@@ -25,7 +25,7 @@ from tsforecasttools import run_timeseries_froecasts
 from mltools import rolling_univariate_window, build_rolling_window_dataset
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy
 
-df = pd.read_csv("rossmannW.csv")
+df = pd.read_csv("data/rossmannW.csv")
 #df = pd.read_csv("rossmannW200k.csv")
 
 print("data frame Shape", df.shape)
