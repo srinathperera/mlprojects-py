@@ -150,7 +150,7 @@ def regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer=200,
 
 
     #next
-    #adam = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+    adam = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
     #adam = Adam(lr=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
     #one hidden layer
 
