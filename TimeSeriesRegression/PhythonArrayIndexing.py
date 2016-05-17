@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import stats
+from sklearn.utils import shuffle
 
 #http://scipy.github.io/old-wiki/pages/Tentative_NumPy_Tutorial.html
 #https://courses.p2pu.org/he/groups/scientific-python/content/reshaping-arrays/
@@ -119,3 +120,6 @@ print("xx.shape", xx.shape, "npa.shape", npa.shape)
 X_all = np.column_stack((xx, npa))
 
 print("X_all.shape",X_all.shape)
+
+print(xx)
+print(shuffle(xx))

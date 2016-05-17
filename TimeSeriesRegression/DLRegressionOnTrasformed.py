@@ -7,6 +7,7 @@ import numpy as np
 
 import pandas as pd
 from sklearn import preprocessing
+from sklearn.utils import shuffle
 
 #import matplotlib.pylab as plt
 #import seaborn as sns
@@ -86,6 +87,8 @@ X_all = df.values.copy()
 
 X_all = preprocessing.normalize(X_all.astype("float32"), norm='l2')
 
+
+X_all = shuffle(X_all)
 
 #print("X_all.shape", X_all.shape, "X_without_sales.shape", X_without_sales.shape)
 
