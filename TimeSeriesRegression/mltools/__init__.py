@@ -9,7 +9,7 @@ from keras.layers.core import Dense, Dropout, Activation
 from keras.optimizers import Adam, SGD
 from math import sqrt
 
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, Callback
 from keras.objectives import mean_squared_error
 
 from keras.regularizers import l2, activity_l2
@@ -38,6 +38,19 @@ class LogFile:
         self.log.write(m)
 
 log = LogFile()
+
+
+class LearningRateLogger(Callback):
+    '''
+    learning rate printer
+    '''
+    def on_epoch_end(self, epoch, logs={}):
+        if hasattr(self.model.optimizer, 'decay'):
+            lr = self.model.optimizer.lr.get_value()
+            it = self.model.optimizer.iterations.get_value()
+            decay = self.model.optimizer.decay.get_value()
+            print(" lr=", lr * (1.0 / (1.0 + decay * it)))
+
 
 def rolling_univariate_window(time_series, window_size):
     shape = (time_series.shape[0] - window_size + 1, window_size)
@@ -178,7 +191,8 @@ def regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer=200,
     #loss functions http://keras.io/objectives/
     #activations http://keras.io/activations/
     early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
-    hist = model.fit(X_train, y_train, nb_epoch=epoch_count, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stop])
+    lr_logger = LearningRateLogger()
+    hist = model.fit(X_train, y_train, nb_epoch=epoch_count, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stop, lr_logger])
     print(hist.history)
 
 #    score = model.evaluate(X_test, y_test, batch_size=16)

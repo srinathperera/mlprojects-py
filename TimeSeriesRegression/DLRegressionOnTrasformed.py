@@ -38,9 +38,9 @@ row_count = len(df.index);
 #sales_data = preprocessing.normalize(sales_data.astype("float32"), norm='l2')[0]
 
 #print("sales_data.shape", sales_data.shape)
-
+#df = df.head(100)
 window_size = 4
-training_set_size = 0.7*row_count
+training_set_size = int(0.7*row_count)
 
 #build rolling window. It is of size row_count - window_size ( due to first window_size -1 due to lack of data, and last value
 #due to lack of training (Y) data
