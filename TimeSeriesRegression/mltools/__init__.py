@@ -134,7 +134,8 @@ def regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer=200,
     for i in xrange(0, number_of_hidden_layers):
         model.add(Dense(nodes_in_layer, activation=activation_fn))
         #model.add(Dense(nodes_in_layer, activation=activation_fn, W_regularizer=l2(0.001))) #http://keras.io/regularizers/
-        model.add(Dropout(droput)) # add dropout
+        if droput > 0:
+            model.add(Dropout(droput)) # add dropout
 
     #model.add(Dense(20, activation='relu'))
     model.add(Dense(1))
@@ -157,14 +158,14 @@ def regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer=200,
     #adam = SGD(lr=0.1, decay=1e-3, momentum=0.9, nesterov=True) #28 RMSEP=0.341843 with 500 per layer 0.05 dropout
 
     # this is the best for power forecast
-    adam = SGD(lr=0.1, decay=1e-3, momentum=0.9, nesterov=True) #28 RMSEP=0.341843/ with 500 per layer 39/0.374848 with 0.01 droput, epoches 50 - 0.05 dropout 30/ 0.351425
+    #adam = SGD(lr=0.1, decay=1e-3, momentum=0.9, nesterov=True) #28 RMSEP=0.341843/ with 500 per layer 39/0.374848 with 0.01 droput, epoches 50 - 0.05 dropout 30/ 0.351425
     #full data set with 0.05 droput 24.0 RMSEP=0.254612
     ##
 
 
     #next
     #adam = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-    adam = SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)
+    adam = SGD(lr=0.1, decay=1e-5, momentum=0.99, nesterov=True)
     #adam = Adam(lr=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
     #one hidden layer
 

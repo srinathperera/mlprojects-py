@@ -106,10 +106,10 @@ X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_
 
 nodes_in_layer = 500
 number_of_hidden_layers = 2
-droput = 0.05
+droput = 0
 activation_fn='relu'
 y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer,
-                      number_of_hidden_layers, droput, activation_fn, 10)
+                      number_of_hidden_layers, droput, activation_fn, 50)
 print_regression_model_summary("DL", y_test, y_pred_dl)
 
 
