@@ -87,7 +87,7 @@ X_all = df.values.copy()
 
 X_all = preprocessing.normalize(X_all.astype("float32"), norm='l2')
 
-
+print("shuffling the data")
 X_all = shuffle(X_all)
 
 #print("X_all.shape", X_all.shape, "X_without_sales.shape", X_without_sales.shape)
@@ -106,7 +106,7 @@ X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_
 
 nodes_in_layer = 500
 number_of_hidden_layers = 2
-droput = 0.3
+droput = 0.05
 activation_fn='relu'
 y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer,
                       number_of_hidden_layers, droput, activation_fn, 10)
