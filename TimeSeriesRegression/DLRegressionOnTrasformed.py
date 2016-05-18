@@ -38,8 +38,8 @@ print("data frame Shape", df.shape)
 row_count = len(df.index);
 
 #only use a subset
-df = df.head(min(200000, row_count))
-row_count = min(200000, row_count)
+#df = df.head(min(200000, row_count))
+#row_count = min(200000, row_count)
 
 #this return an 2D array, make it one
 #sales_data = preprocessing.normalize(sales_data.astype("float32"), norm='l2')[0]
