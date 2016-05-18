@@ -14,11 +14,12 @@ from sklearn.utils import shuffle
 #sns.set_style("darkgrid")
 #sns.set_context("poster")
 
+from keras.optimizers import Adam, SGD
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
-from mltools import print_regression_model_summary,regression_with_dl
+from mltools import print_regression_model_summary,regression_with_dl, MLConfigs
 
 from tsforecasttools import run_timeseries_froecasts
 
@@ -104,13 +105,16 @@ X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count=10)
 
 
-nodes_in_layer = 500
-number_of_hidden_layers = 2
-droput = 0
-activation_fn='relu'
-y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer,
-                      number_of_hidden_layers, droput, activation_fn, 50)
-print_regression_model_summary("DL", y_test, y_pred_dl)
+configs = [
+    MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
+        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-4, momentum=0.99, nesterov=True)),
+    MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 10, droput = 0, activation_fn='relu', loss= "mse",
+        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-4, momentum=0.99, nesterov=True)),
+    ]
+
+for c in configs:
+    y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
+    print_regression_model_summary("DL" + c.tostr(), y_test, y_pred_dl)
 
 
 

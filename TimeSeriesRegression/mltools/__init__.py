@@ -24,7 +24,28 @@ from sklearn.linear_model import LinearRegression
 from sklearn import cross_validation
 
 
+class MLConfigs:
+    nodes_in_layer = 500
+    number_of_hidden_layers = 5
+    droput = 0
+    activation_fn='relu'
+    loss= "mse"
+    epoch_count = 10
+    optimizer = Adam()
 
+    def __init__(self, nodes_in_layer = 500, number_of_hidden_layers = 5, droput = 0, activation_fn='relu', loss= "mse",
+              epoch_count = 10, optimizer = Adam()):
+        self.nodes_in_layer = nodes_in_layer
+        self.number_of_hidden_layers = number_of_hidden_layers
+        self.droput = droput
+        self.activation_fn = activation_fn
+        self.epoch_count = epoch_count
+        self.optimizer = optimizer
+        self.loss = loss
+
+    def tostr(self):
+        return "NN %dX%d droput=$d at=%s loss=%s op=%s" %(self.nodes_in_layer,self.number_of_hidden_layers, self.droput,
+                                            self.activation_fn, self.loss, self.optimizer.get_config()),
 
 
 class LogFile:
@@ -126,16 +147,38 @@ def almost_correct_based_accuracy(Y_actual, Y_predicted, percentage_cutoof):
     return overall_error_percent, rmsep, mape,rmse
 
 
+def ac_loss(Y_actual, Y_predicted):
+    print("Y_actual.shape", Y_actual.shape, "Y_predicted.shape", Y_predicted)
+    total_count = 0
+    error_count = 0
+    for i in xrange(0,len(Y_actual)):
+        total_count += 1
+        percent = 100*abs(Y_predicted[i] - Y_actual[i])/Y_actual[i];
+        if percent > 10:
+            error_count += 1
+    return error_count/total_count
+
+
 def regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer=200,
                        number_of_hidden_layers=5, droput=0.1, activation_fn='relu', epoch_count=100):
+    config = MLConfigs()
+    config.nodes_in_layer = nodes_in_layer
+    config.number_of_hidden_layers = number_of_hidden_layers
+    config.droput = droput
+    config.activation_fn = activation_fn
+    config.epoch_count = epoch_count
+    regression_with_dl(X_train, y_train, X_test, y_test, config)
+
+
+def regression_with_dl(X_train, y_train, X_test, y_test, config):
     model = Sequential()
-    model.add(Dense(nodes_in_layer, input_dim=X_train.shape[1],activation=activation_fn))
+    model.add(Dense(config.nodes_in_layer, input_dim=X_train.shape[1],activation=config.activation_fn))
     #model.add(Dropout(0.1)) # add dropout
-    for i in xrange(0, number_of_hidden_layers):
-        model.add(Dense(nodes_in_layer, activation=activation_fn))
+    for i in xrange(0, config.number_of_hidden_layers):
+        model.add(Dense(config.nodes_in_layer, activation=config.activation_fn))
         #model.add(Dense(nodes_in_layer, activation=activation_fn, W_regularizer=l2(0.001))) #http://keras.io/regularizers/
-        if droput > 0:
-            model.add(Dropout(droput)) # add dropout
+        if config.droput > 0:
+            model.add(Dropout(config.droput)) # add dropout
 
     #model.add(Dense(20, activation='relu'))
     model.add(Dense(1))
@@ -162,14 +205,18 @@ def regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer=200,
     #full data set with 0.05 droput 24.0 RMSEP=0.254612
     ##
 
+    if config.optimizer == None:
+        #next
+        #adam = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+        opf = SGD(lr=0.1, decay=1e-5, momentum=0.99, nesterov=True)
+        #adam = Adam(lr=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+        #one hidden layer
+    else:
+        opf = config.optimizer
 
-    #next
-    #adam = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-    adam = SGD(lr=0.1, decay=1e-5, momentum=0.99, nesterov=True)
-    #adam = Adam(lr=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
-    #one hidden layer
-
-    model.compile(loss='mse', optimizer=adam)
+    model.compile(loss=config.loss, optimizer=opf)
+    #following passes a custom
+    #model.compile(loss=ac_loss, optimizer=opf)
 
 
 
@@ -194,8 +241,9 @@ def regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer=200,
     #activations http://keras.io/activations/
     early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
     lr_logger = LearningRateLogger()
-    hist = model.fit(X_train, y_train, nb_epoch=epoch_count, batch_size=32, validation_data=(X_test, y_test), callbacks=[early_stop, lr_logger])
-    print(hist.history)
+    hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=32, validation_data=(X_test, y_test),
+                     callbacks=[early_stop, lr_logger])
+    print("history",hist.history)
 
 #    score = model.evaluate(X_test, y_test, batch_size=16)
 
