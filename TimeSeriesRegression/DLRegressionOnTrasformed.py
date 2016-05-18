@@ -29,6 +29,7 @@ from mltools import train_test_split,print_graph_test,almost_correct_based_accur
 
 df = pd.read_csv("data/rossmannW.csv")
 #df = pd.read_csv("rossmannW200k.csv")
+#df = df.head(100)
 
 print("data frame Shape", df.shape)
 
@@ -36,11 +37,13 @@ print("data frame Shape", df.shape)
 #sales_data = df['Sales'].values
 row_count = len(df.index);
 
+#only use a subset
+df = df.head(min(200000, row_count))
+
 #this return an 2D array, make it one
 #sales_data = preprocessing.normalize(sales_data.astype("float32"), norm='l2')[0]
 
 #print("sales_data.shape", sales_data.shape)
-#df = df.head(100)
 window_size = 4
 training_set_size = int(0.7*row_count)
 
@@ -107,14 +110,14 @@ X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_
 
 configs = [
     MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
-        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-4, momentum=0.99, nesterov=True)),
+        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
     MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 10, droput = 0, activation_fn='relu', loss= "mse",
-        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-4, momentum=0.99, nesterov=True)),
+        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
     ]
 
 for c in configs:
     y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
-    print_regression_model_summary("DL" + c.tostr(), y_test, y_pred_dl)
+    print_regression_model_summary("DL" + str(c.tostr()), y_test, y_pred_dl)
 
 
 

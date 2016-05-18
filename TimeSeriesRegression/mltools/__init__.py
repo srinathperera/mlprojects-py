@@ -44,8 +44,8 @@ class MLConfigs:
         self.loss = loss
 
     def tostr(self):
-        return "NN %dX%d droput=$d at=%s loss=%s op=%s" %(self.nodes_in_layer,self.number_of_hidden_layers, self.droput,
-                                            self.activation_fn, self.loss, self.optimizer.get_config()),
+        return "NN %dX%d droput=%d at=%s loss=%s" %(self.nodes_in_layer,self.number_of_hidden_layers, self.droput,
+                                            self.activation_fn, self.loss),
 
 
 class LogFile:
@@ -256,11 +256,9 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
 
 def print_regression_model_summary(prefix, y_test, y_pred):
     mse = mean_squared_error(y_test, y_pred)
-    print "%s mean_squared_error= %.6f" %(prefix, mse)
-    log.write("%s mean_squared_error= %.6f\n" %(prefix, mse))
     error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_test, y_pred, 10)
-    print "%s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f" %(prefix, error_AC, rmsep, mape, rmse)
-    log.write("%s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f" %(prefix, error_AC, rmsep, mape, rmse))
+    print "%s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f" %(prefix, error_AC, rmsep, mape, rmse, mse)
+    log.write("%s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f" %(prefix, error_AC, rmsep, mape, rmse, mse))
 
 
 # Utility function to report best scores
