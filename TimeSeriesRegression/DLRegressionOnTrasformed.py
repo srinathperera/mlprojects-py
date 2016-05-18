@@ -108,12 +108,35 @@ X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_
 
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count=10)
 
+'''
+baseConfigs = {
+    "nodes_in_layer":[500],
+    "number_of_hidden_layers":[1,2,5,10],
+    "droput":[0, 2, 3],
+    "activation_fn":["relu"],
+    "loss":["mse"],
+    "optimizer":[SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)],
+    }
+'''
+#http://scikit-learn.org/stable/auto_examples/model_selection/randomized_search.html
+#http://danielhnyk.cz/creating-your-own-estimator-scikit-learn/
+#how to use the map https://docs.python.org/2/tutorial/datastructures.html
 
 configs = [
-    MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
-        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
-    MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 10, droput = 0, activation_fn='relu', loss= "mse",
-        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
+#    MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
+#        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
+    MLConfigs(nodes_in_layer = 1000, number_of_hidden_layers = 2, droput = 3, activation_fn='relu', loss= "mse",
+        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-4, momentum=0.99, nesterov=True)),
+    #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
+    #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
+    #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
+    #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
+    #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
+    #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
+    #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
+    #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
+    #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 10, droput = 0, activation_fn='relu', loss= "mse",
+    #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True))
     ]
 
 for c in configs:

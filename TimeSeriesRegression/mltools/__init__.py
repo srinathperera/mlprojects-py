@@ -79,6 +79,7 @@ def rolling_univariate_window(time_series, window_size):
     return np.lib.stride_tricks.as_strided(time_series, shape=shape, strides=strides)
 
 
+
 def build_rolling_window_dataset(time_series, window_size):
     last_element = time_series[-1]
     time_series = time_series[:-1]
@@ -241,7 +242,7 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     #activations http://keras.io/activations/
     early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
     lr_logger = LearningRateLogger()
-    hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=32, validation_data=(X_test, y_test),
+    hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=8, validation_data=(X_test, y_test),
                      callbacks=[early_stop, lr_logger])
     print("history",hist.history)
 
