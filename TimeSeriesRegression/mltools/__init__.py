@@ -209,7 +209,7 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     if config.optimizer == None:
         #next
         #adam = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
-        opf = SGD(lr=0.1, decay=1e-5, momentum=0.99, nesterov=True)
+        opf = SGD(lr=0.1, decay=0.0005, momentum=0.99, nesterov=True)
         #adam = Adam(lr=0.1, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
         #one hidden layer
     else:
@@ -242,7 +242,7 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     #activations http://keras.io/activations/
     early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
     lr_logger = LearningRateLogger()
-    hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=8, validation_data=(X_test, y_test),
+    hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=16, validation_data=(X_test, y_test),
                      callbacks=[early_stop, lr_logger])
     print("history",hist.history)
 
