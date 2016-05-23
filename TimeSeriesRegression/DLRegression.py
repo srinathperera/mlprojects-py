@@ -15,7 +15,7 @@ from mltools import train_test_split,print_graph_test,almost_correct_based_accur
 from mltools import regression_with_dl, print_regression_model_summary, report_scores
 
 
-df = pd.read_csv("rossmann.csv")
+df = pd.read_csv("data/rossmann300stores.csv")
 
 #We take 10 from first store
 #df = df[(df['Store'] == 1)].head(100)
@@ -79,16 +79,16 @@ print("X_all.shape", X_all.shape)
 
 X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_all)
 
-#run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, 10)
+run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, 10)
 
 
 nodes_in_layer = 500
 number_of_hidden_layers = 2
 droput = 0.05
 activation_fn='relu'
-y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer,
-                      number_of_hidden_layers, droput, activation_fn, 100)
-print_regression_model_summary("DL", y_test, y_pred_dl)
+#y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer,
+#                      number_of_hidden_layers, droput, activation_fn, 100)
+#print_regression_model_summary("DL", y_test, y_pred_dl)
 
 
 

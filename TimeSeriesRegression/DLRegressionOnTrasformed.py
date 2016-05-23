@@ -27,7 +27,7 @@ from tsforecasttools import run_timeseries_froecasts
 from mltools import rolling_univariate_window, build_rolling_window_dataset
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy
 
-df = pd.read_csv("data/rossmannW300Stores.csv")
+df = pd.read_csv("data/rossmann300stores.csv")
 #df = pd.read_csv("rossmannW200k.csv")
 #df = df.head(100)
 
@@ -106,7 +106,7 @@ print("X_all.shape", X_all.shape)
 
 X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_all)
 
-#run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count=10)
+run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count=10)
 
 '''
 baseConfigs = {
@@ -142,9 +142,9 @@ configs = [
     #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True))
     ]
 
-for c in configs:
-    y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
-    print_regression_model_summary("DL" + str(c.tostr()), y_test, y_pred_dl)
+#for c in configs:
+#    y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
+#    print_regression_model_summary("DL" + str(c.tostr()), y_test, y_pred_dl)
 
 
 
