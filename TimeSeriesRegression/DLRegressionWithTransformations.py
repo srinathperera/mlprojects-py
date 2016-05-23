@@ -98,8 +98,8 @@ X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_
 configs = [
 #    MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
 #        epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
-    MLConfigs(nodes_in_layer=1000, number_of_hidden_layers=2, droput=2, activation_fn='relu', loss="mse",
-              epoch_count=10, optimizer=SGD(lr=0.01, decay=0, momentum=0.9, nesterov=True)),
+    #MLConfigs(nodes_in_layer=1000, number_of_hidden_layers=2, droput=2, activation_fn='relu', loss="mse",
+    #          epoch_count=10, optimizer=SGD(lr=0.1, decay=1e-4, momentum=0.9, nesterov=True)),
 
     MLConfigs(nodes_in_layer = 1000, number_of_hidden_layers = 2, droput = 2, activation_fn='relu', loss= "mse",
         epoch_count = 10, optimizer = Adam()),
