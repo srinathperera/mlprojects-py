@@ -14,6 +14,9 @@ def drawLineChart(df, feilds):
 #df = pd.read_csv("data/rossmann.csv", dtype={'Promo': np.int32, 'SchoolHoliday': np.int32})
 #print(df.describe())
 
+#https://www.scipy.org/getting-started.html
+#http://matplotlib.org/users/pyplot_tutorial.html
+
 df = pd.read_csv("forecastdata.csv")
 print(df.describe())
 

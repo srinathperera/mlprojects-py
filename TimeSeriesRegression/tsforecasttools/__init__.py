@@ -97,9 +97,14 @@ def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoc
 
     #combine_models(all_forecasts, y_test)
 
-    forecast_data = np.column_stack((np.array(list(range(0,y_test.shape[0],1))), y_test, y_pred_lr, y_pred_rfr, y_pred_gbr))
+    forecast_data = np.column_stack((np.array(list(range(0,y_test.shape[0],1))), y_test, y_pred_lr, y_pred_rfr, y_pred_gbr, X_test))
+
+    headers=''
+    for i in range(X_test.shape[1]):
+        headers = headers + ",X"+i
+
     #print (forecast_data)
-    np.savetxt('forecastdata.csv', forecast_data, delimiter=',', header="seq,actual,LR,RFR,GBR")   # X is an array
+    np.savetxt('forecastdata.csv', forecast_data, delimiter=',', header="seq,actual,LR,RFR,GBR,"+headers)   # X is an array
     #print("All forecasts written to forecastdata.csv")
     print("run took %f seconds" %((time.time() - start_time)))
 

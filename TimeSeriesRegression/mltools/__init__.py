@@ -25,27 +25,19 @@ from sklearn import cross_validation
 
 
 class MLConfigs:
-    nodes_in_layer = 500
-    number_of_hidden_layers = 5
-    droput = 0
-    activation_fn='relu'
-    loss= "mse"
-    epoch_count = 10
-    optimizer = Adam()
-
-    def __init__(self, nodes_in_layer = 500, number_of_hidden_layers = 5, droput = 0, activation_fn='relu', loss= "mse",
+    def __init__(self, nodes_in_layer = 500, number_of_hidden_layers = 5, dropout = 0, activation_fn='relu', loss= "mse",
               epoch_count = 10, optimizer = Adam()):
         self.nodes_in_layer = nodes_in_layer
         self.number_of_hidden_layers = number_of_hidden_layers
-        self.droput = droput
+        self.dropout = dropout
         self.activation_fn = activation_fn
         self.epoch_count = epoch_count
         self.optimizer = optimizer
         self.loss = loss
 
     def tostr(self):
-        return "NN %dX%d droput=%d at=%s loss=%s" %(self.nodes_in_layer,self.number_of_hidden_layers, self.droput,
-                                            self.activation_fn, self.loss),
+        return "NN %dX%d droput=%2f at=%s loss=%s op=%s" %(self.nodes_in_layer,self.number_of_hidden_layers, self.dropout,
+                                            self.activation_fn, self.loss, self.optimizer.get_config()),
 
 
 class LogFile:
@@ -172,14 +164,15 @@ def regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer=200,
 
 
 def regression_with_dl(X_train, y_train, X_test, y_test, config):
+    print("Using ", config.tostr())
     model = Sequential()
     model.add(Dense(config.nodes_in_layer, input_dim=X_train.shape[1],activation=config.activation_fn))
     #model.add(Dropout(0.1)) # add dropout
     for i in xrange(0, config.number_of_hidden_layers):
         model.add(Dense(config.nodes_in_layer, activation=config.activation_fn))
         #model.add(Dense(nodes_in_layer, activation=activation_fn, W_regularizer=l2(0.001))) #http://keras.io/regularizers/
-        if config.droput > 0:
-            model.add(Dropout(config.droput)) # add dropout
+        if config.dropout > 0:
+            model.add(Dropout(config.dropout)) # add dropout
 
     #model.add(Dense(20, activation='relu'))
     model.add(Dense(1))
