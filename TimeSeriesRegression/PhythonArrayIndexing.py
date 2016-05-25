@@ -121,5 +121,11 @@ X_all = np.column_stack((xx, npa))
 
 print("X_all.shape",X_all.shape)
 
-print(xx)
-print(shuffle(xx))
+#print(xx)
+#print(shuffle(xx))
+
+a = np.array(range(100))
+print a
+print a[10:-1]
+print a[0:0]
+

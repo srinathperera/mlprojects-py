@@ -9,6 +9,8 @@ from keras.layers.core import Dense, Dropout, Activation
 from keras.optimizers import Adam, SGD
 from math import sqrt
 
+import scipy.stats as stats
+
 from keras.callbacks import EarlyStopping, Callback
 from keras.objectives import mean_squared_error
 
@@ -16,6 +18,8 @@ from keras.regularizers import l2, activity_l2
 
 from sklearn.metrics import mean_squared_error
 from operator import itemgetter
+from sklearn.utils import shuffle
+
 
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.ensemble import RandomForestRegressor
@@ -80,6 +84,14 @@ def build_rolling_window_dataset(time_series, window_size):
 
     return X_train, np.hstack((y_train, last_element))
 
+def shuffle_data(X_all, Y_all):
+    # put both together, shuffle, and  break
+    All = np.column_stack((X_all, Y_all))
+    All = shuffle(All)
+
+    X_all = All[:, 0:-1]
+    Y_all = All[:, -1]
+    return X_all, Y_all
 
 def train_test_split(no_of_training_instances, X_all, y_all):
     X_train = X_all[0:no_of_training_instances, :]
@@ -431,5 +443,52 @@ def regression_with_RFR(X_train, y_train, X_test, y_test):
     print_feature_importance(X_test, y_test,rfr.feature_importances_)
     return y_pred_rfr
 
+def calcuate_time_since_event(data, limit):
+    ts_limits = []
+    count = 0;
+    for i in range(len(data)):
+        if data[i] > limit:
+            count = 0
+        else:
+            count = count + 1
+        ts_limits.append(count)
+    return ts_limits
 
+def calcuate_window_operation(data, windowSize, fn):
+    results = []
+    for i in range(len(data)):
+        if i > 1:
+            results.append(0)
+        else:
+            window = data[max(0, i - windowSize -1): i-1]
+            results.append(fn(window))
+    return results
+
+def value_before_period(data, window_size):
+    result = []
+    for i in range(len(data)):
+        if i == 0:
+            value = 0
+        else :
+            v1 = data[i-window_size] if i >= window_size else data[i-1]
+            v2 = data[i - 2*window_size] if i >= 2*window_size else v1
+            v3 = data[i - 3*window_size] if i >= 3*window_size else v2
+            value = np.mean([v1,v2,v3])
+        result.append(value)
+    return result
+
+
+def create_window_based_features(data, window_size):
+    central_fn = np.mean
+    ma1 = calcuate_window_operation(data, window_size, central_fn)
+    ma2 = calcuate_window_operation(data, 2 * window_size, central_fn)
+    ma4 = calcuate_window_operation(data, 4 * window_size, central_fn)
+    ma8 = calcuate_window_operation(data, 8 * window_size, central_fn)
+
+
+    entropy = calcuate_window_operation(data, window_size, stats.entropy)
+    stddev = calcuate_window_operation(data, window_size, np.std)
+    medain_weeksbefore = value_before_period(data, 7)
+
+    return np.column_stack((ma1, ma2, ma4, ma8, entropy, stddev, medain_weeksbefore))
 

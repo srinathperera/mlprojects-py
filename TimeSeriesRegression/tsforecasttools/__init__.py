@@ -94,14 +94,15 @@ def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoc
     #average forecast
     #all_forecasts = np.column_stack((y_pred_lr, y_pred_dl, y_pred_rfr, y_pred_gbr))
     all_forecasts = np.column_stack((y_pred_lr, y_pred_rfr, y_pred_gbr))
+    run_regression_ensamble(all_forecasts, y_test)
 
     #combine_models(all_forecasts, y_test)
 
     forecast_data = np.column_stack((np.array(list(range(0,y_test.shape[0],1))), y_test, y_pred_lr, y_pred_rfr, y_pred_gbr, X_test))
 
-    headers=''
-    for i in range(X_test.shape[1]):
-        headers = headers + ",X"+i
+    headers='X0'
+    for i in range(1,X_test.shape[1]):
+        headers = headers + ",X"+ str(i)
 
     #print (forecast_data)
     np.savetxt('forecastdata.csv', forecast_data, delimiter=',', header="seq,actual,LR,RFR,GBR,"+headers)   # X is an array
@@ -117,3 +118,11 @@ def combine_models(models, y_test):
 
     combined_forecast = [ np.mean(models[i]) for i in range(models.shape[0])]
     print_regression_model_summary("CombinedMean", y_test, combined_forecast)
+
+
+def run_regression_ensamble(models, y_test):
+    training_set_size = int(len(y_test)*.7)
+    X_train, X_test, y_train, y_test = train_test_split(training_set_size, models, y_test)
+    print("results for combined Models")
+    y_pred_lr = regression_with_LR(X_train, y_train, X_test, y_test)
+

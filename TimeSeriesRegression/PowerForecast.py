@@ -10,7 +10,7 @@ from sklearn.linear_model import LinearRegression
 
 
 from mltools import build_rolling_window_dataset, l2norm, regression_with_GBR, regression_with_LR, regression_with_RFR
-from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy
+from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy, shuffle_data
 from mltools import regression_with_dl, print_regression_model_summary, report_scores
 
 from datetime import datetime
