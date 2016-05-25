@@ -245,10 +245,10 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     #optimizer='sgd, RMSprop( usually for RNN), Adagrad, Adadelta, Adam' , see http://keras.io/optimizers/ ( momentum, learning rate etc is calcuated here)
     #loss functions http://keras.io/objectives/
     #activations http://keras.io/activations/
-    early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+    #early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
     lr_logger = LearningRateLogger()
     hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=16, validation_data=(X_test, y_test),
-                     callbacks=[early_stop, lr_logger])
+                     callbacks=[lr_logger])
     print("history",hist.history)
 
 #    score = model.evaluate(X_test, y_test, batch_size=16)

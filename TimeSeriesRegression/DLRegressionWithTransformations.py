@@ -149,10 +149,19 @@ configs = [
 
     #MLConfigs(nodes_in_layer = 1000, number_of_hidden_layers = 1, dropout = 0.0, activation_fn='relu', loss= "mse",
     #    epoch_count = 30, optimizer = Adam()),
-    MLConfigs(nodes_in_layer=1000, number_of_hidden_layers=2, dropout=0.0, activation_fn='relu', loss="mse",
-              epoch_count=10, optimizer=Adam()),
-    MLConfigs(nodes_in_layer=1000, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
-              epoch_count=10, optimizer=Adam()),
+    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
+              epoch_count=50, optimizer=Adam()),
+    MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
+              epoch_count=50, optimizer=Adam()),
+    MLConfigs(nodes_in_layer=30, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
+              epoch_count=50, optimizer=Adam()),
+    MLConfigs(nodes_in_layer=30, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
+              epoch_count=50, optimizer=Adam()),
+    MLConfigs(nodes_in_layer=50, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
+              epoch_count=50, optimizer=Adam()),
+
+    #MLConfigs(nodes_in_layer=1000, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
+    #          epoch_count=10, optimizer=Adam()),
 
     ##MLConfigs(nodes_in_layer=1000, number_of_hidden_layers=5, dropout=0.0, activation_fn='relu', loss="mse",
     #          epoch_count=30, optimizer=Adam()),
