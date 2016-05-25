@@ -135,7 +135,7 @@ print [str(i) +"="+ headers[i]+" " for i in range(len(headers))]
 
 X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_all)
 
-run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, 10)
+#run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, 10)
 
 
 
@@ -171,7 +171,7 @@ configs = [
     #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True))
     ]
 
-#for c in configs:
- #   y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
- #   print_regression_model_summary("DL" + str(c.tostr()), y_test, y_pred_dl)
+for c in configs:
+    y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
+    print_regression_model_summary("DL" + str(c.tostr()), y_test, y_pred_dl)
 
