@@ -188,10 +188,12 @@ configs = [
 
 configs = create_rondomsearch_configs4DL((1,2,3), (5,10,15,20), (0.1, 0.2, 0.4),
                                         (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 50)
-
+index = 0
 for c in configs:
+    c.epoch_count = 500
     #c.nodes_in_layer = c.nodes_in_layer/(1-c.dropout)
     y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
-    print ">> %s" %(str(c.tostr()))
+    print ">> %d %s" %(index, str(c.tostr()))
     print_regression_model_summary("DL", y_test, y_pred_dl, parmsFromNormalization)
+    index = index + 1
 
