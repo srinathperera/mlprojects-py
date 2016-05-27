@@ -29,7 +29,8 @@ p = re.compile('loss.*?\[(.*?)\].*?DL(.*?)AC_errorRate')
 #p = re.compile('loss.*?\[(.*?)\]')
 m = p.search(data )
 if m:
-    print 'Match found: ', m.group(1)
+    print 'G1: ', m.group(1)
+    print "G2: ", m.group(2)
 else:
     print 'No match'
 
@@ -38,12 +39,16 @@ index = 0
 dataset = []
 columns = []
 for match in p.finditer(data):
-    values = match.group(1).split(',')
+    g1 = match.group(1)
+    g2 = match.group(2)
+    print ">>>g1", g1
+    values = g1.split(',')
     valuesAsNum = np.array([float(s) for s in values])
     valuesAsNum.resize((500))
     dataset.append(valuesAsNum)
 
-    name = match.group(2)
+    print ">>>g2", g2
+    name = g2
     print name
     columns.append('data'+str(index))
     index = index+1
