@@ -535,3 +535,4 @@ def create_window_based_features(data, window_size):
 
     return np.column_stack((ma1, ma2, ma4, ma8, entropy, stddev, medain_weeksbefore))
 
+# do cross volidation http://stackoverflow.com/questions/533905/get-the-cartesian-product-of-a-series-of-lists-in-python 
