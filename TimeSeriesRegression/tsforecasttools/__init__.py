@@ -27,7 +27,7 @@ def aggregate_hl(mavg1_vals, window_size):
     return np.array(hl_mvavg)
 
 
-def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count):
+def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count, parmsFromNormalization):
     start_time = time.time()
     print("X_train.shape", X_train.shape, "y_train.shape", y_train.shape,
       "X_test.shape", X_test.shape, "Y_test.shape", y_test.shape)
@@ -65,7 +65,7 @@ def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoc
     #y_pred_lr = lr.predict(X_test)
 
     #print_regression_model_summary("LR", y_test, y_pred_lr)
-    y_pred_lr = regression_with_LR(X_train, y_train, X_test, y_test)
+    y_pred_lr = regression_with_LR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
 
     #Random Forest Regressor
@@ -77,7 +77,7 @@ def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoc
 
 
     #print_regression_model_summary("RFR", y_test, y_pred_rfr)
-    y_pred_rfr = regression_with_RFR(X_train, y_train, X_test, y_test)
+    y_pred_rfr = regression_with_RFR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
     #GradientBoostingRegressor
     #params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 1,
@@ -87,14 +87,14 @@ def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoc
     #y_pred_gbr = gfr.predict(X_test)
     #print_regression_model_summary("GBR", y_test, y_pred_gbr)
 
-    y_pred_gbr = regression_with_GBR(X_train, y_train, X_test, y_test)
+    y_pred_gbr = regression_with_GBR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
     print("All forecasts are done")
 
     #average forecast
     #all_forecasts = np.column_stack((y_pred_lr, y_pred_dl, y_pred_rfr, y_pred_gbr))
     all_forecasts = np.column_stack((y_pred_lr, y_pred_rfr, y_pred_gbr))
-    run_regression_ensamble(all_forecasts, y_test)
+    run_regression_ensamble(all_forecasts, y_test, parmsFromNormalization)
 
     #combine_models(all_forecasts, y_test)
 
@@ -120,9 +120,9 @@ def combine_models(models, y_test):
     print_regression_model_summary("CombinedMean", y_test, combined_forecast)
 
 
-def run_regression_ensamble(models, y_test):
+def run_regression_ensamble(models, y_test, parmsFromNormalization):
     training_set_size = int(len(y_test)*.7)
     X_train, X_test, y_train, y_test = train_test_split(training_set_size, models, y_test)
     print("results for combined Models")
-    y_pred_lr = regression_with_LR(X_train, y_train, X_test, y_test)
+    y_pred_lr = regression_with_LR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 

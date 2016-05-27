@@ -14,7 +14,7 @@ from tsforecasttools import run_timeseries_froecasts
 from mltools import rolling_univariate_window, build_rolling_window_dataset, verify_window_dataset
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy, MLConfigs, shuffle_data
 from mltools import regression_with_dl, print_regression_model_summary, report_scores, calcuate_time_since_event, calcuate_window_operation
-from mltools import create_window_based_features
+from mltools import create_window_based_features, preprocess1DtoZeroMeanUnit, preprocess2DtoZeroMeanUnit
 
 from keras.optimizers import Adam, SGD
 
@@ -43,12 +43,9 @@ df = df.drop('Customers',1)
 #df = df.drop('StateHoliday',1)
 
 
-
-
-
-sales_data = df['Sales'].values
-df['Sales'] = preprocessing.normalize(sales_data.astype("float32"), norm='l2')[0]
-#df['Sales'] = preprocessing.scale(preprocessing.normalize(sales_data.astype("float32"), norm='l2')[0])[0]
+sales_data = df['Sales'].values.astype("float32")
+sales_data, parmsFromNormalization = preprocess1DtoZeroMeanUnit(sales_data)
+df['Sales'] = sales_data
 
 headerNames = []
 window_size = 14
@@ -74,10 +71,10 @@ for s in storeList:
 
     dfS = dfS.drop(dfS.index[index2remove])
     #print dfS.describe()
-    dfS.drop
     headerNames = list(dfS)
     #covert data frame to numpy array
     X_without_sales = dfS.values.copy()
+    X_without_sales = preprocess2DtoZeroMeanUnit(X_without_sales)
     #print("X_all.shape", X_all_t.shape, "X_without_sales.shape", X_without_sales.shape)
     #join two arrays ( also can do np.row_stack )
     timeSincePromotion = timeSincePromotion[window_size-1:-1]
@@ -135,7 +132,7 @@ print [str(i) +"="+ headers[i]+" " for i in range(len(headers))]
 
 X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_all)
 
-#run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, 10)
+#run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, 10, parmsFromNormalization)
 
 
 
@@ -149,16 +146,16 @@ configs = [
 
     #MLConfigs(nodes_in_layer = 1000, number_of_hidden_layers = 1, dropout = 0.0, activation_fn='relu', loss= "mse",
     #    epoch_count = 30, optimizer = Adam()),
-    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
-              epoch_count=50, optimizer=Adam()),
-    MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
-              epoch_count=50, optimizer=Adam()),
-    MLConfigs(nodes_in_layer=30, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
-              epoch_count=50, optimizer=Adam()),
-    MLConfigs(nodes_in_layer=30, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
-              epoch_count=50, optimizer=Adam()),
-    MLConfigs(nodes_in_layer=50, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
-              epoch_count=50, optimizer=Adam()),
+    #MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.1, activation_fn='relu', loss="mse",
+    #          epoch_count=500, optimizer=Adam()),
+    #MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
+    #          epoch_count=50, optimizer=Adam()),
+    #MLConfigs(nodes_in_layer=30, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
+    #          epoch_count=50, optimizer=Adam()),
+    #MLConfigs(nodes_in_layer=30, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
+    #          epoch_count=50, optimizer=Adam()),
+    #MLConfigs(nodes_in_layer=50, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
+    #          epoch_count=50, optimizer=Adam()),
 
     #MLConfigs(nodes_in_layer=1000, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
     #          epoch_count=10, optimizer=Adam()),
@@ -168,8 +165,16 @@ configs = [
     #MLConfigs(nodes_in_layer=1000, number_of_hidden_layers=5, dropout=0.2, activation_fn='relu', loss="mse",
     #          epoch_count=30, optimizer=Adam()),
 
-    #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
-    #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
+
+    #lr=0.01
+    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.1, activation_fn='relu', loss="mse",
+              epoch_count=500, optimizer=Adam(lr=0.01)),
+    #MLConfigs(nodes_in_layer=10, number_of_hidden_layers=3, dropout=0, activation_fn='relu', loss="mse",
+    #          epoch_count=500, optimizer=SGD(lr=0.001, decay=1e-6, momentum=0.5, nesterov=True)),
+
+    #MLConfigs(nodes_in_layer = 20, number_of_hidden_layers = 3, dropout = 0.2, activation_fn='relu', loss= "mse",
+    #    epoch_count = 500, optimizer = SGD(lr=0.0001, decay=0, momentum=0.9, nesterov=True)),
+
     #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
     #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True)),
     #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
@@ -181,6 +186,8 @@ configs = [
     ]
 
 for c in configs:
+    #c.nodes_in_layer = c.nodes_in_layer/(1-c.dropout)
     y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
-    print_regression_model_summary("DL" + str(c.tostr()), y_test, y_pred_dl)
+    print ">> %s" %(str(c.tostr()))
+    print_regression_model_summary("DL", y_test, y_pred_dl, parmsFromNormalization)
 

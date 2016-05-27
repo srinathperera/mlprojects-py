@@ -8,6 +8,7 @@ from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation
 from keras.optimizers import Adam, SGD
 from math import sqrt
+import sklearn.preprocessing as preprocessing
 
 import scipy.stats as stats
 
@@ -40,8 +41,8 @@ class MLConfigs:
         self.loss = loss
 
     def tostr(self):
-        return "NN %dX%d droput=%2f at=%s loss=%s op=%s" %(self.nodes_in_layer,self.number_of_hidden_layers, self.dropout,
-                                            self.activation_fn, self.loss, self.optimizer.get_config()),
+        return "NN %dX%d droput=%2f at=%s loss=%s op=%s epoches=%d" %(self.nodes_in_layer,self.number_of_hidden_layers, self.dropout,
+                                            self.activation_fn, self.loss, self.optimizer.get_config(), self.epoch_count),
 
 
 class LogFile:
@@ -55,6 +56,13 @@ class LogFile:
         self.log.write(m)
 
 log = LogFile()
+
+
+class ParmsFromNormalization:
+    def __init__(self, mean, std, sqrtx2):
+        self.mean = mean
+        self.std = std
+        self.sqrtx2 = sqrtx2
 
 
 class LearningRateLogger(Callback):
@@ -92,6 +100,38 @@ def shuffle_data(X_all, Y_all):
     X_all = All[:, 0:-1]
     Y_all = All[:, -1]
     return X_all, Y_all
+
+
+def preprocess1DtoZeroMeanUnit(data):
+    meanV = np.mean(data, axis=0)
+    data = data - meanV
+    stdV = np.std(data, axis=0)
+    if stdV > 0.5:
+        data = data / stdV
+    else:
+        print("too small", stdV)
+        stdV = 1
+
+    sqrtmx = sqrt(np.mean([x*x for x in data]))
+    sqrtmx = sqrtmx if sqrtmx != 0 else 1
+    # l2 norm is root mean squard value http://mathworld.wolfram.com/L2-Norm.html
+    #return preprocessing.normalize(data, norm='l2', axis=0)[0], ParmsFromNormalization(mean=meanV,std=stdV,sqrtx2=sqrtmx)
+    return data/sqrtmx, ParmsFromNormalization(mean=meanV,std=stdV,sqrtx2=sqrtmx)
+
+def undoPreprocessing(data, parmsFromNormalization):
+    return (data * parmsFromNormalization.std * parmsFromNormalization.sqrtx2) + parmsFromNormalization.mean
+
+
+def preprocess2DtoZeroMeanUnit(data):
+    data = data - np.mean(data, axis=0)
+    std = np.std(data, axis=0)
+    normalized_std = [std[i] if std[i] > 0.5 else 1 for i in range(len(std))]
+    data = data/normalized_std
+    # l2 norm is root mean squard value http://mathworld.wolfram.com/L2-Norm.html
+    #if we need to support recreating this, we need to do this by hand
+    return preprocessing.normalize(data, norm='l2', axis=0)
+
+
 
 def train_test_split(no_of_training_instances, X_all, y_all):
     X_train = X_all[0:no_of_training_instances, :]
@@ -181,7 +221,7 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     model.add(Dense(config.nodes_in_layer, input_dim=X_train.shape[1],activation=config.activation_fn))
     #model.add(Dropout(0.1)) # add dropout
     for i in xrange(0, config.number_of_hidden_layers):
-        model.add(Dense(config.nodes_in_layer, activation=config.activation_fn))
+        model.add(Dense(config.nodes_in_layer, activation=config.activation_fn, W_regularizer=l2(0.001), activity_regularizer=activity_l2(0.001)))
         #model.add(Dense(nodes_in_layer, activation=activation_fn, W_regularizer=l2(0.001))) #http://keras.io/regularizers/
         if config.dropout > 0:
             model.add(Dropout(config.dropout)) # add dropout
@@ -245,11 +285,11 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     #optimizer='sgd, RMSprop( usually for RNN), Adagrad, Adadelta, Adam' , see http://keras.io/optimizers/ ( momentum, learning rate etc is calcuated here)
     #loss functions http://keras.io/objectives/
     #activations http://keras.io/activations/
-    #early_stop = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+    early_stop = EarlyStopping(monitor='val_loss', patience=100, verbose=1)
     lr_logger = LearningRateLogger()
     hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=16, validation_data=(X_test, y_test),
-                     callbacks=[lr_logger])
-    print("history",hist.history)
+                     callbacks=[early_stop, lr_logger])
+    print(">> history",hist.history)
 
 #    score = model.evaluate(X_test, y_test, batch_size=16)
 
@@ -260,10 +300,13 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     return y_pred
 
 
-def print_regression_model_summary(prefix, y_test, y_pred):
+def print_regression_model_summary(prefix, y_test, y_pred, parmsFromNormalization):
+    y_test = (y_test*parmsFromNormalization.std*parmsFromNormalization.sqrtx2) + parmsFromNormalization.mean
+    y_pred = (y_pred*parmsFromNormalization.std*parmsFromNormalization.sqrtx2) + parmsFromNormalization.mean
+
     mse = mean_squared_error(y_test, y_pred)
     error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_test, y_pred, 10)
-    print "%s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f" %(prefix, error_AC, rmsep, mape, rmse, mse)
+    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f" %(prefix, error_AC, rmsep, mape, rmse, mse)
     log.write("%s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f" %(prefix, error_AC, rmsep, mape, rmse, mse))
 
 
@@ -409,13 +452,13 @@ def print_feature_importance(X_test, y_test, importances):
         print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
 
 
-def regression_with_GBR(X_train, y_train, X_test, y_test, params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 1,
+def regression_with_GBR(X_train, y_train, X_test, y_test, parmsFromNormalization, params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 1,
           'learning_rate': 0.01, 'loss': 'ls'}):
         #GradientBoostingRegressor
     gfr = GradientBoostingRegressor(**params)
     gfr.fit(X_train, y_train)
     y_pred_gbr = gfr.predict(X_test)
-    print_regression_model_summary("GBR", y_test, y_pred_gbr)
+    print_regression_model_summary("GBR", y_test, y_pred_gbr, parmsFromNormalization)
     print_feature_importance(X_test, y_test,gfr.feature_importances_)
 
     #cross validation ( not sure this make sense for regression
@@ -426,20 +469,20 @@ def regression_with_GBR(X_train, y_train, X_test, y_test, params = {'n_estimator
     return y_pred_gbr
 
 
-def regression_with_LR(X_train, y_train, X_test, y_test):
+def regression_with_LR(X_train, y_train, X_test, y_test, parmsFromNormalization):
     lr = LinearRegression(normalize=True)
     lr.fit(X_train, y_train)
     y_pred_lr = lr.predict(X_test)
-    print_regression_model_summary("LR", y_test, y_pred_lr)
+    print_regression_model_summary("LR", y_test, y_pred_lr, parmsFromNormalization)
     return y_pred_lr
 
 
 
-def regression_with_RFR(X_train, y_train, X_test, y_test):
+def regression_with_RFR(X_train, y_train, X_test, y_test, parmsFromNormalization):
     rfr = RandomForestRegressor()
     rfr.fit(X_train, y_train)
     y_pred_rfr = rfr.predict(X_test)
-    print_regression_model_summary("RFR", y_test, y_pred_rfr)
+    print_regression_model_summary("RFR", y_test, y_pred_rfr, parmsFromNormalization)
     print_feature_importance(X_test, y_test,rfr.feature_importances_)
     return y_pred_rfr
 

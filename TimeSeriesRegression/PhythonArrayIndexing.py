@@ -2,6 +2,8 @@ import numpy as np
 from scipy import stats
 from sklearn.utils import shuffle
 
+from mltools import preprocess1DtoZeroMeanUnit, undoPreprocessing
+
 #http://scipy.github.io/old-wiki/pages/Tentative_NumPy_Tutorial.html
 #https://courses.p2pu.org/he/groups/scientific-python/content/reshaping-arrays/
 
@@ -129,3 +131,24 @@ print a
 print a[10:-1]
 print a[0:0]
 
+xx = np.array([[0, 1, 2, 3],
+               [10, 11, 12, 13],
+               [20, 21, 22, 23],
+               [30, 31, 32, 33],
+               [40, 41, 42, 43]])
+print xx
+print xx - [1,1,1,1]
+
+print xx - np.mean(xx, axis=0)
+
+print "mean", np.mean(xx, axis=0)
+
+
+xx = np.random.rand(1000)
+
+normalized, parmsFromNormalization = preprocess1DtoZeroMeanUnit(xx)
+new_xx = undoPreprocessing(normalized, parmsFromNormalization)
+print "xx", xx
+print "mean,std,sqrt", parmsFromNormalization.mean, parmsFromNormalization.std, parmsFromNormalization.sqrtx2
+print "newxx", new_xx
+print np.allclose(xx, new_xx)
