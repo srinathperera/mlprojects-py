@@ -152,3 +152,8 @@ print "xx", xx
 print "mean,std,sqrt", parmsFromNormalization.mean, parmsFromNormalization.std, parmsFromNormalization.sqrtx2
 print "newxx", new_xx
 print np.allclose(xx, new_xx)
+
+
+import itertools
+for i in itertools.product([1,2,3],['a','b'],[4,5]):
+    print i

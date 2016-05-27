@@ -15,6 +15,7 @@ from mltools import rolling_univariate_window, build_rolling_window_dataset, ver
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy, MLConfigs, shuffle_data
 from mltools import regression_with_dl, print_regression_model_summary, report_scores, calcuate_time_since_event, calcuate_window_operation
 from mltools import create_window_based_features, preprocess1DtoZeroMeanUnit, preprocess2DtoZeroMeanUnit
+from mltools import create_rondomsearch_configs4DL
 
 from keras.optimizers import Adam, SGD
 
@@ -167,8 +168,8 @@ configs = [
 
 
     #lr=0.01
-    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.1, activation_fn='relu', loss="mse",
-              epoch_count=500, optimizer=Adam(lr=0.01)),
+    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0, activation_fn='relu', loss="mse",
+              epoch_count=200, optimizer=Adam(lr=0.001), regularization=0.005),
     #MLConfigs(nodes_in_layer=10, number_of_hidden_layers=3, dropout=0, activation_fn='relu', loss="mse",
     #          epoch_count=500, optimizer=SGD(lr=0.001, decay=1e-6, momentum=0.5, nesterov=True)),
 
@@ -184,6 +185,9 @@ configs = [
     #MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 10, droput = 0, activation_fn='relu', loss= "mse",
     #    epoch_count = 10, optimizer = SGD(lr=0.1, decay=1e-3, momentum=0.99, nesterov=True))
     ]
+
+configs = create_rondomsearch_configs4DL((1,2,3), (5,10,15,20), (0.1, 0.2, 0.4),
+                                        (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 50)
 
 for c in configs:
     #c.nodes_in_layer = c.nodes_in_layer/(1-c.dropout)

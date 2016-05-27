@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
+import itertools
+import random
 import seaborn as sns
 sns.set_style("darkgrid")
 sns.set_context("poster")
@@ -29,9 +31,10 @@ from sklearn.linear_model import LinearRegression
 from sklearn import cross_validation
 
 
+
 class MLConfigs:
-    def __init__(self, nodes_in_layer = 500, number_of_hidden_layers = 5, dropout = 0, activation_fn='relu', loss= "mse",
-              epoch_count = 10, optimizer = Adam()):
+    def __init__(self, nodes_in_layer = 20, number_of_hidden_layers = 3, dropout = 0, activation_fn='relu', loss= "mse",
+              epoch_count = 10, optimizer = Adam(), regularization=0):
         self.nodes_in_layer = nodes_in_layer
         self.number_of_hidden_layers = number_of_hidden_layers
         self.dropout = dropout
@@ -39,10 +42,11 @@ class MLConfigs:
         self.epoch_count = epoch_count
         self.optimizer = optimizer
         self.loss = loss
+        self.regularization = regularization
 
     def tostr(self):
-        return "NN %dX%d droput=%2f at=%s loss=%s op=%s epoches=%d" %(self.nodes_in_layer,self.number_of_hidden_layers, self.dropout,
-                                            self.activation_fn, self.loss, self.optimizer.get_config(), self.epoch_count),
+        return "NN %dX%d dp=%2f/%4f at=%s loss=%s op=%s epoches=%d" %(self.nodes_in_layer,self.number_of_hidden_layers, self.dropout,
+                            self.regularization, self.activation_fn, self.loss, self.optimizer.get_config(), self.epoch_count)
 
 
 class LogFile:
@@ -221,8 +225,12 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     model.add(Dense(config.nodes_in_layer, input_dim=X_train.shape[1],activation=config.activation_fn))
     #model.add(Dropout(0.1)) # add dropout
     for i in xrange(0, config.number_of_hidden_layers):
-        model.add(Dense(config.nodes_in_layer, activation=config.activation_fn, W_regularizer=l2(0.001), activity_regularizer=activity_l2(0.001)))
-        #model.add(Dense(nodes_in_layer, activation=activation_fn, W_regularizer=l2(0.001))) #http://keras.io/regularizers/
+        if config.regularization > 0:
+            ##http://keras.io/regularizers/
+            model.add(Dense(config.nodes_in_layer, activation=config.activation_fn,
+                            W_regularizer=l2(config.regularization), activity_regularizer=activity_l2(config.regularization)))
+        else:
+            model.add(Dense(config.nodes_in_layer, activation=config.activation_fn))
         if config.dropout > 0:
             model.add(Dropout(config.dropout)) # add dropout
 
@@ -536,3 +544,21 @@ def create_window_based_features(data, window_size):
     return np.column_stack((ma1, ma2, ma4, ma8, entropy, stddev, medain_weeksbefore))
 
 # do cross volidation http://stackoverflow.com/questions/533905/get-the-cartesian-product-of-a-series-of-lists-in-python
+
+
+
+
+def create_rondomsearch_configs4DL(ntdepths, ntwidths, dropouts, reglur, lr, trialcount):
+    all_dl_configs =[]
+    for t in itertools.product(ntdepths, ntwidths, dropouts, reglur, lr):
+        all_dl_configs.append(MLConfigs(nodes_in_layer=t[1], number_of_hidden_layers=t[0], dropout=t[2], activation_fn='relu', loss="mse",
+              epoch_count=500, optimizer=Adam(lr=t[4]), regularization=t[3]))
+
+    count2remove = len(all_dl_configs) - trialcount
+    print "explore %2f of search space" %(float(trialcount)/len(all_dl_configs))
+    if count2remove == 0:
+        return all_dl_configs
+    else:
+        #indexes2remove = random.shuffle(range(len(all_dl_configs)))
+        random.shuffle(all_dl_configs)
+        return all_dl_configs[0:trialcount]
