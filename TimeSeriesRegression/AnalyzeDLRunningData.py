@@ -23,7 +23,7 @@ def draw_dl_loss(loss_data, val_loss_data, headers, maxEntries=50):
     length = min(maxEntries,loss_data.shape[0])
     xdata = np.array(range(length))
     for i in range(loss_data.shape[1]):
-        print xdata.shape, loss_data[:,i].shape, val_loss_data[:,i].shape
+        #print xdata.shape, loss_data[:,i].shape, val_loss_data[:,i].shape
         plt.plot(xdata, loss_data[:,i], '+', label=headers[i], linewidth=1)
         plt.plot(xdata, val_loss_data[:,i], '--', label='val_'+headers[i], linewidth=1)
 
@@ -31,7 +31,8 @@ def draw_dl_loss(loss_data, val_loss_data, headers, maxEntries=50):
     plt.yscale('log')
     plt.show()
 
-file = open('data/runs.txt', 'r')
+#file = open('data/runs.txt', 'r')
+file = open('results/may28-50run.txt','r')
 data =  file.read()
 
 data = data.replace('\n','')
@@ -70,9 +71,9 @@ for match in p.finditer(data):
     val_loss_valuesNum = np.array([float(s) for s in val_loss_values])
     val_loss_valuesNum.resize((500))
 
-    #if float(ac_error) < 35:
+    if float(ac_error) < 40:
     #if float(ac_error) == 40 or float(ac_error) < 33:
-    if float(ac_error) == 40:
+    #if float(ac_error) == 40:
         loss_dataset.append(loss_valuesNum)
         val_loss_dataset.append(val_loss_valuesNum)
         columns.append('data'+str(index))
