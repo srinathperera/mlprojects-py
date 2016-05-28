@@ -188,8 +188,8 @@ configs = [
 
 #configs = create_rondomsearch_configs4DL((1,2,3), (5,10,15,20), (0.1, 0.2, 0.4),
 #                                        (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 50)
-configs = create_rondomsearch_configs4DL((1,2,3), (5,10,15,20), (0),
-                                        (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 15)
+configs = create_rondomsearch_configs4DL((1,2,3), (5,10,15,20), (0 , 0.05),
+                                        (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 20)
 
 index = 0
 for c in configs:
