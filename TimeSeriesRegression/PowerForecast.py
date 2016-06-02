@@ -11,9 +11,10 @@ from sklearn.linear_model import LinearRegression
 
 from mltools import build_rolling_window_dataset, l2norm, regression_with_GBR, regression_with_LR, regression_with_RFR
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy, shuffle_data
-from mltools import regression_with_dl, print_regression_model_summary, report_scores
+from mltools import regression_with_dl, print_regression_model_summary, preprocess1DtoZeroMeanUnit, MLConfigs
 
 from datetime import datetime
+from keras.optimizers import Adam
 
 
 #df = pd.read_csv("household_power_consumption200k.txt", delimiter=';')
@@ -22,8 +23,8 @@ from datetime import datetime
 #print (power_data)
 
 
-#with open("household_power_consumption200k.txt") as f:
-with open("household_power_consumption.txt") as f:
+with open("data/household_power_consumption200k.txt") as f:
+#with open("household_power_consumption.txt") as f:
     data = csv.reader(f, delimiter=";")
     power_data = []
     cycle_data = []
@@ -37,9 +38,12 @@ with open("household_power_consumption.txt") as f:
         except ValueError:
             pass
 
+
+
+
 normalizing_factor = l2norm(power_data)
 
-power_data = preprocessing.normalize(power_data, norm='l2')[0]
+power_data, parmsFromNormalization = preprocess1DtoZeroMeanUnit(power_data)
 
 
 window_size = 7
@@ -108,23 +112,31 @@ print("cycle_data.shape", cycle_data.shape)
 
 #X_all = np.column_stack((cycle_data, zscore_vals, entropy_vals, mavg1_vals, mavg2_vals, mavg4_vals, mavg8_vals, mavg16_vals))
 
+X_all, Y_all = shuffle_data(X_all, Y_all)
+
 X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_all)
 
 print ("normalizing_factor", normalizing_factor)
-#run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count=10)
-#regression_with_GBR(X_train, y_train, X_test, y_test)
-regression_with_LR(X_train, y_train, X_test, y_test)
-#regression_with_RFR(X_train, y_train, X_test, y_test)
+#run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count=10, parmsFromNormalization=parmsFromNormalization)
 
-nodes_in_layer = 500
-number_of_hidden_layers = 2
-droput = 0.05
-#droput = 0.1
-activation_fn='relu'
-#y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, nodes_in_layer,
-#                      number_of_hidden_layers, droput, activation_fn, 10)
-#print_regression_model_summary("DL", y_test, y_pred_dl)
 
-#np.savetxt('pforecast.csv', np.column_stack((X_all, Y_all)), delimiter=',', header="w1,w2,w3,w4,w5,w6,w7,year,month,weekday,hour,target")   # X is an array
+configs = [
+    #lr=0.01
+    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0, activation_fn='relu', loss="mse",
+              epoch_count=200, optimizer=Adam(lr=0.001)),
+    #MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0, activation_fn='relu', loss="mse",
+    #          epoch_count=200, optimizer=Adam(lr=0.001), regularization=0.005),
+    ]
 
+#configs = create_rondomsearch_configs4DL((1,2,3), (5,10,15,20), (0, 0.1, 0.2, 0.4),
+#                                        (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 50)
+
+index = 0
+for c in configs:
+    c.epoch_count = 200
+    #c.nodes_in_layer = c.nodes_in_layer/(1-c.dropout)
+    y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
+    print ">> %d %s" %(index, str(c.tostr()))
+    print_regression_model_summary("DL", y_test, y_pred_dl, parmsFromNormalization)
+    index = index + 1
 

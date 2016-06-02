@@ -15,7 +15,7 @@ from mltools import rolling_univariate_window, build_rolling_window_dataset, ver
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy, MLConfigs, shuffle_data
 from mltools import regression_with_dl, print_regression_model_summary, report_scores, calcuate_time_since_event, calcuate_window_operation
 from mltools import create_window_based_features, preprocess1DtoZeroMeanUnit, preprocess2DtoZeroMeanUnit
-from mltools import create_rondomsearch_configs4DL
+from mltools import create_rondomsearch_configs4DL, check_assending
 
 from keras.optimizers import Adam, SGD
 
@@ -29,6 +29,7 @@ df = pd.read_csv("data/rossmann300stores.csv")
 
 print("data frame Shape", df.shape, list(df))
 
+check_assending(df, 'Date','%Y-%m-%d')
 lb2IntEncoder = preprocessing.LabelEncoder()
 df.StateHoliday  = lb2IntEncoder.fit_transform(df.StateHoliday)
 
@@ -125,6 +126,8 @@ print("X_all.shape", X_all.shape, "Y_all", Y_all.shape)
 
 
 df = df.drop('Sales',1)
+
+
 headers = headerNames + ['TimeSincePromotion', 'ma1', 'ma2', 'ma4', 'ma8', 'entropy', 'stddev', 'valueBeforeWeek',
                       'w1cosratio', 'w1cosproduct', 'wecosratio', 'wecosproduct'] + ["W"+str(i) for i in range(window_size)]
 print [str(i) +"="+ headers[i]+" " for i in range(len(headers))]
@@ -132,7 +135,6 @@ print [str(i) +"="+ headers[i]+" " for i in range(len(headers))]
 
 
 X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_all)
-
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, 10, parmsFromNormalization)
 
 
@@ -168,8 +170,8 @@ configs = [
 
 
     #lr=0.01
-    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0, activation_fn='relu', loss="mse",
-              epoch_count=200, optimizer=Adam(lr=0.001), regularization=0.005),
+    MLConfigs(nodes_in_layer=50, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
+              epoch_count=200, optimizer=Adam(lr=0.0001), regularization=0.001),
     #MLConfigs(nodes_in_layer=10, number_of_hidden_layers=3, dropout=0, activation_fn='relu', loss="mse",
     #          epoch_count=500, optimizer=SGD(lr=0.001, decay=1e-6, momentum=0.5, nesterov=True)),
 
@@ -188,13 +190,13 @@ configs = [
 
 #configs = create_rondomsearch_configs4DL((1,2,3), (5,10,15,20), (0, 0.1, 0.2, 0.4),
 #                                        (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 50)
-configs = create_rondomsearch_configs4DL((1,2,3), (100, 200, 300), (0, 0.1, 0.2, 0.4),
-                                        (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 40)
+#configs = create_rondomsearch_configs4DL((1,2,3), (100, 200, 300), (0, 0.1, 0.2, 0.4),
+#                                        (0, 0.01, 0.001), (0.01, 0.001, 0.0001), 40)
 
 index = 0
 for c in configs:
     c.epoch_count = 500
-    #c.nodes_in_layer = c.nodes_in_layer/(1-c.dropout)
+    c.nodes_in_layer = c.nodes_in_layer/(1-c.dropout)
     y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
     print ">> %d %s" %(index, str(c.tostr()))
     print_regression_model_summary("DL", y_test, y_pred_dl, parmsFromNormalization)

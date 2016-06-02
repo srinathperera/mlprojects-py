@@ -11,30 +11,31 @@ def drawLineChart(df, feilds):
     plt.show()
 
 #http://pandas.pydata.org/pandas-docs/stable/visualization.html
-#df = pd.read_csv("data/rossmann.csv", dtype={'Promo': np.int32, 'SchoolHoliday': np.int32})
+df = pd.read_csv("data/rossmann.csv", dtype={'Promo': np.int32, 'SchoolHoliday': np.int32})
 #print(df.describe())
+df = df[(df['Store'] <= 300)]
+
+df.to_csv('data/rossmann300stores.csv')
 
 #https://www.scipy.org/getting-started.html
 #http://matplotlib.org/users/pyplot_tutorial.html
 
-df = pd.read_csv("forecastdata.csv")
-print(df.describe())
+#df = pd.read_csv("data/forecastdata.csv")
+#print(df.describe())
 
 
-df['LR_ER'] = abs(df['LR'] - df['actual'])
-df['RFR_ER'] = abs(df['RFR'] - df['actual'])
+#df['LR_ER'] = abs(df['LR'] - df['actual'])
+#df['RFR_ER'] = abs(df['RFR'] - df['actual'])
 
 #http://pandas.pydata.org/pandas-docs/stable/indexing.html
-df[['LR_ER', 'RFR_ER']].plot()
+#df[['LR_ER', 'RFR_ER']].plot()
 
 #df.drop('# seq',1).head(500).plot()
-plt.show()
+#plt.show()
 
 
 
-#df = df[(df['Store'] <= 100)]
 
-#df.to_csv('data/rossmann300stores.csv')
 
 #print(df['Store'].median())
 

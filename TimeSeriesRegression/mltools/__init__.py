@@ -13,6 +13,7 @@ from math import sqrt
 import sklearn.preprocessing as preprocessing
 
 import scipy.stats as stats
+from datetime import datetime
 
 from keras.callbacks import EarlyStopping, Callback
 from keras.objectives import mean_squared_error
@@ -85,6 +86,12 @@ def rolling_univariate_window(time_series, window_size):
     shape = (time_series.shape[0] - window_size + 1, window_size)
     strides = time_series.strides + (time_series.strides[-1],)
     return np.lib.stride_tricks.as_strided(time_series, shape=shape, strides=strides)
+
+def check_assending(df, date_col_name, dateformat):
+    startd = datetime.strptime(df[date_col_name].values[0], dateformat)
+    endd = datetime.strptime(df[date_col_name].values[1], dateformat)
+    if endd < startd:
+        raise "Data set is not assending %s < %s" %(endd, startd)
 
 
 
@@ -190,8 +197,8 @@ def almost_correct_based_accuracy(Y_actual, Y_predicted, percentage_cutoof):
         #np.percentile(error_values, 50)
 
     overall_error_percent = 100*error_count/total_count
-    rmsep = sqrt(sum(rmsep_sum)/total_count)
-    mape = np.mean(mape_sum)
+    rmsep = 100*sqrt(sum(rmsep_sum)/total_count)
+    mape = 100*np.mean(mape_sum)
     rmse = sqrt(sum(rmse_sum)/total_count)
     return overall_error_percent, rmsep, mape,rmse
 
