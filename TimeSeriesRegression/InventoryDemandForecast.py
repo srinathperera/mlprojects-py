@@ -35,7 +35,7 @@ df = pd.read_csv('data/train.csv')
 
 #testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
 #testDf = testDf[(testDf['Producto_ID'] <= 300)]
-#testDf = None
+testDf = None
 
 #print "shapes train, test", df.shape, testDf.shape
 print "shapes train, test", df.shape
