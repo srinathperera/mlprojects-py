@@ -29,10 +29,12 @@ def addFeildStatsAsFeatures(df, feild_name, testDf, drop=False, default_mean=Non
 
 
 
-df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+df = pd.read_csv('data/train.csv')
 
-testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
-testDf = testDf[(testDf['Producto_ID'] <= 300)]
+
+#testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+#testDf = testDf[(testDf['Producto_ID'] <= 300)]
 #testDf = None
 
 #print "shapes train, test", df.shape, testDf.shape

@@ -2,6 +2,7 @@ from mltools import rolling_univariate_window, build_rolling_window_dataset, ver
 import numpy as np
 import pandas as pd
 import datetime
+from mltools import calculate_rmsle
 
 
 def fill_in_missing_dates(df, date_col_name, other_col):
@@ -37,7 +38,7 @@ def fill_in_missing_dates(df, date_col_name, other_col):
 
     return df
 
-list = np.array(range(100))
+#list = np.array(range(100))
 
 #data = build_rolling_window_dataset(list, 7)
 #print(data)
@@ -56,7 +57,11 @@ list = np.array(range(100))
 #np.savetxt('USDvsEUExchangeRateFixed.csv', fixedData, fmt='%s', delimiter=',', header="day,ExchangeRate")
 #print fixedData[:100]
 
-appleSotcksDf = pd.read_csv('./data/applestocksfixed.csv')
-appleSotcksDf = appleSotcksDf.fillna(method='pad')
-np.savetxt('temp.csv', appleSotcksDf, fmt='%s', delimiter=',', header="Date,Close")
+#appleSotcksDf = pd.read_csv('./data/applestocksfixed.csv')
+#appleSotcksDf = appleSotcksDf.fillna(method='pad')
+#np.savetxt('temp.csv', appleSotcksDf, fmt='%s', delimiter=',', header="Date,Close")
+
+df = pd.read_csv('forecastdata.csv')
+
+print calculate_rmsle(df['RFR'].values, df['actual'].values)
 
