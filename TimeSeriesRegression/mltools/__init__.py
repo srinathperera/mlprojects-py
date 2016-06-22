@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
 import itertools
-import random
+import random, math
 import seaborn as sns
 sns.set_style("darkgrid")
 sns.set_context("poster")
@@ -174,6 +174,23 @@ def print_graph_test(y_test, y_pred1, y_pred2, maxEntries=50):
     plt.show()
 
 
+
+def calculate_rmsle(Y_actual, Y_predicted):
+    rmsle_sum = []
+    ignored_count = 0
+    for i in range(len(Y_actual)):
+        if Y_predicted[i] > 0:
+            v = (math.log(1+ Y_predicted[i]) - math.log(1+Y_actual[i]))
+            rmsle_sum.append(v*v)
+        else:
+            ignored_count = ignored_count+1
+    print "Entries Ignored",ignored_count, "total", len(Y_actual)
+    rmsle =  sqrt(sum(rmsle_sum)/len(rmsle_sum))
+    print "rmsle", rmsle
+    return rmsle
+
+
+
 def almost_correct_based_accuracy(Y_actual, Y_predicted, percentage_cutoof):
     total_count = 0
     error_count = 0
@@ -321,8 +338,9 @@ def print_regression_model_summary(prefix, y_test, y_pred, parmsFromNormalizatio
 
     mse = mean_squared_error(y_test, y_pred)
     error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_test, y_pred, 10)
-    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f" %(prefix, error_AC, rmsep, mape, rmse, mse)
-    log.write("%s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f" %(prefix, error_AC, rmsep, mape, rmse, mse))
+    rmsle = calculate_rmsle(y_test, y_pred)
+    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f rmsle=%.5f" %(prefix, error_AC, rmsep, mape, rmse, mse, rmsle)
+    log.write("%s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f mse=%f rmsle=%.5f" %(prefix, error_AC, rmsep, mape, rmse, mse, rmsle))
 
 
 # Utility function to report best scores
@@ -351,7 +369,7 @@ def transform_feild4rnn(power, sequence_length):
     #print "Shift : ", result_mean
     #print "Data  : ", result.shape
 
-    row = round(0.9 * result.shape[0])
+    row = int(round(0.9 * result.shape[0]))
     train = result[:row, :]
     #np.random.shuffle(train)
     #print("train", train.shape)

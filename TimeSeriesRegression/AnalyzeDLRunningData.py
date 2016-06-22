@@ -28,7 +28,10 @@ def draw_dl_loss(loss_data, val_loss_data, headers, maxEntries=50):
         plt.plot(xdata, val_loss_data[:,i], '--', label='val_'+headers[i], linewidth=1)
 
     plt.legend(loc=0)
-    plt.yscale('log')
+    plt.xlabel('Loss', fontsize=18)
+    plt.ylabel('Number of epoches', fontsize=18)
+
+    #plt.yscale('log')
     plt.show()
 
 def draw_dl_scatterplots(data2vis):
@@ -78,6 +81,11 @@ def draw_dl_scatterplots(data2vis):
     plt.xlabel('L2 Reguarization', fontsize=18)
     plt.ylabel('Inverted Squared Error', fontsize=18)
     plt.scatter(data2vis['rg'].values, ierrors, alpha=0.5)
+
+    plt.subplot(326)
+    plt.xlabel('Learning Rate', fontsize=18)
+    plt.ylabel('Inverted Squared Error', fontsize=18)
+    plt.scatter(data2vis['lr'].values, ierrors, alpha=0.5)
 
     plt.tight_layout()
     plt.show()
@@ -147,7 +155,7 @@ npdata = np.column_stack(loss_dataset)
 val_npdata = np.column_stack(val_loss_dataset)
 
 #print("npdata.shape", npdata.shape)
-#draw_dl_loss(npdata, val_npdata, columns, 1000)
+draw_dl_loss(npdata, val_npdata, columns, 1000)
 #npa = np.array(dataset)
 #print npa.shape
 #df = pd.DataFrame(npa, columns=columns)
@@ -156,7 +164,7 @@ data2vis = np.row_stack(data2vis)
 data2vis = pd.DataFrame(data2vis, columns=['w', 'd', 'dropout', 'rg', 'lr', 'ac_error', 'rmsep'])
 print data2vis.describe()
 
-draw_dl_scatterplots(data2vis)
+#draw_dl_scatterplots(data2vis)
 
 #df.plot()
 #plt.show()

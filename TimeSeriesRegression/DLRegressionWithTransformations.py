@@ -53,12 +53,20 @@ headerNames = []
 window_size = 14
 storeList = df['Store'].unique()
 
-storeData = []
-target = []
+x_train_list = []
+x_test_list = []
+y_train_list = []
+y_test_list = []
+
 
 for s in storeList:
     dfS = df[(df['Store'] == s)]
     sales_data = dfS['Sales'].values
+
+    if(len(x_train_list) == 0):
+        print s, "data", sales_data[:10]
+        #to do verify output
+
     X_all_t, Y_all_t = build_rolling_window_dataset(sales_data, window_size)
     #verify_window_dataset(X_all_t,Y_all_t)
     timeSincePromotion = calcuate_time_since_event(dfS['Promo'].values,0)
@@ -92,41 +100,55 @@ for s in storeList:
     #print(X_without_sales.shape, 1, wfeatures.shape, 1, 1, 1, 1, X_all_t.shape)
     X_all_t = np.column_stack((X_without_sales, timeSincePromotion, wfeatures, w1cosratio, w1cosproduct, wecosratio, wecosproduct, X_all_t))
     #print("X_all.shape", X_all_t.shape)
-    storeData.append(X_all_t)
-    target.append(Y_all_t)
 
-X_all = storeData[0]
-Y_all = target[0]
-for i in range(1,len(storeData)):
-    #print("DebugX", i, X_all.shape, sales_data[i].shape)
-    X_all = np.row_stack((X_all, storeData[i]))
+    training_set_size = int(0.7*X_all_t.shape[0])
+    X_train_s, X_test_s, y_train_s, y_test_s = train_test_split(training_set_size, X_all_t, Y_all_t)
+
+    x_train_list.append(X_train_s)
+    x_test_list.append(X_test_s)
+    y_train_list.append(y_train_s)
+    y_test_list.append(y_test_s)
+
+#put the store data back togehter
+X_train = np.row_stack(x_train_list)
+X_test = np.row_stack(x_test_list)
+Y_train = np.concatenate(y_train_list, axis=0)
+Y_test = np.concatenate(y_test_list, axis=0)
+
+
+#X_all = storeData[0]
+#Y_all = target[0]
+#for i in range(1,len(storeData)):
+    #print("DebugX", i, X_all.shape, sales_data[i].shape)#
+#    X_all = np.row_stack((X_all, storeData[i]))
     #print("Debug", i,Y_all.shape, target[i].shape)
-    Y_all = np.concatenate((Y_all, target[i]), 0)
+#    Y_all = np.concatenate((Y_all, target[i]), 0)
 
-if X_all.shape[0] != Y_all.shape[0]:
-    raise  ValueError("X_all and Y_all does not match")
+#if X_all.shape[0] != Y_all.shape[0]:
+    #raise  ValueError("X_all and Y_all does not match")
 
 
 #takes numpy array from data frame
-row_count = X_all.shape[0]
+#row_count = X_all.shape[0]
 #print("sales_data.shape", sales_data.shape)
-training_set_size = int(0.7*row_count)
 
-print("X_all.shape", X_all.shape, "Y_all", Y_all.shape)
+#print("X_all.shape", X_all.shape, "Y_all", Y_all.shape)
 
-print X_all[:10]
+#print X_all[:10]
 
+
+print "X_train", X_train[:10]
+print "Y_train", Y_train[:10]
+
+
+#todo verif(df[], X_train, Y_train)
 
 #put both together, shuffle, and  break
-X_all_temp, Y_all_temp = shuffle_data(X_all, Y_all)
-X_all = X_all_temp
-Y_all = Y_all_temp
-
-print("X_all.shape", X_all.shape, "Y_all", Y_all.shape)
-
+X_all_temp, Y_all_temp = shuffle_data(X_train, Y_train)
+X_train = X_all_temp
+Y_train = Y_all_temp
 
 df = df.drop('Sales',1)
-
 
 headers = headerNames + ['TimeSincePromotion', 'ma1', 'ma2', 'ma4', 'ma8', 'entropy', 'stddev', 'valueBeforeWeek',
                       'w1cosratio', 'w1cosproduct', 'wecosratio', 'wecosproduct'] + ["W"+str(i) for i in range(window_size)]
@@ -134,12 +156,9 @@ print [str(i) +"="+ headers[i]+" " for i in range(len(headers))]
 
 
 
-X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_all)
+#X_train, X_test, y_train, y_test = train_test_split(training_set_size, X_all, Y_all)
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, 10, parmsFromNormalization)
 
-
-
-print (X_all[:10])
 
 configs = [
 #    MLConfigs(nodes_in_layer = 500, number_of_hidden_layers = 2, droput = 0, activation_fn='relu', loss= "mse",
@@ -170,7 +189,7 @@ configs = [
 
 
     #lr=0.01
-    MLConfigs(nodes_in_layer=50, number_of_hidden_layers=2, dropout=0, activation_fn='relu', loss="mse",
+    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.0, activation_fn='relu', loss="mse",
               epoch_count=200, optimizer=Adam(lr=0.0001), regularization=0.001),
     #MLConfigs(nodes_in_layer=10, number_of_hidden_layers=3, dropout=0, activation_fn='relu', loss="mse",
     #          epoch_count=500, optimizer=SGD(lr=0.001, decay=1e-6, momentum=0.5, nesterov=True)),
@@ -195,10 +214,9 @@ configs = [
 
 index = 0
 for c in configs:
-    c.epoch_count = 500
-    c.nodes_in_layer = c.nodes_in_layer/(1-c.dropout)
-    y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
+    c.epoch_count = 50
+    y_pred_dl = regression_with_dl(X_train, Y_train, X_test, Y_test, c)
     print ">> %d %s" %(index, str(c.tostr()))
-    print_regression_model_summary("DL", y_test, y_pred_dl, parmsFromNormalization)
+    print_regression_model_summary("DL", Y_test, y_pred_dl, parmsFromNormalization)
     index = index + 1
 
