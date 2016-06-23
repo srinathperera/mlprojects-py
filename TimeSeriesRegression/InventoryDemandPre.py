@@ -26,6 +26,28 @@ import matplotlib.pyplot as plt
 
 df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 
+
+grouped = df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])['Demanda_uni_equil']
+#salesByDeport = grouped.count()
+#print salesByDeport.head(10)
+
+def avgdiff(group):
+    group = group.values
+    if len(group) > 1:
+        return np.mean([group[i] - group[i-1] for i in range(1, len(group))])
+    else:
+        return 0
+
+values = grouped.apply(avgdiff)
+
+#print values[1110, 7, 3301, 50395, 145]
+
+slopes = []
+for index, row in df.iterrows():
+    slopes.append(values[row['Agencia_ID'], row['Canal_ID'], row['Ruta_SAK'], row['Cliente_ID'], row['Producto_ID']])
+
+print slopes
+
 #print df.describe()
 
 salesByDeport = df.groupby(['Agencia_ID'])['Demanda_uni_equil'].mean()
@@ -74,5 +96,5 @@ plt.scatter(df['Cliente_ID'].values, df['Ruta_SAK'], c=df['Demanda_uni_equil'], 
 
 
 
-plt.tight_layout()
-plt.show()
+#plt.tight_layout()
+#plt.show()

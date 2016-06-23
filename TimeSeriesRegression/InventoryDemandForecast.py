@@ -7,7 +7,9 @@ from tsforecasttools import run_timeseries_froecasts, regression_with_RFR
 from mltools import preprocess2DtoZeroMeanUnit, preprocess1DtoZeroMeanUnit, train_test_split, print_feature_importance
 from mltools import calculate_rmsle, almost_correct_based_accuracy
 
-
+import sys
+print 'Number of arguments:', len(sys.argv), 'arguments.'
+print 'Argument List:', str(sys.argv)
 
 def addFeildStatsAsFeatures(df, feild_name, testDf, drop=False, default_mean=None, default_stddev=None):
     groupData = df.groupby([feild_name])['Demanda_uni_equil']
@@ -29,8 +31,8 @@ def addFeildStatsAsFeatures(df, feild_name, testDf, drop=False, default_mean=Non
 
 
 
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
-df = pd.read_csv('data/train.csv')
+df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+#df = pd.read_csv('data/train.csv')
 
 
 #testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
@@ -43,11 +45,36 @@ print "shapes train, test", df.shape
 demand_val_mean = df['Demanda_uni_equil'].mean()
 demand_val_stddev = df['Demanda_uni_equil'].mean()
 
+#calculate average slope
+grouped = df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])['Demanda_uni_equil']
+def avgdiff(group):
+    group = group.values
+    if len(group) > 1:
+        return np.mean([group[i] - group[i-1] for i in range(1, len(group))])
+    else:
+        return 0
+
+slopeMap = grouped.apply(avgdiff)
+groupedMeanMap = grouped.mean()
+
+
+slopes = []
+groupedMeans = []
+for index, row in df.iterrows():
+    slopes.append(slopeMap[row['Agencia_ID'], row['Canal_ID'], row['Ruta_SAK'], row['Cliente_ID'], row['Producto_ID']])
+    groupedMeans.append(groupedMeanMap[row['Agencia_ID'], row['Canal_ID'], row['Ruta_SAK'], row['Cliente_ID'], row['Producto_ID']])
+
+df['Slopes']= slopes
+df['groupedMeans']= groupedMeans
+
+#add mean and stddev
 df, testDf = addFeildStatsAsFeatures(df,'Agencia_ID', testDf, drop=True)
 df, testDf = addFeildStatsAsFeatures(df,'Canal_ID', testDf, drop=True)
 df, testDf = addFeildStatsAsFeatures(df,'Ruta_SAK', testDf, drop=True)
 df, testDf = addFeildStatsAsFeatures(df,'Cliente_ID', testDf, drop=True)
 df, testDf = addFeildStatsAsFeatures(df,'Producto_ID', testDf, True, demand_val_mean, demand_val_stddev)
+
+
 
 print df.head(10)
 
