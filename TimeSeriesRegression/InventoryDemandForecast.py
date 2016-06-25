@@ -124,7 +124,10 @@ def run_xgboost(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
 s_time = time.time()
 #df = feather2df('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.feather')
 df = pd.read_csv('data/train.csv')
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 r_time = time.time()
+
+print "read took %f" %(r_time-s_time)
 
 #testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
 #testDf = testDf[(testDf['Producto_ID'] <= 300)]
@@ -133,7 +136,7 @@ testDf = None
 #print "shapes train, test", df.shape, testDf.shape
 print "shapes train, test", df.shape
 
-df = addSlopes(df)
+#df = addSlopes(df)
 
 demand_val_mean = df['Demanda_uni_equil'].mean()
 demand_val_stddev = df['Demanda_uni_equil'].std()
@@ -175,8 +178,8 @@ prep_time = time.time()
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, -1, 10, parmsFromNormalization)
 #regression_with_RFR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
-#run_rfr(X_train, y_train, X_test, y_actual, parmsFromNormalization)
-run_xgboost(X_train, y_train, X_test, y_actual, parmsFromNormalization)
+run_rfr(X_train, y_train, X_test, y_actual, parmsFromNormalization)
+#run_xgboost(X_train, y_train, X_test, y_actual, parmsFromNormalization)
 
 #c = MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.0, activation_fn='relu', loss="mse",
 #              epoch_count=50, optimizer=Adam(lr=0.0001), regularization=0.001)
