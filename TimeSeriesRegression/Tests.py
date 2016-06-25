@@ -3,6 +3,9 @@ import numpy as np
 import pandas as pd
 import datetime
 from mltools import calculate_rmsle
+import time
+
+from mlpreprocessing import df2feather, feather2df
 
 
 def fill_in_missing_dates(df, date_col_name, other_col):
@@ -61,7 +64,26 @@ def fill_in_missing_dates(df, date_col_name, other_col):
 #appleSotcksDf = appleSotcksDf.fillna(method='pad')
 #np.savetxt('temp.csv', appleSotcksDf, fmt='%s', delimiter=',', header="Date,Close")
 
-df = pd.read_csv('forecastdata.csv')
+#df = pd.read_csv('forecastdata.csv')
 
-print calculate_rmsle(df['RFR'].values, df['actual'].values)
+#print calculate_rmsle(df['RFR'].values, df['actual'].values)
 
+start = time.time()
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+df_time = time.time()
+#df2feather(df, "/Users/srinath/playground/data-science/BimboInventoryDemand/train.feather")
+fw_time = time.time()
+#df = feather2df("/Users/srinath/playground/data-science/BimboInventoryDemand/train.feather")
+fr_time = time.time()
+#a = df.values
+
+
+#Numpy binary format http://docs.scipy.org/doc/numpy/reference/generated/numpy.save.html#numpy.save
+np.save("/Users/srinath/playground/data-science/BimboInventoryDemand/train.npy", a)
+#npw_time = time.time()
+#a = np.load("/Users/srinath/playground/data-science/BimboInventoryDemand/train.npy")
+#npr_time = time.time()
+
+#print "df read=%f s, f write=%f s, f read=%f s, np write=%fs np read=%fs" \
+#      %((df_time-start), (fw_time-df_time), (fr_time- fw_time), npw_time-fr_time, npr_time-npw_time)
+#print (df_time-time), (fw_time-df_time), (fr_time- fw_time)

@@ -14,7 +14,7 @@ from sklearn.metrics import mean_absolute_error
 from mltools import rolling_univariate_window, build_rolling_window_dataset
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy
 from mltools import regression_with_dl, print_regression_model_summary, report_scores, regression_with_GBR, regression_with_LR, regression_with_RFR
-
+import xgboost as xgb
 
 def aggregate_hl(mavg1_vals, window_size):
     hl_mvavg = []
@@ -25,6 +25,19 @@ def aggregate_hl(mavg1_vals, window_size):
         else:
             hl_mvavg.append(np.mean(mavg1_vals[start_index:i:1]))
     return np.array(hl_mvavg)
+
+
+def regression_with_xgboost(X_train, Y_train, X_test):
+    #http://datascience.stackexchange.com/questions/9483/xgboost-linear-regression-output-incorrect
+    #http://xgboost.readthedocs.io/en/latest/get_started/index.html
+    #https://www.kaggle.com/c/higgs-boson/forums/t/10286/customize-loss-function-in-xgboost
+
+    T_train_xgb = xgb.DMatrix(X_train, Y_train)
+
+    params = {"objective": "reg:linear", "booster":"gblinear"}
+    gbm = xgb.train(dtrain=T_train_xgb,params=params)
+    y_pred = gbm.predict(xgb.DMatrix(X_test))
+    return gbm, y_pred
 
 
 def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count, parmsFromNormalization):

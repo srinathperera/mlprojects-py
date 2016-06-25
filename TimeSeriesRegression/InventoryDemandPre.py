@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import time
 
 
 
@@ -34,19 +34,44 @@ grouped = df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Produ
 def avgdiff(group):
     group = group.values
     if len(group) > 1:
-        return np.mean([group[i] - group[i-1] for i in range(1, len(group))])
+        #return [np.mean([group[i] - group[i-1] for i in range(1, len(group))]) , np.mean(group), np.std(group)]
+        return np.mean(group)
     else:
         return 0
 
 values = grouped.apply(avgdiff)
 
-#print values[1110, 7, 3301, 50395, 145]
+t = values[1110, 7, 3301, 50395, 145]
 
-slopes = []
-for index, row in df.iterrows():
-    slopes.append(values[row['Agencia_ID'], row['Canal_ID'], row['Ruta_SAK'], row['Cliente_ID'], row['Producto_ID']])
+print t
 
-print slopes
+#print values.index
+#print t[0], t[1], t[2]
+
+#valuesDf =  pd.DataFrame(values)
+
+#http://discuss.analyticsvidhya.com/t/how-to-convert-the-multi-index-series-into-a-data-frame-in-python/5119/2
+valuesDf = values.to_frame("Mean")
+valuesDf.reset_index(inplace=True)
+valuesDf['Std'] = grouped.std().values
+
+print valuesDf.head(10)
+
+
+start_ts = time.time()
+merged = pd.merge(df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+
+print "took", (time.time() - start_ts)
+
+print merged.head(10)
+
+
+
+#slopes = []
+#for index, row in df.iterrows():
+#    slopes.append(values[row['Agencia_ID'], row['Canal_ID'], row['Ruta_SAK'], row['Cliente_ID'], row['Producto_ID']])
+
+#print slopes
 
 #print df.describe()
 
