@@ -136,7 +136,7 @@ testDf = None
 #print "shapes train, test", df.shape, testDf.shape
 print "shapes train, test", df.shape
 
-#df = addSlopes(df)
+df = addSlopes(df)
 
 demand_val_mean = df['Demanda_uni_equil'].mean()
 demand_val_stddev = df['Demanda_uni_equil'].std()
