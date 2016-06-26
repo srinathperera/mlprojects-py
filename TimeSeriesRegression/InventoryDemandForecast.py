@@ -35,8 +35,13 @@ def addFeildStatsAsFeatures(df, feild_name, testDf, drop=False, default_mean=Non
         newDf = df.drop(feild_name,1)
 
     if testDf is not None:
-        testDf[feild_name+"_Mean"] = [meanData.get(x, default_mean) for x in testDf[feild_name]]
-        testDf[feild_name+"_StdDev"] = [stddevData.get(x, default_stddev) for x in testDf[feild_name]]
+        testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
+        if default_mean is not None:
+            testDf[feild_name+"_Mean"].fillna(default_mean, inplace=True)
+        if default_mean is not None:
+            testDf[feild_name+"_StdDev"].fillna(default_stddev, inplace=True)
+        #testDf[feild_name+"_Mean"] = [meanData.get(x, default_mean) for x in testDf[feild_name]]
+        #testDf[feild_name+"_StdDev"] = [stddevData.get(x, default_stddev) for x in testDf[feild_name]]
         if drop:
             testDf = testDf.drop(feild_name,1)
     print "took %f (%f, %f), size %s %f" %(time.time()-start, calculate_ts- start,
@@ -52,7 +57,7 @@ def avgdiff(group):
         return 0
 
 
-def addSlopes(df):
+def addSlopes(df, testDf):
     start_ts = time.time()
     #TODO do all operations in one go (see Pre)
 
@@ -70,7 +75,7 @@ def addSlopes(df):
 
     slopes_aggr_time = time.time()
     df = pd.merge(df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
-
+    df.fillna(0, inplace=True)
     #slopes = []
     #groupedMeans = []
     #groupedStddevs = []
@@ -82,10 +87,13 @@ def addSlopes(df):
     #df['Slopes']= slopes
     #df['groupedMeans']= groupedMeans
     #df['groupedStd']= groupedStddevs
+    if testDf is not None:
+        testDf = pd.merge(testDf, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+        testDf.fillna(0, inplace=True)
 
     slopes_time = time.time()
     print "Slopes took %f (%f, %f)" %(slopes_time - start_ts, slopes_aggr_time-start_ts, slopes_time-slopes_aggr_time)
-    return df
+    return df, testDf
 
 def run_rfr(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     rfr = RandomForestRegressor()
@@ -103,6 +111,7 @@ def run_rfr(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual, y_pred_corrected, 10)
     rmsle = calculate_rmsle(y_actual, y_pred_corrected)
     print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("RFR", error_AC, rmsep, mape, rmse, rmsle)
+    return rfr, y_pred_corrected
 
 def run_xgboost(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     model, y_pred = regression_with_xgboost(X_train, Y_train, X_test)
@@ -113,30 +122,35 @@ def run_xgboost(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual, y_pred_corrected, 10)
     rmsle = calculate_rmsle(y_actual, y_pred_corrected)
     print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("XGBoost", error_AC, rmsep, mape, rmse, rmsle)
+    return model, y_pred_corrected
 
 #TODO
 #try to improve merging
 #do the preprocessing seperately, and let them add new features without processing everything
 
+test_run = False
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 
 s_time = time.time()
-#df = feather2df('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.feather')
-df = pd.read_csv('data/train.csv')
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+
+if test_run:
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+    #df = feather2df('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.feather')
+    testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+    testDf = testDf[(testDf['Producto_ID'] <= 300)]
+else:
+    df = pd.read_csv('data/train.csv')
+    testDf = pd.read_csv('data/test.csv')
+
 r_time = time.time()
 
 print "read took %f" %(r_time-s_time)
 
-#testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
-#testDf = testDf[(testDf['Producto_ID'] <= 300)]
-testDf = None
-
 #print "shapes train, test", df.shape, testDf.shape
 print "shapes train, test", df.shape
 
-df = addSlopes(df)
+df, testDf = addSlopes(df, testDf)
 
 demand_val_mean = df['Demanda_uni_equil'].mean()
 demand_val_stddev = df['Demanda_uni_equil'].std()
@@ -178,7 +192,7 @@ prep_time = time.time()
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, -1, 10, parmsFromNormalization)
 #regression_with_RFR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
-run_rfr(X_train, y_train, X_test, y_actual, parmsFromNormalization)
+model, y_pred_corrected = run_rfr(X_train, y_train, X_test, y_actual, parmsFromNormalization)
 #run_xgboost(X_train, y_train, X_test, y_actual, parmsFromNormalization)
 
 #c = MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.0, activation_fn='relu', loss="mse",
@@ -189,6 +203,19 @@ run_rfr(X_train, y_train, X_test, y_actual, parmsFromNormalization)
 
 m_time = time.time()
 
+if testDf is not None:
+    temp = testDf.drop('id',1)
+
+    print list(temp)
+    #pd.colnames(temp)[pd.colSums(is.na(temp)) > 0]
+    #print temp.describe()
+    #print df.isnull().any()
+    temp = temp.fillna(0)
+    kaggale_test = preprocess2DtoZeroMeanUnit(temp.values.copy())
+    kaggale_predicted = model.predict(kaggale_test)
+
+    to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
+    np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%.2f')   # X is an array
 
 #if testDf is not None:
 #    temp = testDf.drop('id',1)
