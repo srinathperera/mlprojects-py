@@ -212,10 +212,16 @@ if testDf is not None:
     #print df.isnull().any()
     temp = temp.fillna(0)
     kaggale_test = preprocess2DtoZeroMeanUnit(temp.values.copy())
-    kaggale_predicted = model.predict(kaggale_test)
+    kaggale_predicted_raw = model.predict(kaggale_test)
+    kaggale_predicted = (kaggale_predicted_raw*parmsFromNormalization.std*parmsFromNormalization.sqrtx2) + parmsFromNormalization.mean
 
+    #kaggale_predicted = np.where(kaggale_predicted < 0, 0, kaggale_predicted)
+    #to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
+    #np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
+
+    kaggale_predicted = np.where(kaggale_predicted < 0, 0, np.round(kaggale_predicted))
     to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
-    np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%.2f')   # X is an array
+    np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
 
 #if testDf is not None:
 #    temp = testDf.drop('id',1)
