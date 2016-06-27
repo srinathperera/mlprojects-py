@@ -127,7 +127,7 @@ def run_rfr(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
 
     #save model
     joblib.dump(y_pred_rfr, 'model.pkl')
-    
+
     return rfr, y_pred_final
 
 def run_xgboost(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
@@ -142,7 +142,7 @@ def run_xgboost(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("XGBoost", error_AC, rmsep, mape, rmse, rmsle)
     return model, y_pred_corrected
 
-test_run = True
+test_run = False
 use_preprocessed_file = False
 save_preprocessed_file = False
 preprocessed_file_name = "_data.csv"
