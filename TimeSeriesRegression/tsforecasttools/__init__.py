@@ -28,6 +28,14 @@ def aggregate_hl(mavg1_vals, window_size):
     return np.array(hl_mvavg)
 
 
+class XGBoostModel:
+    def __init__(self, model):
+        self.model = model
+
+    def predict(self, data):
+        return self.model.predict(xgb.DMatrix(data))
+
+
 def regression_with_xgboost(X_train, Y_train, X_test):
     #http://datascience.stackexchange.com/questions/9483/xgboost-linear-regression-output-incorrect
     #http://xgboost.readthedocs.io/en/latest/get_started/index.html
@@ -38,7 +46,7 @@ def regression_with_xgboost(X_train, Y_train, X_test):
     params = {"objective": "reg:linear", "booster":"gblinear"}
     gbm = xgb.train(dtrain=T_train_xgb,params=params)
     y_pred = gbm.predict(xgb.DMatrix(X_test))
-    return gbm, y_pred
+    return XGBoostModel(gbm), y_pred
 
 
 def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count, parmsFromNormalization):

@@ -129,19 +129,28 @@ def preprocess1DtoZeroMeanUnit(data):
     #return preprocessing.normalize(data, norm='l2', axis=0)[0], ParmsFromNormalization(mean=meanV,std=stdV,sqrtx2=sqrtmx)
     return data/sqrtmx, ParmsFromNormalization(mean=meanV,std=stdV,sqrtx2=sqrtmx)
 
+def apply_zeroMeanUnit(data, parmsFromNormalization):
+    return (data - parmsFromNormalization.mean)/(parmsFromNormalization.std*parmsFromNormalization.sqrtx2)
+
+
 def undoPreprocessing(data, parmsFromNormalization):
     return (data * parmsFromNormalization.std * parmsFromNormalization.sqrtx2) + parmsFromNormalization.mean
 
 
 def preprocess2DtoZeroMeanUnit(data):
-    data = data - np.mean(data, axis=0)
+    mean = np.mean(data, axis=0)
+    data = data - mean
     std = np.std(data, axis=0)
     normalized_std = [std[i] if std[i] > 0.5 else 1 for i in range(len(std))]
     data = data/normalized_std
-    # l2 norm is root mean squard value http://mathworld.wolfram.com/L2-Norm.html
-    #if we need to support recreating this, we need to do this by hand
-    return preprocessing.normalize(data, norm='l2', axis=0)
 
+    sqrtmx = sqrt(np.mean([x*x for x in data]))
+    sqrtmx = sqrtmx if sqrtmx != 0 else 1
+
+    return data/sqrtmx, ParmsFromNormalization(mean=mean,std=std,sqrtx2=sqrtmx)
+
+def apply_zeroMeanUnit2D(data, parmsFromNormalization):
+    return (data - parmsFromNormalization.mean)/(parmsFromNormalization.std*parmsFromNormalization.sqrtx2)
 
 
 def train_test_split(no_of_training_instances, X_all, y_all):
