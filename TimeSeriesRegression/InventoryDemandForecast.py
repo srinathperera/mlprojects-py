@@ -221,7 +221,7 @@ y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_actual_train)
 y_test = apply_zeroMeanUnit(y_actual_test, parmsFromNormalization)
 
 X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(train_df.values.copy())
-X_test = apply_zeroMeanUnit2D(train_df.values.copy(), parmsFromNormalization2D)
+X_test = apply_zeroMeanUnit2D(test_df.values.copy(), parmsFromNormalization2D)
 
 
 prep_time = time.time()
@@ -234,9 +234,12 @@ model, y_pred_corrected = run_rfr(X_train, y_train, X_test, y_actual_test, parms
 
 #c = MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.0, activation_fn='relu', loss="mse",
 #              epoch_count=50, optimizer=Adam(lr=0.0001), regularization=0.001)
+
+#print "Sizes=", len(X_train), len(y_train), len(X_test), len(y_test)
 #y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
-#print ">> %d %s" %(index, str(c.tostr()))
 #print_regression_model_summary("DL", y_test, y_pred_dl, parmsFromNormalization)
+
+#model = None
 
 
 if test_run:
@@ -248,7 +251,7 @@ if test_run:
 
 m_time = time.time()
 
-if testDf is not None:
+if testDf is not None and model is not None:
     temp = testDf.drop('id',1)
 
     if train_df.shape[1] != temp.shape[1]:
