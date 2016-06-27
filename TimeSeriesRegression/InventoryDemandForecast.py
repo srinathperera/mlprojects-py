@@ -136,7 +136,7 @@ def drop_column(df1, df2, feild_name):
     df2 = df2.drop(feild_name,1)
     return df1, df2
 
-test_run = True
+test_run = False
 use_preprocessed_file = False
 save_preprocessed_file = False
 preprocessed_file_name = "_data.csv"
