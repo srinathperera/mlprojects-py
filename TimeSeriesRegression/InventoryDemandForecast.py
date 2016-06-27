@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 import time
+import pickle
 
 
 from tsforecasttools import run_timeseries_froecasts, regression_with_xgboost
@@ -111,6 +112,9 @@ def run_rfr(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual, y_pred_corrected, 10)
     rmsle = calculate_rmsle(y_actual, y_pred_corrected)
     print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("RFR", error_AC, rmsep, mape, rmse, rmsle)
+
+    #save model
+    #s = pickle.dumps(clf)
     return rfr, y_pred_corrected
 
 def run_xgboost(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
@@ -219,7 +223,8 @@ if testDf is not None:
     #to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
     #np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
 
-    kaggale_predicted = np.where(kaggale_predicted < 0, 0, np.round(kaggale_predicted))
+    #kaggale_predicted = np.where(kaggale_predicted < 0, 0, np.round(kaggale_predicted))
+    kaggale_predicted = np.where(kaggale_predicted < 0, 0, kaggale_predicted)
     to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
     np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
 
