@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 import time
-import pickle
+from sklearn.externals import joblib
+
+from mltools import undoPreprocessing
 
 
 from tsforecasttools import run_timeseries_froecasts, regression_with_xgboost
@@ -15,6 +17,7 @@ from keras.optimizers import Adam
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
+
 
 def addFeildStatsAsFeatures(df, feild_name, testDf, drop=False, default_mean=None, default_stddev=None):
     start = time.time()
@@ -57,6 +60,14 @@ def avgdiff(group):
     else:
         return 0
 
+#TODO fix defaults
+
+def modeloutput2predictions(model_forecast, parmsFromNormalization, negative_allowed=False):
+    y_pred_corrected = undoPreprocessing(model_forecast, parmsFromNormalization)
+    if not negative_allowed:
+        y_pred_corrected = np.where(y_pred_corrected < 0, 1, y_pred_corrected)
+    return y_pred_corrected
+
 
 def addSlopes(df, testDf):
     start_ts = time.time()
@@ -96,6 +107,7 @@ def addSlopes(df, testDf):
     print "Slopes took %f (%f, %f)" %(slopes_time - start_ts, slopes_aggr_time-start_ts, slopes_time-slopes_aggr_time)
     return df, testDf
 
+
 def run_rfr(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     rfr = RandomForestRegressor()
     rfr.fit(X_train, Y_train)
@@ -106,84 +118,100 @@ def run_rfr(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     print_feature_importance(X_test, y_test,rfr.feature_importances_)
 
     #undo the normalization
-    y_actual = y_actual[-1*len(y_pred_rfr):]
-    y_pred_corrected = (y_pred_rfr*parmsFromNormalization.std*parmsFromNormalization.sqrtx2) + parmsFromNormalization.mean
+    y_actual_4test = y_actual[-1*len(y_pred_rfr):]
+    y_pred_final = modeloutput2predictions(y_pred_rfr, parmsFromNormalization=parmsFromNormalization)
 
-    error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual, y_pred_corrected, 10)
-    rmsle = calculate_rmsle(y_actual, y_pred_corrected)
-    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("RFR", error_AC, rmsep, mape, rmse, rmsle)
+    error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_4test, y_pred_final, 10)
+    rmsle = calculate_rmsle(y_actual_4test, y_pred_final)
+    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("RFR", error_ac, rmsep, mape, rmse, rmsle)
 
     #save model
-    #s = pickle.dumps(clf)
-    return rfr, y_pred_corrected
+    joblib.dump(y_pred_rfr, 'model.pkl')
+    
+    return rfr, y_pred_final
 
 def run_xgboost(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
     model, y_pred = regression_with_xgboost(X_train, Y_train, X_test)
     #undo the normalization
     y_actual = y_actual[-1*len(y_pred):]
-    y_pred_corrected = (y_pred*parmsFromNormalization.std*parmsFromNormalization.sqrtx2) + parmsFromNormalization.mean
+
+    y_pred_corrected = modeloutput2predictions(y_pred, parmsFromNormalization=parmsFromNormalization)
 
     error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual, y_pred_corrected, 10)
     rmsle = calculate_rmsle(y_actual, y_pred_corrected)
     print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("XGBoost", error_AC, rmsep, mape, rmse, rmsle)
     return model, y_pred_corrected
 
-#TODO
-#try to improve merging
-#do the preprocessing seperately, and let them add new features without processing everything
-
-test_run = False
-
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+test_run = True
+use_preprocessed_file = False
+save_preprocessed_file = False
+preprocessed_file_name = "_data.csv"
 
 s_time = time.time()
 
-if test_run:
-    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
-    #df = feather2df('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.feather')
-    testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
-    testDf = testDf[(testDf['Producto_ID'] <= 300)]
+y_actual = None
+if not use_preprocessed_file:
+    if test_run:
+        df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+        testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+        testDf = testDf[(testDf['Producto_ID'] <= 300)]
+    else:
+        df = pd.read_csv('data/train.csv')
+        testDf = pd.read_csv('data/test.csv')
 else:
-    df = pd.read_csv('data/train.csv')
-    testDf = pd.read_csv('data/test.csv')
+    if test_run:
+        df = pd.read_csv(preprocessed_file_name)
+        y_actual = df['Demanda_uni_equil'].values
+        df = df.drop('Demanda_uni_equil',1)
+
+        testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+        testDf = testDf[(testDf['Producto_ID'] <= 300)]
+    else:
+        df = pd.read_csv(preprocessed_file_name)
+        y_actual = df['Demanda_uni_equil'].values
+
+        df = df.drop('Demanda_uni_equil',1)
+        testDf = pd.read_csv('data/test.csv')
+
 
 r_time = time.time()
 
 print "read took %f" %(r_time-s_time)
 
-#print "shapes train, test", df.shape, testDf.shape
-print "shapes train, test", df.shape
+if not use_preprocessed_file:
+    #print "shapes train, test", df.shape, testDf.shape
+    print "shapes train, test", df.shape
 
-df, testDf = addSlopes(df, testDf)
+    df, testDf = addSlopes(df, testDf)
 
-demand_val_mean = df['Demanda_uni_equil'].mean()
-demand_val_stddev = df['Demanda_uni_equil'].std()
+    demand_val_mean = df['Demanda_uni_equil'].mean()
+    demand_val_stddev = df['Demanda_uni_equil'].std()
+    #add mean and stddev by groups
+    df, testDf = addFeildStatsAsFeatures(df,'Agencia_ID', testDf, drop=True)
+    df, testDf = addFeildStatsAsFeatures(df,'Canal_ID', testDf, drop=True)
+    df, testDf = addFeildStatsAsFeatures(df,'Ruta_SAK', testDf, drop=True)
+    df, testDf = addFeildStatsAsFeatures(df,'Cliente_ID', testDf, drop=True)
+    df, testDf = addFeildStatsAsFeatures(df,'Producto_ID', testDf, True, demand_val_mean, demand_val_stddev)
 
+    print df.head(10)
 
-#add mean and stddev by groups
-df, testDf = addFeildStatsAsFeatures(df,'Agencia_ID', testDf, drop=True)
-df, testDf = addFeildStatsAsFeatures(df,'Canal_ID', testDf, drop=True)
-df, testDf = addFeildStatsAsFeatures(df,'Ruta_SAK', testDf, drop=True)
-df, testDf = addFeildStatsAsFeatures(df,'Cliente_ID', testDf, drop=True)
-df, testDf = addFeildStatsAsFeatures(df,'Producto_ID', testDf, True, demand_val_mean, demand_val_stddev)
+    #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
+    df = df.fillna(0)
 
+    y_actual = df['Demanda_uni_equil'].values
+    Y_all, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_actual)
+    df = df.drop('Venta_uni_hoy',1)
+    df = df.drop('Venta_hoy',1)
+    df = df.drop('Dev_uni_proxima',1)
+    df = df.drop('Dev_proxima',1)
 
+    if save_preprocessed_file:
+        df.to_csv(preprocessed_file_name, index=False)
 
-print df.head(10)
+    df = df.drop('Demanda_uni_equil',1)
 
-#TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
-df = df.fillna(0)
-
-y_actual = df['Demanda_uni_equil'].values
-Y_all, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_actual)
-df = df.drop('Demanda_uni_equil',1)
-df = df.drop('Venta_uni_hoy',1)
-df = df.drop('Venta_hoy',1)
-df = df.drop('Dev_uni_proxima',1)
-df = df.drop('Dev_proxima',1)
-
-print "df", list(df)
-#print "testDf", list(testDf)
+    print "df feilds", list(df)
+    #print "testDf", list(testDf)
 
 
 X_all = preprocess2DtoZeroMeanUnit(df.values.copy())
@@ -205,38 +233,31 @@ model, y_pred_corrected = run_rfr(X_train, y_train, X_test, y_actual, parmsFromN
 #print ">> %d %s" %(index, str(c.tostr()))
 #print_regression_model_summary("DL", y_test, y_pred_dl, parmsFromNormalization)
 
+
+if test_run:
+    corrected_Y_test = modeloutput2predictions(y_test, parmsFromNormalization=parmsFromNormalization)
+    y_actual_test = y_actual[-1*len(corrected_Y_test):]
+    print "Undo normalization test passed", np.allclose(corrected_Y_test, y_actual_test, atol=0.01)
+
 m_time = time.time()
 
 if testDf is not None:
     temp = testDf.drop('id',1)
-
-    print list(temp)
     #pd.colnames(temp)[pd.colSums(is.na(temp)) > 0]
     #print temp.describe()
     #print df.isnull().any()
     temp = temp.fillna(0)
+
     kaggale_test = preprocess2DtoZeroMeanUnit(temp.values.copy())
     kaggale_predicted_raw = model.predict(kaggale_test)
-    kaggale_predicted = (kaggale_predicted_raw*parmsFromNormalization.std*parmsFromNormalization.sqrtx2) + parmsFromNormalization.mean
+    kaggale_predicted = modeloutput2predictions(kaggale_predicted_raw, parmsFromNormalization=parmsFromNormalization)
 
-    #kaggale_predicted = np.where(kaggale_predicted < 0, 0, kaggale_predicted)
-    #to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
-    #np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
-
-    #kaggale_predicted = np.where(kaggale_predicted < 0, 0, np.round(kaggale_predicted))
-    kaggale_predicted = np.where(kaggale_predicted < 0, 0, kaggale_predicted)
     to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
-    np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
-
-#if testDf is not None:
-#    temp = testDf.drop('id',1)
-#    temp = temp.fillna(0)
-#    print list(temp)
-#    kaggale_test = preprocess2DtoZeroMeanUnit(temp.values.copy())
-#    kaggale_predicted = rfr.predict(kaggale_test)
-
-#    to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
-#    np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil")   # X is an array
+    to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+    to_saveDf = to_saveDf.fillna(0)
+    to_saveDf["id"] = to_saveDf["id"].astype(int)
+    to_saveDf.to_csv('submission.csv', index=False)
+    #np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
 
 #print "top aggrigate count", len(slopeMap)
 print "total=%f, read=%fs, preporcess=%fs, model=%fs" \

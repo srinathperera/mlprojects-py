@@ -79,7 +79,7 @@ fr_time = time.time()
 
 
 #Numpy binary format http://docs.scipy.org/doc/numpy/reference/generated/numpy.save.html#numpy.save
-np.save("/Users/srinath/playground/data-science/BimboInventoryDemand/train.npy", a)
+#np.save("/Users/srinath/playground/data-science/BimboInventoryDemand/train.npy", a)
 #npw_time = time.time()
 #a = np.load("/Users/srinath/playground/data-science/BimboInventoryDemand/train.npy")
 #npr_time = time.time()
@@ -87,3 +87,9 @@ np.save("/Users/srinath/playground/data-science/BimboInventoryDemand/train.npy",
 #print "df read=%f s, f write=%f s, f read=%f s, np write=%fs np read=%fs" \
 #      %((df_time-start), (fw_time-df_time), (fr_time- fw_time), npw_time-fr_time, npr_time-npw_time)
 #print (df_time-time), (fw_time-df_time), (fr_time- fw_time)
+
+sub = pd.read_csv('/Users/srinath/Desktop/submission.csv')
+kaggale_predicted=sub['Demanda_uni_equil']
+kaggale_predicted = np.where(kaggale_predicted < 0, 0, np.round(kaggale_predicted))
+to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
+np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array

@@ -181,10 +181,10 @@ def calculate_rmsle(Y_actual, Y_predicted):
     for i in range(len(Y_actual)):
         if Y_predicted[i] > 0:
             v = (math.log(1+ Y_predicted[i]) - math.log(1+Y_actual[i]))
-            rmsle_sum.append(v*v)
+
         else:
-            ignored_count = ignored_count+1
-    print "Entries Ignored",ignored_count, "total", len(Y_actual)
+            v = 0 - math.log(1+Y_actual[i])
+        rmsle_sum.append(v*v)
     rmsle =  sqrt(sum(rmsle_sum)/len(rmsle_sum))
     print "rmsle", rmsle
     return rmsle

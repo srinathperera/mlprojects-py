@@ -12,7 +12,7 @@ import time
 # if 2000, the 138 products
 
 #print productDf.shape
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 
 #df = df[(df['Producto_ID'] <= 300)]
 
@@ -24,8 +24,10 @@ import time
 #np.savetxt('temp.csv', appleSotcksDf, fmt='%s', delimiter=',', header="Date,Close")
 
 
-df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 
+
+print df.describe()
 
 grouped = df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])['Demanda_uni_equil']
 #salesByDeport = grouped.count()
