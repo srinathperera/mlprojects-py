@@ -229,8 +229,8 @@ prep_time = time.time()
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, -1, 10, parmsFromNormalization)
 #regression_with_RFR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
-#model, y_pred_corrected = run_rfr(X_train, y_train, X_test, y_actual_test, parmsFromNormalization)
-model, y_pred_corrected = run_xgboost(X_train, y_train, X_test, y_actual_test, parmsFromNormalization)
+model, y_pred_corrected = run_rfr(X_train, y_train, X_test, y_actual_test, parmsFromNormalization)
+#model, y_pred_corrected = run_xgboost(X_train, y_train, X_test, y_actual_test, parmsFromNormalization)
 
 #c = MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.0, activation_fn='relu', loss="mse",
 #              epoch_count=50, optimizer=Adam(lr=0.0001), regularization=0.001)
