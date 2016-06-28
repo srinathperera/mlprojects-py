@@ -11,16 +11,19 @@ def print_base_stats(df):
     print df.describe()
 
 
-def create_small_datafile(limit, df):
+def create_small_datafile(low, high, df):
     productDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/producto_tabla.csv')
-    productDf = productDf[(productDf['Producto_ID'] <= limit)]
+    productDf = productDf[(productDf['Producto_ID'] < high) & (productDf['Producto_ID'] >= low)]
+    print len(productDf)
 
     #if 1000 then 68 products and 35M rows
     # if 2000, the 138 products
-    df = df[(df['Producto_ID'] <= limit)]
+    df = df[(df['Producto_ID'] < high) & (df['Producto_ID'] >= low)]
+
+    print df['Producto_ID'].min(), df['Producto_ID'].max()
 
     print "Size", df.shape
-    df.to_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv', index=False)
+    df.to_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems'+ str(low) +'_'+ str(high) +'.csv', index=False)
 
 
 
@@ -150,16 +153,43 @@ def test2Dtransfrom(df):
     print "d2", d2.shape, "t2", t2.shape, "f1", f2.shape
 
 
+def merge_outputs():
+    testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+    testDf1k = testDf[(testDf['Producto_ID'] < 1000)]
+    results1k = pd.read_csv('sub1/submission1k.csv')
+    results1k['id'] = testDf1k['id']
+
+    testDf2k = testDf[(testDf['Producto_ID'] < 2000) & (testDf['Producto_ID'] >= 1000)]
+    results2k = pd.read_csv('sub1/submission1k_2k.csv')
+    results2k['id'] = testDf2k['id']
+
+    testDf3k = testDf[(testDf['Producto_ID'] < 10000) & (testDf['Producto_ID'] >= 2000)]
+    results3k = pd.read_csv('sub1/submission2k_10k.csv')
+    results3k['id'] = testDf3k['id']
+
+    result = pd.concat([results1k, results2k, results3k]).sort_values(by=['id'])
+
+    result.to_csv('final.csv', index=False)
+
+    print result.shape
 
 
 
-
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 
 
 #print_base_stats(df)
-test2Dtransfrom(df)
+#test2Dtransfrom(df)
+
+#create_small_datafile(0,1000, df)
+#create_small_datafile(1000,2000, df)
+#create_small_datafile(2000, 10000, df)
+
+#merge_outputs()
+
+testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+print testDf['Producto_ID'].min(), testDf['Producto_ID'].max()
 
 #plt.tight_layout()
 #plt.show()

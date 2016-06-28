@@ -78,13 +78,13 @@ def addSlopes(train_df, test_df, testDf):
     slopeMap = grouped.apply(avgdiff)
     groupedMeanMap = grouped.mean()
     groupedStddevMap = grouped.std()
-    groupedmedianMap = grouped.median()
+    #groupedmedianMap = grouped.median()
 
     valuesDf = slopeMap.to_frame("Slopes")
     valuesDf.reset_index(inplace=True)
     valuesDf["groupedMeans"] = groupedMeanMap.values
     valuesDf["groupedStd"] = groupedStddevMap.values
-    valuesDf["groupedMedian"] = groupedmedianMap.values
+    #valuesDf["groupedMedian"] = groupedmedianMap.values
 
     slopes_aggr_time = time.time()
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
@@ -158,8 +158,16 @@ y_actual = None
 if not use_preprocessed_file:
     if test_run:
         df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_1000.csv')
+
+        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems2000_10000.csv')
+        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems1000_2000.csv')
+
         testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+        #testDf = testDf[(testDf['Producto_ID'] <= 1000)]
         testDf = testDf[(testDf['Producto_ID'] <= 300)]
+        #testDf = testDf[(testDf['Producto_ID'] < 2000) & (testDf['Producto_ID'] >= 1000)]
+
         print "testDf read", testDf.shape
     else:
         df = pd.read_csv('data/train.csv')
@@ -214,10 +222,10 @@ if not use_preprocessed_file:
     demand_val_stddev = df['Demanda_uni_equil'].std()
     #add mean and stddev by groups
     train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=True)
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=True)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=True)
     train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=True)
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=True)
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, True, demand_val_mean, demand_val_stddev)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=True)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, True, demand_val_mean, demand_val_stddev)
 
     #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
     train_df = train_df.fillna(0)
@@ -255,15 +263,15 @@ prep_time = time.time()
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, -1, 10, parmsFromNormalization)
 #regression_with_RFR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
-if X_train.shape[1] != X_test.shape[1] or len(y_train) != 1 or len(y_test) != 1:
+if X_train.shape[1] != X_test.shape[1]:
     print " columns not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
 
 if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
     print "rows not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
 
 #model = run_rfr(X_train, y_train, X_test, y_test)
-#model = run_lr(X_train, y_train, X_test, y_test)
-model = run_xgboost(X_train, y_train, X_test, y_test)
+model = run_lr(X_train, y_train, X_test, y_test)
+#model = run_xgboost(X_train, y_train, X_test, y_test)
 #model = run_dl(X_train, y_train, X_test, y_test)
 
 
@@ -300,6 +308,7 @@ if test_run:
 m_time = time.time()
 
 if testDf is not None and model is not None:
+    ids = testDf['id']
     temp = testDf.drop('id',1)
 
     if train_df.shape[1] != temp.shape[1]:
@@ -326,7 +335,7 @@ if testDf is not None and model is not None:
 
     print "log retransform", kaggale_test.shape
 
-    to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
+    to_save = np.column_stack((ids, kaggale_predicted))
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
     to_saveDf = to_saveDf.fillna(0)
     to_saveDf["id"] = to_saveDf["id"].astype(int)
