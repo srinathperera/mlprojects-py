@@ -262,8 +262,8 @@ if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
     print "rows not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
 
 #model = run_rfr(X_train, y_train, X_test, y_test)
-model = run_lr(X_train, y_train, X_test, y_test)
-#model = run_xgboost(X_train, y_train, X_test, y_test)
+#model = run_lr(X_train, y_train, X_test, y_test)
+model = run_xgboost(X_train, y_train, X_test, y_test)
 #model = run_dl(X_train, y_train, X_test, y_test)
 
 
