@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from mltools import apply_zeroMeanUnit2D, preprocess2DtoZeroMeanUnit, undo_zeroMeanUnit2D
 import time
 
 
@@ -129,11 +130,36 @@ def show_stat_graphs(df):
     plt.ylabel('Route', fontsize=18)
     plt.scatter(df['Cliente_ID'].values, df['Ruta_SAK'], c=df['Demanda_uni_equil'], alpha=0.5)
 
+def test2Dtransfrom(df):
+    half = int(df.shape[0]/2)
+    df1 = df[:half]
+    df2 = df[-1*(df.shape[0]-half):]
 
-df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+    d1 = df1.values.copy()
+    d2 = df2.values.copy()
+    t1,pn = preprocess2DtoZeroMeanUnit(d1)
+    t2 = apply_zeroMeanUnit2D(d2, pn)
 
-print_base_stats(df)
+    f1 = undo_zeroMeanUnit2D(t1,pn)
+    f2 = undo_zeroMeanUnit2D(t2,pn)
+
+    print "d1=f1", np.allclose(d1, f1, atol=0.01)
+    print "d2=f2", np.allclose(d2, f2, atol=0.01)
+
+    print "d1", d1.shape, "t1", t1.shape, "f1", f1.shape
+    print "d2", d2.shape, "t2", t2.shape, "f1", f2.shape
+
+
+
+
+
+
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+
+
+#print_base_stats(df)
+test2Dtransfrom(df)
 
 #plt.tight_layout()
 #plt.show()

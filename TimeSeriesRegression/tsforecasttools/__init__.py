@@ -15,7 +15,7 @@ from mltools import rolling_univariate_window, build_rolling_window_dataset
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy
 from mltools import regression_with_dl, print_regression_model_summary, report_scores, regression_with_GBR, regression_with_LR, regression_with_RFR
 import xgboost as xgb
-from mltools import undoPreprocessing
+from mltools import undoPreprocessing, ParmsFromNormalization
 
 def aggregate_hl(mavg1_vals, window_size):
     hl_mvavg = []
@@ -149,3 +149,21 @@ def run_regression_ensamble(models, y_test, parmsFromNormalization):
     y_pred_lr = regression_with_LR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
 
+class RegressionEnsamble:
+    def __init__(self, model):
+        self.model = model
+
+    #models should be able to correct normalizations
+    def train(self, models, x_train, y_train, x_test, y_test):
+        x_train_predictions = np.hstack([m.predict(x_train) for m in models])
+        x_test_predictions = np.hstack([m.predict(x_test) for m in models])
+
+        lr = LinearRegression(normalize=True)
+        lr.fit(x_train_predictions, y_train)
+        y_pred_lr = lr.predict(x_test_predictions)
+        print_regression_model_summary("LR", y_test, y_pred_lr, ParmsFromNormalization(mean=0,std=1,sqrtx2=1)())
+        self.model = lr
+        return lr
+
+    def predict(self, x_data):
+        return self.model.predict(x_data)

@@ -153,6 +153,10 @@ def apply_zeroMeanUnit2D(data, parmsFromNormalization):
     return (data - parmsFromNormalization.mean)/(parmsFromNormalization.std*parmsFromNormalization.sqrtx2)
 
 
+def undo_zeroMeanUnit2D(data, parmsFromNormalization):
+    return (data*parmsFromNormalization.std*parmsFromNormalization.sqrtx2 + parmsFromNormalization.mean)
+
+
 def train_test_split(no_of_training_instances, X_all, y_all):
     X_train = X_all[0:no_of_training_instances, :]
     X_test = X_all[no_of_training_instances:, :]
@@ -195,7 +199,6 @@ def calculate_rmsle(Y_actual, Y_predicted):
             v = 0 - math.log(1+Y_actual[i])
         rmsle_sum.append(v*v)
     rmsle =  sqrt(sum(rmsle_sum)/len(rmsle_sum))
-    print "rmsle", rmsle
     return rmsle
 
 
@@ -338,7 +341,7 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
 
     #print("DL Loss", "{:.6f}".format(loss))
     y_pred = model.predict(X_test)
-    return y_pred
+    return model, y_pred
 
 
 def print_regression_model_summary(prefix, y_test, y_pred, parmsFromNormalization):
@@ -478,7 +481,7 @@ def verify_window_dataset(x_all, y_all):
 
 
 
-def print_feature_importance(X_test, y_test, importances):
+def print_feature_importance(importances):
     # print feature importance
     # http://scikit-learn.org/stable/auto_examples/ensemble/plot_forest_importances.html
     #std = np.std([tree.feature_importances_ for tree in rfr.estimators_],axis=0)
@@ -490,7 +493,7 @@ def print_feature_importance(X_test, y_test, importances):
     # Print the feature ranking
     print("Feature ranking:")
 
-    for f in range(X_test.shape[1]):
+    for f in range(len(indices)):
         print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
 
 

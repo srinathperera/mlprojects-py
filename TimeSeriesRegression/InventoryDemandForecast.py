@@ -9,7 +9,8 @@ from mltools import undoPreprocessing
 
 from tsforecasttools import run_timeseries_froecasts, regression_with_xgboost
 from mltools import preprocess2DtoZeroMeanUnit, preprocess1DtoZeroMeanUnit, train_test_split, print_feature_importance, apply_zeroMeanUnit2D
-from mltools import calculate_rmsle, almost_correct_based_accuracy, MLConfigs, print_regression_model_summary, regression_with_dl, apply_zeroMeanUnit
+from mltools import calculate_rmsle, almost_correct_based_accuracy, MLConfigs, print_regression_model_summary, \
+    regression_with_dl, apply_zeroMeanUnit, undo_zeroMeanUnit2D
 from keras.optimizers import Adam
 
 #from mlpreprocessing import feather2df
@@ -17,7 +18,6 @@ from keras.optimizers import Adam
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
-
 
 def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, drop=False, default_mean=None, default_stddev=None):
     start = time.time()
@@ -99,46 +99,47 @@ def addSlopes(train_df, test_df, testDf):
     return train_df_m, test_df_m, testDf
 
 
-def run_rfr(X_train, Y_train, X_test, y_actual_4test, parmsFromNormalization):
+def run_rfr(X_train, Y_train, X_test, y_test):
     rfr = RandomForestRegressor()
     rfr.fit(X_train, Y_train)
 
-    #predict data set
-    y_pred_rfr = rfr.predict(X_test)
-
-    print_feature_importance(X_test, y_test,rfr.feature_importances_)
-
-    #undo the normalization
-    y_pred_final = modeloutput2predictions(y_pred_rfr, parmsFromNormalization=parmsFromNormalization)
-
-    error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_4test, y_pred_final, 10)
-    rmsle = calculate_rmsle(y_actual_4test, y_pred_final)
-    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("RFR", error_ac, rmsep, mape, rmse, rmsle)
+    print_feature_importance(rfr.feature_importances_)
 
     #save model
-    joblib.dump(y_pred_rfr, 'model.pkl')
+    joblib.dump(rfr, 'model.pkl')
+    return rfr
 
-    return rfr, y_pred_final
 
-def run_xgboost(X_train, Y_train, X_test, y_actual, parmsFromNormalization):
+def run_dl(X_train, y_train, X_test, y_test):
+    c = MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.0, activation_fn='relu', loss="mse",
+             epoch_count=50, optimizer=Adam(lr=0.0001), regularization=0.001)
+    model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
+    return model
+
+
+def run_xgboost(X_train, Y_train, X_test, y_actual):
     model, y_pred = regression_with_xgboost(X_train, Y_train, X_test)
     #undo the normalization
 
-    y_pred_corrected = modeloutput2predictions(y_pred, parmsFromNormalization=parmsFromNormalization)
-
-    error_AC, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual, y_pred_corrected, 10)
-    rmsle = calculate_rmsle(y_actual, y_pred_corrected)
-    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("XGBoost", error_AC, rmsep, mape, rmse, rmsle)
-    return model, y_pred_corrected
+    return model
 
 def drop_column(df1, df2, feild_name):
     df1 = df1.drop(feild_name,1)
     df2 = df2.drop(feild_name,1)
     return df1, df2
 
-test_run = False
+
+def transfrom_to_log(data):
+    return np.log(data + 1)
+
+def retransfrom_from_log(data):
+    return np.exp(data) - 1
+
+
+test_run = True
 use_preprocessed_file = False
 save_preprocessed_file = False
+target_as_log = True
 preprocessed_file_name = "_data.csv"
 
 s_time = time.time()
@@ -149,6 +150,7 @@ if not use_preprocessed_file:
         df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
         testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
         testDf = testDf[(testDf['Producto_ID'] <= 300)]
+        print "testDf read", testDf.shape
     else:
         df = pd.read_csv('data/train.csv')
         testDf = pd.read_csv('data/test.csv')
@@ -175,14 +177,26 @@ print "read took %f" %(r_time-s_time)
 y_actual_train = None
 y_actual_test = None
 
+
+
 if not use_preprocessed_file:
     #print "shapes train, test", df.shape, testDf.shape
     print "shapes train, test", df.shape
 
     training_set_size = int(0.7*df.shape[0])
     test_set_size = df.shape[0] - training_set_size
+
+    y_all = df['Demanda_uni_equil'].values
+
+    if target_as_log:
+        #then all values are done as logs
+        df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
+
     train_df = df[:training_set_size]
     test_df = df[-1*test_set_size:]
+
+    y_actual_train = y_all[:training_set_size]
+    y_actual_test = y_all[-1*test_set_size:]
 
     train_df, test_df, testDf = addSlopes(train_df, test_df, testDf)
 
@@ -207,8 +221,8 @@ if not use_preprocessed_file:
     if save_preprocessed_file:
         df.to_csv(preprocessed_file_name, index=False)
 
-    y_actual_train = train_df['Demanda_uni_equil'].values
-    y_actual_test = test_df['Demanda_uni_equil'].values
+    y_train_row = train_df['Demanda_uni_equil'].values
+    y_test_row = test_df['Demanda_uni_equil'].values
 
     train_df, test_df = drop_column(train_df, test_df, 'Demanda_uni_equil')
 
@@ -217,11 +231,12 @@ if not use_preprocessed_file:
 
     print "Forecasting Feilds", list(train_df)
 
-y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_actual_train)
-y_test = apply_zeroMeanUnit(y_actual_test, parmsFromNormalization)
+y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train_row)
+y_test = apply_zeroMeanUnit(y_test_row, parmsFromNormalization)
 
 X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(train_df.values.copy())
-X_test = apply_zeroMeanUnit2D(test_df.values.copy(), parmsFromNormalization2D)
+x_test_raw = test_df.values.copy()
+X_test = apply_zeroMeanUnit2D(x_test_raw, parmsFromNormalization2D)
 
 
 prep_time = time.time()
@@ -229,23 +244,38 @@ prep_time = time.time()
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, -1, 10, parmsFromNormalization)
 #regression_with_RFR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
-model, y_pred_corrected = run_rfr(X_train, y_train, X_test, y_actual_test, parmsFromNormalization)
-#model, y_pred_corrected = run_xgboost(X_train, y_train, X_test, y_actual_test, parmsFromNormalization)
+model = run_rfr(X_train, y_train, X_test, y_actual_test)
+#model, y_pred_corrected = run_xgboost(X_train, y_train, X_test, y_actual_test)
+#model, y_pred_corrected = run_dl(X_train, y_train, X_test, y_test)
 
-#c = MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.0, activation_fn='relu', loss="mse",
-#              epoch_count=50, optimizer=Adam(lr=0.0001), regularization=0.001)
 
-#print "Sizes=", len(X_train), len(y_train), len(X_test), len(y_test)
-#y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
-#print_regression_model_summary("DL", y_test, y_pred_dl, parmsFromNormalization)
+y_pred_raw = model.predict(X_test)
+#undo the normalization
+y_pred_final = modeloutput2predictions(y_pred_raw, parmsFromNormalization=parmsFromNormalization)
+if target_as_log:
+    y_pred_final = retransfrom_from_log(y_pred_final)
+
+error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_pred_final, 10)
+rmsle = calculate_rmsle(y_actual_test, y_pred_final)
+print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("RFR", error_ac, rmsep, mape, rmse, rmsle)
+
 
 #model = None
 
 
 if test_run:
     corrected_Y_test = modeloutput2predictions(y_test, parmsFromNormalization=parmsFromNormalization)
+    if target_as_log:
+        corrected_Y_test = retransfrom_from_log(corrected_Y_test)
     print "Undo normalization test passed", np.allclose(corrected_Y_test, y_actual_test, atol=0.01)
-    rmsle = calculate_rmsle(y_actual_test, test_df["groupedMeans"])
+
+    print "Undo X data test test passed", \
+        np.allclose(x_test_raw, undo_zeroMeanUnit2D(X_test, parmsFromNormalization2D), atol=0.01)
+
+    if target_as_log:
+        rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMeans"]))
+    else:
+        rmsle = calculate_rmsle(y_actual_test, test_df["groupedMeans"])
     print "rmsle for mean prediction", rmsle
 
 
@@ -262,10 +292,21 @@ if testDf is not None and model is not None:
     #print df.isnull().any()
     temp = temp.fillna(0)
 
-    kaggale_test = apply_zeroMeanUnit2D(train_df.values.copy(), parmsFromNormalization2D)
+    print "forecasting values",  temp.shape
+
+    kaggale_test = apply_zeroMeanUnit2D(temp.values.copy(), parmsFromNormalization2D)
+
+    print "kaggale_test", kaggale_test.shape
 
     kaggale_predicted_raw = model.predict(kaggale_test)
     kaggale_predicted = modeloutput2predictions(kaggale_predicted_raw, parmsFromNormalization=parmsFromNormalization)
+
+    print "kaggale_predicted", kaggale_test.shape
+
+    if target_as_log:
+        kaggale_predicted = retransfrom_from_log(kaggale_predicted)
+
+    print "log retransform", kaggale_test.shape
 
     to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
