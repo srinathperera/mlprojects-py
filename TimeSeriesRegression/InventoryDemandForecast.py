@@ -136,7 +136,7 @@ def retransfrom_from_log(data):
     return np.exp(data) - 1
 
 
-test_run = True
+test_run = False
 use_preprocessed_file = False
 save_preprocessed_file = False
 target_as_log = True
