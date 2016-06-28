@@ -12,6 +12,7 @@ from mltools import preprocess2DtoZeroMeanUnit, preprocess1DtoZeroMeanUnit, trai
 from mltools import calculate_rmsle, almost_correct_based_accuracy, MLConfigs, print_regression_model_summary, \
     regression_with_dl, apply_zeroMeanUnit, undo_zeroMeanUnit2D
 from keras.optimizers import Adam
+from sklearn.linear_model import LinearRegression
 
 #from mlpreprocessing import feather2df
 
@@ -77,11 +78,13 @@ def addSlopes(train_df, test_df, testDf):
     slopeMap = grouped.apply(avgdiff)
     groupedMeanMap = grouped.mean()
     groupedStddevMap = grouped.std()
+    groupedmedianMap = grouped.median()
 
     valuesDf = slopeMap.to_frame("Slopes")
     valuesDf.reset_index(inplace=True)
     valuesDf["groupedMeans"] = groupedMeanMap.values
     valuesDf["groupedStd"] = groupedStddevMap.values
+    valuesDf["groupedMedian"] = groupedmedianMap.values
 
     slopes_aggr_time = time.time()
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
@@ -110,9 +113,16 @@ def run_rfr(X_train, Y_train, X_test, y_test):
     return rfr
 
 
+def run_lr(X_train, Y_train, X_test, y_test):
+    lr = LinearRegression(normalize=True)
+    lr.fit(X_train, Y_train)
+    return lr
+
+
+
 def run_dl(X_train, y_train, X_test, y_test):
-    c = MLConfigs(nodes_in_layer=20, number_of_hidden_layers=3, dropout=0.0, activation_fn='relu', loss="mse",
-             epoch_count=50, optimizer=Adam(lr=0.0001), regularization=0.001)
+    c = MLConfigs(nodes_in_layer=30, number_of_hidden_layers=3, dropout=0.1, activation_fn='relu', loss="mse",
+             epoch_count=30, optimizer=Adam(lr=0.0001), regularization=0.01)
     model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
     return model
 
@@ -229,7 +239,8 @@ if not use_preprocessed_file:
     if train_df.shape[1] != test_df.shape[1]:
         print "train and test does not match " + list(train_df) + " " + list(test_df)
 
-    print "Forecasting Feilds", list(train_df)
+    feilds = list(train_df)
+    print "Forecasting Feilds", [ "("+str(i)+")" + feilds[i] for i in range(len(feilds))]
 
 y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train_row)
 y_test = apply_zeroMeanUnit(y_test_row, parmsFromNormalization)
@@ -244,9 +255,16 @@ prep_time = time.time()
 #run_timeseries_froecasts(X_train, y_train, X_test, y_test, -1, 10, parmsFromNormalization)
 #regression_with_RFR(X_train, y_train, X_test, y_test, parmsFromNormalization)
 
-model = run_rfr(X_train, y_train, X_test, y_actual_test)
-#model, y_pred_corrected = run_xgboost(X_train, y_train, X_test, y_actual_test)
-#model, y_pred_corrected = run_dl(X_train, y_train, X_test, y_test)
+if X_train.shape[1] != X_test.shape[1] or len(y_train) != 1 or len(y_test) != 1:
+    print " columns not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
+
+if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
+    print "rows not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
+
+#model = run_rfr(X_train, y_train, X_test, y_test)
+model = run_lr(X_train, y_train, X_test, y_test)
+#model = run_xgboost(X_train, y_train, X_test, y_test)
+#model = run_dl(X_train, y_train, X_test, y_test)
 
 
 y_pred_raw = model.predict(X_test)
