@@ -23,7 +23,7 @@ def create_small_datafile(low, high, df):
     print df['Producto_ID'].min(), df['Producto_ID'].max()
 
     print "Size", df.shape
-    df.to_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems'+ str(low) +'_'+ str(high) +'.csv', index=False)
+    df.to_csv('data/trainitems'+ str(low) +'_'+ str(high) +'.csv', index=False)
 
 def create_small_test_datafile(low, high):
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
@@ -209,17 +209,50 @@ def find_missing_products():
 
     print "full entries count", test.shape[0]
 
+def build_sample_dataset():
+    #
+    #227,3,1110,7,3301,1263779,145,1,19.75,0,0.0,1
+
+    data = []
+    for agency in range(0,5):
+        for week in range(6,10):
+            for product in range(1,200):
+                data.append([week, agency, 1, 1, 1, product, 1, 0, 0, 0, week*product/(agency +1)])
+
+    df =  pd.DataFrame(data, columns=['Semana', 'Agencia_ID','Canal_ID','Ruta_SAK', 'Cliente_ID', 'Producto_ID',
+                                                  'Venta_uni_hoy', 'Venta_hoy','Dev_uni_proxima', 'Dev_proxima', 'Demanda_uni_equil'])
 
 
-df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+    grouped = df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    print "all 4", grouped.mean(), grouped.std()
+
+    groupe1d = df.groupby(['Agencia_ID'])
+    print "Agencia_ID", groupe1d.mean(), groupe1d.std()
+
+    groupe2d = df.groupby(['Ruta_SAK'])
+    print "Ruta_SAK", groupe2d.mean(), groupe2d.std()
+
+    df.to_csv('sample_dataset.csv', index=False)
+
+def break_dataset():
+    df = pd.read_csv('data/train.csv')
+    for i in range(0, 50000, 5000):
+        create_small_datafile(i,i+5000, df)
+
+
+#build_sample_dataset()
+
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 
 #find_missing_products()
 #print_base_stats(df)
 #test2Dtransfrom(df)
 
-for i in range(0, 50000, 5000):
-    create_small_datafile(i,i+5000, df)
+#create_small_datafile(0,75, df)
+
+# for i in range(0, 50000, 5000):
+#     create_small_datafile(i,i+5000, df)
 #create_small_test_datafile(0,100)
 #create_small_datafile(0,1000, df)
 #create_small_datafile(1000,2000, df)

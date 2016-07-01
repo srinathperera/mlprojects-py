@@ -164,9 +164,9 @@ def run_dl(X_train, y_train, X_test, y_test):
     return model
 
 
-def run_xgboost(X_train, Y_train, X_test, Y_test):
+def run_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds=None):
     print "Running XG Boost"
-    model, y_pred = regression_with_xgboost(X_train, Y_train, X_test, Y_test)
+    model, y_pred = regression_with_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds)
     #undo the normalization
 
     return model

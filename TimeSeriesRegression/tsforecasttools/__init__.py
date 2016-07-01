@@ -59,7 +59,7 @@ def regression_with_xgboost2(X_train, Y_train, X_test, Y_test):
     return XGBoostModel(xlf), y_pred
 
 
-def regression_with_xgboost(X_train, Y_train, X_test, Y_test):
+def regression_with_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds=None):
     #http://datascience.stackexchange.com/questions/9483/xgboost-linear-regression-output-incorrect
     #http://xgboost.readthedocs.io/en/latest/get_started/index.html
     #https://www.kaggle.com/c/higgs-boson/forums/t/10286/customize-loss-function-in-xgboost
@@ -69,17 +69,35 @@ def regression_with_xgboost(X_train, Y_train, X_test, Y_test):
     #Python API http://xgboost.readthedocs.io/en/latest/python/python_api.html
     #is this correct
 
-    train_data = xgb.DMatrix(X_train, Y_train)
-    test_data = xgb.DMatrix(X_test, Y_test)
+    if X_test is not None and Y_test is not None:
+        train_data = xgb.DMatrix(X_train, Y_train)
+        test_data = xgb.DMatrix(X_test, Y_test)
 
-    params = {"objective": "reg:linear", "booster":"gblinear"}
-    params['nthread'] = 4
+        params = {"objective": "reg:linear", "booster":"gblinear"}
+        params['nthread'] = 4
 
-    evallist  = [(train_data,'eval'), (test_data,'train')]
-    num_round = 100
-    gbm = xgb.train( params, train_data, num_round, evallist, verbose_eval = True, early_stopping_rounds=5)
-    y_pred = gbm.predict(xgb.DMatrix(X_test))
-    return XGBoostModel(gbm), y_pred
+        evallist  = [(test_data,'eval'), (train_data,'train')]
+        num_round = 100
+        gbm = xgb.train( params, train_data, num_round, evallist, verbose_eval = True, early_stopping_rounds=5)
+        y_pred = gbm.predict(xgb.DMatrix(X_test))
+
+        gbm.dump_model('xgb.fmap')
+        importance = gbm.get_fscore(fmap='xgb.fmap')
+        print "importance=", importance
+        return XGBoostModel(gbm), y_pred
+    else:
+        train_data = xgb.DMatrix(X_train, Y_train)
+
+        params = {"objective": "reg:linear", "booster":"gblinear"}
+        params['nthread'] = 4
+
+        evallist  = [(train_data,'train')]
+        num_round = 10
+        gbm = xgb.train( params, train_data, num_round, evallist, verbose_eval = True)
+        y_pred = gbm.predict(xgb.DMatrix(X_test))
+        return XGBoostModel(gbm), y_pred
+
+
 
 
 

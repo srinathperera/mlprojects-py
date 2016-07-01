@@ -17,7 +17,7 @@ from keras.optimizers import Adam
 from sklearn.linear_model import LinearRegression
 
 from inventory_demand import *
-
+from mltools import *
 #from mlpreprocessing import feather2df
 
 import sys
@@ -26,18 +26,25 @@ print 'Argument List:', str(sys.argv)
 
 
 
-test_run = False
+test_run = True
 use_preprocessed_file = False
 save_preprocessed_file = False
-target_as_log = True
+target_as_log = False
 preprocessed_file_name = "_data.csv"
+save_predictions_with_data = True
 
 s_time = time.time()
+
+np.set_printoptions(precision=1, suppress=True)
 
 y_actual = None
 if not use_preprocessed_file:
     if test_run:
-        df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+
+        df = pd.read_csv('sample_dataset.csv')
+        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_75.csv')
+
         #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_1000.csv')
 
         #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems2000_10000.csv')
@@ -45,7 +52,8 @@ if not use_preprocessed_file:
 
         testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
         #testDf = testDf[(testDf['Producto_ID'] <= 1000)]
-        testDf = testDf[(testDf['Producto_ID'] <= 300)]
+        #testDf = testDf[(testDf['Producto_ID'] <= 300)]
+        testDf = testDf[(testDf['Producto_ID'] <= 75)]
         #testDf = testDf[(testDf['Producto_ID'] < 2000) & (testDf['Producto_ID'] >= 1000)]
 
         print "testDf read", testDf.shape
@@ -75,7 +83,7 @@ print "read took %f" %(r_time-s_time)
 y_actual_train = None
 y_actual_test = None
 
-
+forecasting_feilds = None
 
 if not use_preprocessed_file:
     #print "shapes train, test", df.shape, testDf.shape
@@ -109,10 +117,10 @@ if not use_preprocessed_file:
     groups = ('Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID')
     measures = ('Dev_proxima', 'Dev_uni_proxima', 'Demanda_uni_equil', 'unit_prize', 'Venta_uni_hoy', 'Venta_hoy')
     #for t in itertools.product(groups, measures):
-    for t in [('Cliente_ID', 'Demanda_uni_equil'), ('Cliente_ID', 'Venta_uni_hoy'), ('Cliente_ID', 'Venta_hoy'),
-        ('Ruta_SAK', 'unit_prize')]:
-            train_df, test_df, testDf = addFeildStatsAsFeatures(train_df,
-                                    test_df,t[0], testDf, drop=False, agr_feild=t[1])
+    #for t in [('Cliente_ID', 'Demanda_uni_equil'), ('Cliente_ID', 'Venta_uni_hoy'), ('Cliente_ID', 'Venta_hoy'),
+    #    ('Ruta_SAK', 'unit_prize')]:
+    #        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df,
+    #                                test_df,t[0], testDf, drop=False, agr_feild=t[1])
 
 
     #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False)
@@ -141,6 +149,10 @@ if not use_preprocessed_file:
     train_df, test_df = drop_column(train_df, test_df, 'Dev_proxima')
     train_df, test_df = drop_column(train_df, test_df, 'unit_prize')
 
+    feature_df = test_df
+
+    print train_df.sample(20)
+
 
     if save_preprocessed_file:
         df.to_csv(preprocessed_file_name, index=False)
@@ -155,6 +167,7 @@ if not use_preprocessed_file:
 
     forecasting_feilds = list(train_df)
     print "Forecasting Feilds", [ "("+str(i)+")" + forecasting_feilds[i] for i in range(len(forecasting_feilds))]
+
 
 y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train_row)
 y_test = apply_zeroMeanUnit(y_test_row, parmsFromNormalization)
@@ -175,9 +188,13 @@ if X_train.shape[1] != X_test.shape[1]:
 if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
     print "rows not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
 
+#print_xy_sample(X_train, y_train)
+#print_xy_sample(X_test, y_test)
+
+
 #model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
 #model = run_lr(X_train, y_train, X_test, y_test)
-model = run_xgboost(X_train, y_train, X_test, y_test)
+model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecasting_feilds)
 #model = run_dl(X_train, y_train, X_test, y_test)
 
 
@@ -190,6 +207,11 @@ if target_as_log:
 error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_pred_final, 10)
 rmsle = calculate_rmsle(y_actual_test, y_pred_final)
 print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("RFR", error_ac, rmsep, mape, rmse, rmsle)
+
+if save_predictions_with_data:
+    feature_df['predictions'] = y_pred_final
+    feature_df['actual'] = y_actual_test
+    feature_df.to_csv('forecast_with_data.csv', index=False)
 
 
 #model = None

@@ -91,9 +91,9 @@ def extract_feilds_from_group(group, sales):
     mean  = np.mean(sales)
     stddev = np.std(sales)
     median = np.median(sales)
-    entropy = scipy.stats.entropy(sales)
+    #entropy = scipy.stats.entropy(sales)
 
-    data_as_num = np.nan_to_num([mean, stddev, median, entropy, agencia_id_mean, agencia_id_stddev, ruta_sak_mean, ruta_sak_stddev])
+    data_as_num = np.nan_to_num([mean, stddev, median, agencia_id_mean, agencia_id_stddev, ruta_sak_mean, ruta_sak_stddev])
     data_maxed = np.where(data_as_num > 10000, 10000, data_as_num)
 
     return data_maxed
@@ -192,8 +192,8 @@ def forecast(model, train_df, test_df, default_sales):
 
 do_normalize_data = False #making this true reduce accuracy, test later
 
-df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_100.csv')
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_100.csv')
+df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 
 #preporcessing
 df = drop_feilds_1df(df, ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima'])
@@ -232,6 +232,9 @@ train_df = merge_stats_with_df(train_df, stat_df, 'Ruta_SAK', default_mean=defau
 test_df = merge_stats_with_df(test_df, stat_df, 'Ruta_SAK', default_mean=default_sales, default_stddev=None)
 
 
+
+
+
 if train_df.shape[1] != test_df.shape[1]:
     raise Exception("train and test df does not match")
 print "train feilds=", list(train_df)
@@ -243,8 +246,10 @@ y_train = np.ravel(y_train)
 print "Shapes", x_train.shape, y_train.shape
 
 check4nan(x_train)
-#model = run_lr(x_train, y_train, None, None)
+model = run_lr(x_train, y_train, None, None)
 model = run_rfr(x_train, y_train, None, None)
+#model = run_xgboost(x_train, y_train, None, None)
+
 
 #verify
 test_df = drop_feilds_1df(test_df, ['Demanda_uni_equil'])

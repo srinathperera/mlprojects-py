@@ -605,3 +605,10 @@ def create_rondomsearch_configs4DL(ntdepths, ntwidths, dropouts, reglur, lr, tri
         #indexes2remove = random.shuffle(range(len(all_dl_configs)))
         random.shuffle(all_dl_configs)
         return all_dl_configs[0:trialcount]
+
+def print_sample(data, size = 10):
+    print data[np.random.randint(data.shape[0],size=size)]
+
+def print_xy_sample(x_data, y_data, size = 10):
+    indexes = np.random.randint(x_data.shape[0],size=size)
+    print x_data[indexes], y_data[indexes]
