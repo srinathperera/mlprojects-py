@@ -239,7 +239,7 @@ def break_dataset():
     for i in range(0, 50000, 5000):
         create_small_datafile(i,i+5000, df)
 
-
+break_dataset()
 #build_sample_dataset()
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
