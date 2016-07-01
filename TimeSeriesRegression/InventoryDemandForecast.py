@@ -5,6 +5,8 @@ import time
 from sklearn.externals import joblib
 
 from mltools import undoPreprocessing
+import itertools
+
 
 
 from tsforecasttools import run_timeseries_froecasts, regression_with_xgboost
@@ -14,136 +16,14 @@ from mltools import calculate_rmsle, almost_correct_based_accuracy, MLConfigs, p
 from keras.optimizers import Adam
 from sklearn.linear_model import LinearRegression
 
+from inventory_demand import *
+
 #from mlpreprocessing import feather2df
 
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
-def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, drop=False, default_mean=None, default_stddev=None):
-    start = time.time()
-    groupData = train_df.groupby([feild_name])['Demanda_uni_equil']
-    meanData = groupData.mean()
-    stddevData = groupData.std()
-
-    valuesDf = meanData.to_frame(feild_name+"_Mean")
-    valuesDf.reset_index(inplace=True)
-    valuesDf[feild_name+"_StdDev"] = stddevData.values
-
-
-    calculate_ts = time.time()
-    train_df_m = pd.merge(train_df, valuesDf, how='left', on=[feild_name])
-    test_df_m = pd.merge(test_df, valuesDf, how='left', on=[feild_name])
-
-    if drop:
-        train_df_m = train_df_m.drop(feild_name,1)
-        test_df_m = test_df_m.drop(feild_name,1)
-
-    if testDf is not None:
-        testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
-        if default_mean is not None:
-            testDf[feild_name+"_Mean"].fillna(default_mean, inplace=True)
-        if default_stddev is not None:
-            testDf[feild_name+"_StdDev"].fillna(default_stddev, inplace=True)
-        if drop:
-            testDf = testDf.drop(feild_name,1)
-    print "took %f (%f, %f), size %s %f" %(time.time()-start, calculate_ts- start,
-                                           time.time() - calculate_ts, feild_name, len(meanData))
-
-    return train_df_m, test_df_m, testDf
-
-def avgdiff(group):
-    group = group.values
-    if len(group) > 1:
-        return np.mean([group[i] - group[i-1] for i in range(1, len(group))])
-    else:
-        return 0
-
-#TODO fix defaults
-
-def modeloutput2predictions(model_forecast, parmsFromNormalization, negative_allowed=False):
-    y_pred_corrected = undoPreprocessing(model_forecast, parmsFromNormalization)
-    if not negative_allowed:
-        y_pred_corrected = np.where(y_pred_corrected < 0, 1, y_pred_corrected)
-    return y_pred_corrected
-
-
-def addSlopes(train_df, test_df, testDf):
-    start_ts = time.time()
-    #TODO do all operations in one go (see Pre)
-
-    #calculate average slope
-    grouped = train_df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])['Demanda_uni_equil']
-
-    slopeMap = grouped.apply(avgdiff)
-    groupedMeanMap = grouped.mean()
-    groupedStddevMap = grouped.std()
-    #groupedmedianMap = grouped.median()
-
-    valuesDf = slopeMap.to_frame("Slopes")
-    valuesDf.reset_index(inplace=True)
-    valuesDf["groupedMeans"] = groupedMeanMap.values
-    valuesDf["groupedStd"] = groupedStddevMap.values
-    #valuesDf["groupedMedian"] = groupedmedianMap.values
-
-    slopes_aggr_time = time.time()
-    train_df_m = pd.merge(train_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
-    train_df_m.fillna(0, inplace=True)
-
-    test_df_m = pd.merge(test_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
-    test_df_m.fillna(0, inplace=True)
-
-    if testDf is not None:
-        testDf = pd.merge(testDf, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
-        testDf.fillna(0, inplace=True)
-
-    slopes_time = time.time()
-    print "Slopes took %f (%f, %f)" %(slopes_time - start_ts, slopes_aggr_time-start_ts, slopes_time-slopes_aggr_time)
-    return train_df_m, test_df_m, testDf
-
-
-def run_rfr(X_train, Y_train, X_test, y_test):
-    rfr = RandomForestRegressor()
-    rfr.fit(X_train, Y_train)
-
-    print_feature_importance(rfr.feature_importances_)
-
-    #save model
-    joblib.dump(rfr, 'model.pkl')
-    return rfr
-
-
-def run_lr(X_train, Y_train, X_test, y_test):
-    lr = LinearRegression(normalize=True)
-    lr.fit(X_train, Y_train)
-    return lr
-
-
-
-def run_dl(X_train, y_train, X_test, y_test):
-    c = MLConfigs(nodes_in_layer=30, number_of_hidden_layers=3, dropout=0.1, activation_fn='relu', loss="mse",
-             epoch_count=30, optimizer=Adam(lr=0.0001), regularization=0.01)
-    model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
-    return model
-
-
-def run_xgboost(X_train, Y_train, X_test, y_actual):
-    model, y_pred = regression_with_xgboost(X_train, Y_train, X_test)
-    #undo the normalization
-
-    return model
-
-def drop_column(df1, df2, feild_name):
-    df1 = df1.drop(feild_name,1)
-    df2 = df2.drop(feild_name,1)
-    return df1, df2
-
-
-def transfrom_to_log(data):
-    return np.log(data + 1)
-
-def retransfrom_from_log(data):
-    return np.exp(data) - 1
 
 
 test_run = False
@@ -200,6 +80,9 @@ y_actual_test = None
 if not use_preprocessed_file:
     #print "shapes train, test", df.shape, testDf.shape
     print "shapes train, test", df.shape
+    df['unit_prize'] = df['Venta_hoy']/df['Venta_uni_hoy']
+
+    #df['UClient'] =
 
     training_set_size = int(0.7*df.shape[0])
     test_set_size = df.shape[0] - training_set_size
@@ -219,13 +102,34 @@ if not use_preprocessed_file:
     train_df, test_df, testDf = addSlopes(train_df, test_df, testDf)
 
     demand_val_mean = df['Demanda_uni_equil'].mean()
+    #demand_val_mean = df['Demanda_uni_equil'].median()
     demand_val_stddev = df['Demanda_uni_equil'].std()
     #add mean and stddev by groups
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=True)
-    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=True)
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=True)
-    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=True)
-    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, True, demand_val_mean, demand_val_stddev)
+
+    groups = ('Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID')
+    measures = ('Dev_proxima', 'Dev_uni_proxima', 'Demanda_uni_equil', 'unit_prize', 'Venta_uni_hoy', 'Venta_hoy')
+    #for t in itertools.product(groups, measures):
+    for t in [('Cliente_ID', 'Demanda_uni_equil'), ('Cliente_ID', 'Venta_uni_hoy'), ('Cliente_ID', 'Venta_hoy'),
+        ('Ruta_SAK', 'unit_prize')]:
+            train_df, test_df, testDf = addFeildStatsAsFeatures(train_df,
+                                    test_df,t[0], testDf, drop=False, agr_feild=t[1])
+
+
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, False, demand_val_mean, demand_val_stddev)
+
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='unit_prize')
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Dev_proxima')
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
+
+
+
+
+    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
+
 
     #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
     train_df = train_df.fillna(0)
@@ -235,6 +139,8 @@ if not use_preprocessed_file:
     train_df, test_df = drop_column(train_df, test_df, 'Venta_hoy')
     train_df, test_df = drop_column(train_df, test_df, 'Dev_uni_proxima')
     train_df, test_df = drop_column(train_df, test_df, 'Dev_proxima')
+    train_df, test_df = drop_column(train_df, test_df, 'unit_prize')
+
 
     if save_preprocessed_file:
         df.to_csv(preprocessed_file_name, index=False)
@@ -247,8 +153,8 @@ if not use_preprocessed_file:
     if train_df.shape[1] != test_df.shape[1]:
         print "train and test does not match " + list(train_df) + " " + list(test_df)
 
-    feilds = list(train_df)
-    print "Forecasting Feilds", [ "("+str(i)+")" + feilds[i] for i in range(len(feilds))]
+    forecasting_feilds = list(train_df)
+    print "Forecasting Feilds", [ "("+str(i)+")" + forecasting_feilds[i] for i in range(len(forecasting_feilds))]
 
 y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train_row)
 y_test = apply_zeroMeanUnit(y_test_row, parmsFromNormalization)
@@ -269,9 +175,9 @@ if X_train.shape[1] != X_test.shape[1]:
 if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
     print "rows not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
 
-#model = run_rfr(X_train, y_train, X_test, y_test)
-model = run_lr(X_train, y_train, X_test, y_test)
-#model = run_xgboost(X_train, y_train, X_test, y_test)
+#model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
+#model = run_lr(X_train, y_train, X_test, y_test)
+model = run_xgboost(X_train, y_train, X_test, y_test)
 #model = run_dl(X_train, y_train, X_test, y_test)
 
 
@@ -312,7 +218,7 @@ if testDf is not None and model is not None:
     temp = testDf.drop('id',1)
 
     if train_df.shape[1] != temp.shape[1]:
-        print "train and test does not match " + list(train_df) + " " + list(temp)
+        print "train and test does not match " + str(list(train_df)) + " " + str(list(temp))
 
     #pd.colnames(temp)[pd.colSums(is.na(temp)) > 0]
     #print temp.describe()

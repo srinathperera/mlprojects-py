@@ -12,9 +12,9 @@ def print_base_stats(df):
 
 
 def create_small_datafile(low, high, df):
-    productDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/producto_tabla.csv')
-    productDf = productDf[(productDf['Producto_ID'] < high) & (productDf['Producto_ID'] >= low)]
-    print len(productDf)
+    #productDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/producto_tabla.csv')
+    #productDf = productDf[(productDf['Producto_ID'] < high) & (productDf['Producto_ID'] >= low)]
+    #print len(productDf)
 
     #if 1000 then 68 products and 35M rows
     # if 2000, the 138 products
@@ -25,6 +25,16 @@ def create_small_datafile(low, high, df):
     print "Size", df.shape
     df.to_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems'+ str(low) +'_'+ str(high) +'.csv', index=False)
 
+def create_small_test_datafile(low, high):
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+    #if 1000 then 68 products and 35M rows
+    # if 2000, the 138 products
+    df = df[(df['Producto_ID'] < high) & (df['Producto_ID'] >= low)]
+
+    print df['Producto_ID'].min(), df['Producto_ID'].max()
+
+    print "Size", df.shape
+    df.to_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test'+ str(low) +'_'+ str(high) +'.csv', index=False)
 
 
 
@@ -173,23 +183,55 @@ def merge_outputs():
 
     print result.shape
 
+def test_falttern_reshape():
+    x = np.array([[[1], [2,3]], [[4], [5], [5, 6,7], [], [8]]])
+    print "before", x
+    y = x.ravel()
+    print "X", y, "len",  y.shape
+
+    #print x.flatten().reshape(-1, 4)
+
+def find_missing_products():
+    train = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+    train_ids = train['Producto_ID'].unique()
+    test = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+    test_ids = test['Producto_ID'].unique()
+
+    missing_ids = pd.Index(test_ids).difference(pd.Index(train_ids))
+    print "missing ID count ", len(missing_ids)
+
+    missing_ids_df =  pd.DataFrame(missing_ids, columns=["Producto_ID"])
+    missing_ids_df.to_csv('missing_ids.csv', index=False)
+
+    entries_with_missing = pd.merge(test, missing_ids_df, on='Producto_ID')
+
+    print "Mising entries=", entries_with_missing.shape[0], "percentage=", entries_with_missing.shape[0]*100/test.shape[0]
+
+    print "full entries count", test.shape[0]
+
 
 
 df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 
-
+#find_missing_products()
 #print_base_stats(df)
 #test2Dtransfrom(df)
 
+for i in range(0, 50000, 5000):
+    create_small_datafile(i,i+5000, df)
+#create_small_test_datafile(0,100)
 #create_small_datafile(0,1000, df)
 #create_small_datafile(1000,2000, df)
 #create_small_datafile(2000, 10000, df)
 
 #merge_outputs()
 
-testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
-print testDf['Producto_ID'].min(), testDf['Producto_ID'].max()
+#testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+#print testDf.describe()
+#print testDf['Producto_ID'].min(), testDf['Producto_ID'].max()
+
+#test_falttern_reshape()
 
 #plt.tight_layout()
 #plt.show()

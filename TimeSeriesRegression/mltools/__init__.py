@@ -481,7 +481,7 @@ def verify_window_dataset(x_all, y_all):
 
 
 
-def print_feature_importance(importances):
+def print_feature_importance(importances, forecasting_feilds=None):
     # print feature importance
     # http://scikit-learn.org/stable/auto_examples/ensemble/plot_forest_importances.html
     #std = np.std([tree.feature_importances_ for tree in rfr.estimators_],axis=0)
@@ -494,7 +494,10 @@ def print_feature_importance(importances):
     print("Feature ranking:")
 
     for f in range(len(indices)):
-        print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
+        if forecasting_feilds is None:
+            print("%d. feature %d (%f)" % (f + 1, indices[f], importances[indices[f]]))
+        else:
+            print("%d. feature %d =%s (%f)" % (f + 1, indices[f], forecasting_feilds[indices[f]], importances[indices[f]]))
 
 
 def regression_with_GBR(X_train, y_train, X_test, y_test, parmsFromNormalization, params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 1,
@@ -582,7 +585,10 @@ def create_window_based_features(data, window_size):
 
 # do cross volidation http://stackoverflow.com/questions/533905/get-the-cartesian-product-of-a-series-of-lists-in-python
 
-
+def check4nan(data):
+    print "np.inf=", np.where(np.isnan(data))
+    print "is.inf=", np.where(np.isinf(data))
+    print "np.max=", np.max(abs(data))
 
 
 def create_rondomsearch_configs4DL(ntdepths, ntwidths, dropouts, reglur, lr, trialcount):
