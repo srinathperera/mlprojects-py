@@ -164,8 +164,8 @@ def run_lr(X_train, Y_train, X_test, y_test):
 
 def run_dl(X_train, y_train, X_test, y_test):
     print "Running DL"
-    c = MLConfigs(nodes_in_layer=30, number_of_hidden_layers=3, dropout=0.1, activation_fn='relu', loss="mse",
-             epoch_count=30, optimizer=Adam(lr=0.0001), regularization=0.01)
+    c = MLConfigs(nodes_in_layer=30, number_of_hidden_layers=3, dropout=0.4, activation_fn='relu', loss="mse",
+             epoch_count=2, optimizer=Adam(lr=0.0001), regularization=0.3)
     model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
     return model
 

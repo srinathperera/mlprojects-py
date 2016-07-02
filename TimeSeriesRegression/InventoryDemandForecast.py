@@ -209,8 +209,8 @@ if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
 
 #model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
 #model = run_lr(X_train, y_train, X_test, y_test)
-model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecasting_feilds)
-#model = run_dl(X_train, y_train, X_test, y_test)
+#model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecasting_feilds)
+model = run_dl(X_train, y_train, X_test, y_test)
 
 
 y_pred_raw = model.predict(X_test)
