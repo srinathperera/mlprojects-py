@@ -5,7 +5,18 @@ from mltools import apply_zeroMeanUnit2D, preprocess2DtoZeroMeanUnit, undo_zeroM
 import time
 
 
+from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import Normalizer
+from sklearn import metrics
 
+from sklearn.cluster import KMeans, MiniBatchKMeans
+
+
+from inventory_demand import *
 
 def print_base_stats(df):
     print df.describe()
@@ -143,6 +154,9 @@ def show_stat_graphs(df):
     plt.ylabel('Route', fontsize=18)
     plt.scatter(df['Cliente_ID'].values, df['Ruta_SAK'], c=df['Demanda_uni_equil'], alpha=0.5)
 
+    plt.tight_layout()
+    plt.show()
+
 def test2Dtransfrom(df):
     half = int(df.shape[0]/2)
     df1 = df[:half]
@@ -239,7 +253,148 @@ def break_dataset():
     for i in range(0, 50000, 5000):
         create_small_datafile(i,i+5000, df)
 
-break_dataset()
+
+def analyze_error():
+    df = pd.read_csv('forecast_with_data.csv')
+
+    df['error'] = np.abs(np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1))
+    df['Slopes'] = np.round(df['Slopes'].values)
+
+    print df.describe()
+
+
+
+    plt.figure(1, figsize=(20,10))
+    plt.subplot(321)
+    plt.xlabel('Error', fontsize=18)
+    plt.ylabel('Slope', fontsize=18)
+    #plt.yscale('log')
+    #plt.xscale('log')
+    plt.scatter(df['Slopes'].values, df['error'].values, alpha=0.5)
+
+    groupe2d = df.groupby(['Slopes'])['error'].mean()
+    plt.subplot(322)
+    plt.xlabel('Slope', fontsize=18)
+    plt.ylabel('Mean Error', fontsize=18)
+    plt.scatter(groupe2d.index.values, groupe2d.values, alpha=0.5)
+
+    df['groupedStd'] = np.round(df['groupedStd'].values)
+    groupe2d = df.groupby(['groupedStd'])['error'].mean()
+    plt.subplot(323)
+    plt.xlabel('groupedStd', fontsize=18)
+    plt.ylabel('Mean Error', fontsize=18)
+    plt.scatter(groupe2d.index.values, groupe2d.values, alpha=0.5)
+
+    df['groupedMeans'] = np.round(df['groupedMeans'].values)
+    groupe2d = df.groupby(['groupedMeans'])['error'].mean()
+    plt.subplot(324)
+    plt.xlabel('groupedMeans', fontsize=18)
+    plt.ylabel('Mean Error', fontsize=18)
+    plt.scatter(groupe2d.index.values, groupe2d.values, alpha=0.5)
+
+def product_stats():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+
+    grouped = df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])['Demanda_uni_equil']
+
+    slopeMap = grouped.apply(avgdiff)
+    groupedMeanMap = grouped.mean()
+    groupedStddevMap = grouped.std()
+
+    valuesDf = slopeMap.to_frame("Slopes")
+    valuesDf.reset_index(inplace=True)
+    valuesDf["groupedMeans"] = groupedMeanMap.values
+    valuesDf["groupedStd"] = groupedStddevMap.values
+
+
+
+    plt.figure(1, figsize=(20,10))
+    plt.subplot(321)
+    plt.xlabel('Producto_ID', fontsize=18)
+    plt.ylabel('Mean', fontsize=18)
+    #plt.yscale('log')
+    #plt.xscale('log')
+    plt.scatter(valuesDf['Producto_ID'].values, valuesDf['groupedMeans'].values, alpha=0.5)
+
+#   groupe2d = df.groupby(['Slopes'])['error'].mean()
+    plt.subplot(322)
+    plt.xlabel('Agencia_ID', fontsize=18)
+    plt.ylabel('Mean', fontsize=18)
+    plt.scatter(valuesDf['Agencia_ID'].values, valuesDf['groupedMeans'].values, alpha=0.5)
+
+    plt.subplot(323)
+    plt.xlabel('Agencia_ID', fontsize=18)
+    plt.ylabel('Slope', fontsize=18)
+    plt.scatter(valuesDf['Agencia_ID'].values, valuesDf['Slopes'].values, alpha=0.5)
+
+    plt.subplot(324)
+    plt.xlabel('Producto_ID', fontsize=18)
+    plt.ylabel('Slope', fontsize=18)
+    plt.scatter(valuesDf['Producto_ID'].values, valuesDf['Slopes'].values, alpha=0.5)
+
+
+    plt.tight_layout()
+    plt.show()
+
+def find_similar_products():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+    vectorizer = TfidfVectorizer(max_df=0.5, max_features=200,
+                                 min_df=2, stop_words='english',
+                                 use_idf=True)
+    X = vectorizer.fit_transform(df)
+
+    print("n_samples: %d, n_features: %d" % X.shape)
+
+    print("Performing dimensionality reduction using LSA")
+    t0 = time()
+    # Vectorizer results are normalized, which makes KMeans behave as
+    # spherical k-means for better results. Since LSA/SVD results are
+    # not normalized, we have to redo the normalization.
+    svd = TruncatedSVD(5)
+    normalizer = Normalizer(copy=False)
+    lsa = make_pipeline(svd, normalizer)
+
+    X = lsa.fit_transform(X)
+
+    print("done in %fs" % (time() - t0))
+
+    explained_variance = svd.explained_variance_ratio_.sum()
+    print("Explained variance of the SVD step: {}%".format(
+        int(explained_variance * 100)))
+
+    print()
+
+
+###############################################################################
+# Do the actual clustering
+
+if opts.minibatch:
+    km = MiniBatchKMeans(n_clusters=true_k, init='k-means++', n_init=1,
+                         init_size=1000, batch_size=1000, verbose=opts.verbose)
+else:
+    km = KMeans(n_clusters=true_k, init='k-means++', max_iter=100, n_init=1,
+                verbose=opts.verbose)
+
+print("Clustering sparse data with %s" % km)
+t0 = time()
+km.fit(X)
+print("done in %0.3fs" % (time() - t0))
+print()
+
+print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km.labels_))
+print("Completeness: %0.3f" % metrics.completeness_score(labels, km.labels_))
+print("V-measure: %0.3f" % metrics.v_measure_score(labels, km.labels_))
+print("Adjusted Rand-Index: %.3f"
+      % metrics.adjusted_rand_score(labels, km.labels_))
+print("Silhouette Coefficient: %0.3f"
+      % metrics.silhouette_score(X, km.labels_, sample_size=1000))
+
+print()
+
+
+product_stats()
+#analyze_error()
+#break_dataset()
 #build_sample_dataset()
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
@@ -266,5 +421,3 @@ break_dataset()
 
 #test_falttern_reshape()
 
-#plt.tight_layout()
-#plt.show()

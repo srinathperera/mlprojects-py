@@ -24,42 +24,56 @@ import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
+command = -2
+if len(sys.argv) > 1:
+    command = int(sys.argv[1])
 
 
-test_run = True
+test_run = False
 use_preprocessed_file = False
 save_preprocessed_file = False
-target_as_log = False
+target_as_log = True
 preprocessed_file_name = "_data.csv"
-save_predictions_with_data = True
+save_predictions_with_data = False
 
 s_time = time.time()
 
 np.set_printoptions(precision=1, suppress=True)
 
+
+data_files = [
+    ["trainitems0_5000.csv", 0, 5000], #1.4G
+    ["trainitems5000_10000.csv", 5000, 10000], #76M
+    ["trainitems30000_35000.csv", 30000, 35000], #559N
+    ["trainitems35000_40000.csv", 35000, 40000], #336M
+    ["trainitems40000_45000.csv", 40000, 45000], #640M
+    ["trainitems45000_50000.csv", 450000, 50000], #123M
+]
+
+
+
 y_actual = None
 if not use_preprocessed_file:
-    if test_run:
-        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
-
-        df = pd.read_csv('sample_dataset.csv')
-        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_75.csv')
-
-        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_1000.csv')
-
-        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems2000_10000.csv')
-        #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems1000_2000.csv')
-
-        testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
-        #testDf = testDf[(testDf['Producto_ID'] <= 1000)]
-        #testDf = testDf[(testDf['Producto_ID'] <= 300)]
-        testDf = testDf[(testDf['Producto_ID'] <= 75)]
-        #testDf = testDf[(testDf['Producto_ID'] < 2000) & (testDf['Producto_ID'] >= 1000)]
-
-        print "testDf read", testDf.shape
-    else:
+    if command == -2:
         df = pd.read_csv('data/train.csv')
         testDf = pd.read_csv('data/test.csv')
+    elif command == -1:
+        df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+        testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+        testDf = testDf[(testDf['Producto_ID'] <= 300)]
+    else:
+        dir = None
+        if test_run:
+            dir = "/Users/srinath/playground/data-science/BimboInventoryDemand/"
+        else:
+            dir = "data/"
+
+        df = pd.read_csv(dir + data_files[command][0])
+
+        testDf = pd.read_csv(dir +'test.csv')
+        testDf = testDf[(testDf['Producto_ID'] < data_files[command][2]) & (testDf['Producto_ID'] >= data_files[command][1])]
+
+        print "testDf read", testDf.shape
 else:
     if test_run:
         df = pd.read_csv(preprocessed_file_name)
@@ -136,7 +150,8 @@ if not use_preprocessed_file:
 
 
 
-    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
+    #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
+    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID'])
 
 
     #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
@@ -200,13 +215,14 @@ model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecas
 
 y_pred_raw = model.predict(X_test)
 #undo the normalization
-y_pred_final = modeloutput2predictions(y_pred_raw, parmsFromNormalization=parmsFromNormalization)
+y_pred_final = modeloutput2predictions(y_pred_raw, parmsFromNormalization=parmsFromNormalization,
+                                       default_forecast=test_df["groupedMeans"])
 if target_as_log:
     y_pred_final = retransfrom_from_log(y_pred_final)
 
 error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_pred_final, 10)
 rmsle = calculate_rmsle(y_actual_test, y_pred_final)
-print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("RFR", error_ac, rmsep, mape, rmse, rmsle)
+print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + str(command), error_ac, rmsep, mape, rmse, rmsle)
 
 if save_predictions_with_data:
     feature_df['predictions'] = y_pred_final
@@ -218,7 +234,8 @@ if save_predictions_with_data:
 
 
 if test_run:
-    corrected_Y_test = modeloutput2predictions(y_test, parmsFromNormalization=parmsFromNormalization)
+    corrected_Y_test = modeloutput2predictions(y_test, parmsFromNormalization=parmsFromNormalization,
+                                               default_forecast=test_df["groupedMeans"])
     if target_as_log:
         corrected_Y_test = retransfrom_from_log(corrected_Y_test)
     print "Undo normalization test passed", np.allclose(corrected_Y_test, y_actual_test, atol=0.01)
@@ -226,11 +243,14 @@ if test_run:
     print "Undo X data test test passed", \
         np.allclose(x_test_raw, undo_zeroMeanUnit2D(X_test, parmsFromNormalization2D), atol=0.01)
 
+    rmsle = None
     if target_as_log:
-        rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMeans"]))
+        mean_rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMeans"]))
+        median_rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMedian"]))
     else:
-        rmsle = calculate_rmsle(y_actual_test, test_df["groupedMeans"])
-    print "rmsle for mean prediction", rmsle
+        mean_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMeans"])
+        median_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMedian"])
+    print "rmsle for mean prediction ", rmsle
 
 
 m_time = time.time()
@@ -254,7 +274,8 @@ if testDf is not None and model is not None:
     print "kaggale_test", kaggale_test.shape
 
     kaggale_predicted_raw = model.predict(kaggale_test)
-    kaggale_predicted = modeloutput2predictions(kaggale_predicted_raw, parmsFromNormalization=parmsFromNormalization)
+    kaggale_predicted = modeloutput2predictions(kaggale_predicted_raw, parmsFromNormalization=parmsFromNormalization,
+                                                default_forecast=test_df["groupedMeans"])
 
     print "kaggale_predicted", kaggale_test.shape
 
@@ -267,12 +288,12 @@ if testDf is not None and model is not None:
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
     to_saveDf = to_saveDf.fillna(0)
     to_saveDf["id"] = to_saveDf["id"].astype(int)
-    to_saveDf.to_csv('submission.csv', index=False)
+    to_saveDf.to_csv('submission'+str(command)+ '.csv', index=False)
 
-    to_saveDf["groupedMeans"] = testDf["groupedMeans"]
-    to_saveDf["groupedStd"] = testDf["groupedStd"]
-    to_saveDf["Slopes"] = testDf["Slopes"]
-    to_saveDf.to_csv('prediction_detailed.csv', index=False)
+    #to_saveDf["groupedMeans"] = testDf["groupedMeans"]
+    #to_saveDf["groupedStd"] = testDf["groupedStd"]
+    #to_saveDf["Slopes"] = testDf["Slopes"]
+    #to_saveDf.to_csv('prediction_detailed.csv', index=False)
 
     #np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
 

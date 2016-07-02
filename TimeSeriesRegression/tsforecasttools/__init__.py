@@ -72,8 +72,13 @@ def regression_with_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds
     if X_test is not None and Y_test is not None:
         train_data = xgb.DMatrix(X_train, Y_train)
         test_data = xgb.DMatrix(X_test, Y_test)
+        #parameters https://github.com/dmlc/xgboost/blob/master/doc/parameter.md
+        #basic version
+        #params = {"objective": "reg:linear", "booster":"gblinear"}
+        #params = {"objective": "reg:linear", "booster":"gblinear", 'eta':0.1, 'max_depth':2, 'alpha':0.2, 'lambda':0.8}
+        #params = {"objective": "reg:linear", "booster":"gbtree", 'eta':0.1, 'gamma':1.0 , 'max_depth':3, 'min_child_weight':1}
+        params = {"objective": "reg:linear", "booster":"gblinear", 'eta':0.1, 'gamma':1.0 , 'max_depth':3, 'min_child_weight':1}
 
-        params = {"objective": "reg:linear", "booster":"gblinear"}
         params['nthread'] = 4
 
         evallist  = [(test_data,'eval'), (train_data,'train')]

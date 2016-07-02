@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 import time
+import math
 from sklearn.externals import joblib
 
 from mltools import undoPreprocessing
@@ -12,8 +13,7 @@ from tsforecasttools import run_timeseries_froecasts, regression_with_xgboost
 
 
 from mltools import preprocess2DtoZeroMeanUnit, preprocess1DtoZeroMeanUnit, train_test_split, print_feature_importance, apply_zeroMeanUnit2D
-from mltools import calculate_rmsle, almost_correct_based_accuracy, MLConfigs, print_regression_model_summary, \
-    regression_with_dl, apply_zeroMeanUnit, undo_zeroMeanUnit2D
+from mltools import calculate_rmsle, almost_correct_based_accuracy, MLConfigs, print_regression_model_summary, regression_with_dl, apply_zeroMeanUnit, undo_zeroMeanUnit2D
 from keras.optimizers import Adam
 
 
@@ -73,10 +73,16 @@ def avgdiff(group):
 
 #TODO fix defaults
 
-def modeloutput2predictions(model_forecast, parmsFromNormalization, negative_allowed=False):
+def modeloutput2predictions(model_forecast, parmsFromNormalization, default_forecast, negative_allowed=False):
     y_pred_corrected = undoPreprocessing(model_forecast, parmsFromNormalization)
+    zero_frecasts = np.where(y_pred_corrected < 0)[0]
+    print "zero forecasts=%d, %f precent" %(zero_frecasts.shape[0], float(zero_frecasts.shape[0])/y_pred_corrected.shape[0])
     if not negative_allowed:
-        y_pred_corrected = np.where(y_pred_corrected < 0, 1, y_pred_corrected)
+        for i in range(y_pred_corrected.shape[0]):
+            if y_pred_corrected[i] < 0:
+                #y_pred_corrected[i] = default_forecast[i]
+                y_pred_corrected[i] = 1
+        #y_pred_corrected = np.where(y_pred_corrected < 0, 1, y_pred_corrected)
     return y_pred_corrected
 
 
@@ -109,13 +115,13 @@ def addSlopes(train_df, test_df, testDf):
     slopeMap = grouped.apply(avgdiff)
     groupedMeanMap = grouped.mean()
     groupedStddevMap = grouped.std()
-    #groupedmedianMap = grouped.median()
+    groupedmedianMap = grouped.median()
 
     valuesDf = slopeMap.to_frame("Slopes")
     valuesDf.reset_index(inplace=True)
     valuesDf["groupedMeans"] = groupedMeanMap.values
     valuesDf["groupedStd"] = groupedStddevMap.values
-    #valuesDf["groupedMedian"] = groupedmedianMap.values
+    valuesDf["groupedMedian"] = groupedmedianMap.values
 
     slopes_aggr_time = time.time()
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
@@ -216,7 +222,8 @@ class InventoryDemandPredictor:
 def avgdiff(group):
     group = group.values
     if len(group) > 1:
-        return np.mean([group[i] - group[i-1] for i in range(1, len(group))])
+        slope =  np.mean([group[i] - group[i-1] for i in range(1, len(group))])
+        return slope
     else:
         return 0
 
