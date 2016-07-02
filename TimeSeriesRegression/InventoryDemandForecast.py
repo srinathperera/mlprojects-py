@@ -215,6 +215,7 @@ if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
 configs = create_rondomsearch_configs4DL((1,2,3), (10, 20), (0.1, 0.2, 0.4),
                                         (0.1, 0.2, 0.3), (0.001, 0.0001), 10)
 for c  in configs:
+    c.epoch_count = 5
     model = run_dl(X_train, y_train, X_test, y_test,c)
     print c.tostr() + "rmsle"
     y_pred_final = check_accuracy(c.tostr(), model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)

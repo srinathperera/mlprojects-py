@@ -337,16 +337,24 @@ def product_stats():
     plt.show()
 
 def find_similar_products():
-    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/producto_tabla.csv')
+
+    labels = df['Producto_ID']
+    print "have " + str(df.shape[0]) + "products"
+
     vectorizer = TfidfVectorizer(max_df=0.5, max_features=200,
                                  min_df=2, stop_words='english',
                                  use_idf=True)
-    X = vectorizer.fit_transform(df)
+    X = vectorizer.fit_transform(df['NombreProducto'])
 
     print("n_samples: %d, n_features: %d" % X.shape)
 
+    print type(X)
+    print X
+
+
+
     print("Performing dimensionality reduction using LSA")
-    t0 = time()
     # Vectorizer results are normalized, which makes KMeans behave as
     # spherical k-means for better results. Since LSA/SVD results are
     # not normalized, we have to redo the normalization.
@@ -356,14 +364,42 @@ def find_similar_products():
 
     X = lsa.fit_transform(X)
 
-    print("done in %fs" % (time() - t0))
 
     explained_variance = svd.explained_variance_ratio_.sum()
     print("Explained variance of the SVD step: {}%".format(
         int(explained_variance * 100)))
 
+    print("new size", X.shape)
+    print type(X)
+    print X
+
+
+
+    # Do the actual clustering
+    km = KMeans(n_clusters=10, init='k-means++', max_iter=100, n_init=1,
+                verbose=True)
+
+    print("Clustering sparse data with %s" % km)
+    #km.fit(X)
+
+    results = km.fit_predict(X)
+    print len(results), results
+
+
+
+    print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km.labels_))
+    print("Completeness: %0.3f" % metrics.completeness_score(labels, km.labels_))
+    print("V-measure: %0.3f" % metrics.v_measure_score(labels, km.labels_))
+    print("Adjusted Rand-Index: %.3f"
+        % metrics.adjusted_rand_score(labels, km.labels_))
+    print("Silhouette Coefficient: %0.3f"
+          % metrics.silhouette_score(X, km.labels_, sample_size=1000))
+
     print()
 
+    products_clusters = np.column_stack([labels, results])
+    to_saveDf =  pd.DataFrame(products_clusters, columns=["Producto_ID","Cluster"])
+    to_saveDf.to_csv('product_clusters.csv', index=False)
 
 def product_raw_stats():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
@@ -400,38 +436,8 @@ def product_raw_stats():
     plt.tight_layout()
     plt.show()
 
-
-
-
-###############################################################################
-# Do the actual clustering
-'''
-if opts.minibatch:
-    km = MiniBatchKMeans(n_clusters=true_k, init='k-means++', n_init=1,
-                         init_size=1000, batch_size=1000, verbose=opts.verbose)
-else:
-    km = KMeans(n_clusters=true_k, init='k-means++', max_iter=100, n_init=1,
-                verbose=opts.verbose)
-
-print("Clustering sparse data with %s" % km)
-t0 = time()
-km.fit(X)
-print("done in %0.3fs" % (time() - t0))
-print()
-
-print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km.labels_))
-print("Completeness: %0.3f" % metrics.completeness_score(labels, km.labels_))
-print("V-measure: %0.3f" % metrics.v_measure_score(labels, km.labels_))
-print("Adjusted Rand-Index: %.3f"
-      % metrics.adjusted_rand_score(labels, km.labels_))
-print("Silhouette Coefficient: %0.3f"
-      % metrics.silhouette_score(X, km.labels_, sample_size=1000))
-
-print()
-'''
-
-
-product_raw_stats()
+find_similar_products()
+#product_raw_stats()
 #analyze_error()
 #break_dataset()
 #build_sample_dataset()
