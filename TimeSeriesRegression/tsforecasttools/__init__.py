@@ -74,11 +74,18 @@ def regression_with_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds
         test_data = xgb.DMatrix(X_test, Y_test)
         #parameters https://github.com/dmlc/xgboost/blob/master/doc/parameter.md
         #basic version
-        #params = {"objective": "reg:linear", "booster":"gblinear"}
+        params = {"objective": "reg:linear", "booster":"gblinear"}
         #params = {"objective": "reg:linear", "booster":"gblinear", 'eta':0.1, 'max_depth':2, 'alpha':0.2, 'lambda':0.8}
-        params = {"objective": "reg:linear", "booster":"gbtree", 'eta':0.3, 'gamma':1.0 , 'max_depth':1, 'min_child_weight':3, 'subsample':0.99,
-                  'alpha':0.8, 'lambda':0.8}
         #params = {"objective": "reg:linear", "booster":"gblinear", 'eta':0.1, 'gamma':1.0 , 'max_depth':3, 'min_child_weight':1}
+
+        #params = {"objective": "reg:linear", "booster":"gbtree", 'eta':0.3}
+        params['subsample'] = 0.5 #0.5-1, Lower values make the algorithm more conservative and prevents overfitting but too small values might lead to under-fitting.
+        params['min_child_weight'] = 3 #      #Used to control over-fitting. Higher values prevent a model from learning relations which might be highly specific to the particular sample selected for a tree.
+        params['max_depth'] = 3 #Used to control over-fitting as higher depth will allow model to learn relations very specific to a particular sample.
+        #params['gamma'] = 0
+        params['alpha'] = 0.2 #L1
+        params['lambda'] = 0.2 #L2
+
 
         params['nthread'] = 4
 

@@ -162,11 +162,13 @@ def run_lr(X_train, Y_train, X_test, y_test):
 
 
 
-def run_dl(X_train, y_train, X_test, y_test):
+def run_dl(X_train, y_train, X_test, y_test, c=None):
     print "Running DL"
-    c = MLConfigs(nodes_in_layer=30, number_of_hidden_layers=3, dropout=0.4, activation_fn='relu', loss="mse",
-             epoch_count=2, optimizer=Adam(lr=0.0001), regularization=0.3)
+    if c == None:
+        c = MLConfigs(nodes_in_layer=30, number_of_hidden_layers=3, dropout=0.2, activation_fn='relu', loss="mse",
+             epoch_count=5, optimizer=Adam(lr=0.0001), regularization=0.2)
     model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
+
     return model
 
 
@@ -226,4 +228,19 @@ def avgdiff(group):
         return slope
     else:
         return 0
+
+
+def check_accuracy(label, model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command):
+    y_pred_raw = model.predict(X_test)
+    #undo the normalization
+    y_pred_final = modeloutput2predictions(y_pred_raw, parmsFromNormalization=parmsFromNormalization,
+                                       default_forecast=test_df["groupedMeans"])
+    if target_as_log:
+        y_pred_final = retransfrom_from_log(y_pred_final)
+
+    error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_pred_final, 10)
+    rmsle = calculate_rmsle(y_actual_test, y_pred_final)
+    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + str(command)+ " "+ label, error_ac, rmsep, mape, rmse, rmsle)
+    return y_pred_final
+
 

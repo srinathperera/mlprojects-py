@@ -365,9 +365,47 @@ def find_similar_products():
     print()
 
 
+def product_raw_stats():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+
+    #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+
+    grouped = df.groupby(['Semana'])['Demanda_uni_equil'].mean()
+
+    plt.figure(1, figsize=(20,10))
+    plt.subplot(321)
+    plt.xlabel('Semana', fontsize=18)
+    plt.ylabel('Mean', fontsize=18)
+    #plt.yscale('log')
+    #plt.xscale('log')
+    plt.scatter(df['Semana'].values, df['Demanda_uni_equil'].values, alpha=0.5)
+
+    grouped = df.groupby(['Semana'])['Demanda_uni_equil'].mean()
+    plt.subplot(322)
+    plt.xlabel('Slope', fontsize=18)
+    plt.ylabel('Mean Error', fontsize=18)
+    plt.scatter(grouped.index.values, grouped.values, alpha=0.5)
+
+    grouped = df.groupby(['Semana', 'Producto_ID'])['Demanda_uni_equil'].mean()
+    valuesDf = grouped.to_frame("Mean")
+    valuesDf.reset_index(inplace=True)
+
+
+    plt.subplot(323)
+    plt.xlabel('Semana', fontsize=18)
+    plt.ylabel('Mean Error', fontsize=18)
+    plt.scatter(valuesDf['Semana'], valuesDf["Mean"], alpha=0.5)
+
+
+    plt.tight_layout()
+    plt.show()
+
+
+
+
 ###############################################################################
 # Do the actual clustering
-
+'''
 if opts.minibatch:
     km = MiniBatchKMeans(n_clusters=true_k, init='k-means++', n_init=1,
                          init_size=1000, batch_size=1000, verbose=opts.verbose)
@@ -390,9 +428,10 @@ print("Silhouette Coefficient: %0.3f"
       % metrics.silhouette_score(X, km.labels_, sample_size=1000))
 
 print()
+'''
 
 
-product_stats()
+product_raw_stats()
 #analyze_error()
 #break_dataset()
 #build_sample_dataset()
