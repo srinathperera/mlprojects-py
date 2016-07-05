@@ -155,20 +155,20 @@ if not use_preprocessed_file:
     #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Cluster'])
 
 
-    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Producto_ID', 'Agencia_ID'],
-                                                          'Demanda_uni_equil', "agc_product", demand_val_mean, demand_val_stddev)
+    #train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Producto_ID', 'Agencia_ID'],
+    #                                                      'Demanda_uni_equil', "agc_product", demand_val_mean, demand_val_stddev)
 
-    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Canal_ID', 'Ruta_SAK', 'Cliente_ID'],
-                                                          'Demanda_uni_equil', "routes_combined", demand_val_mean, demand_val_stddev)
+    #train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Canal_ID', 'Ruta_SAK', 'Cliente_ID'],
+    #                                                      'Demanda_uni_equil', "routes_combined", demand_val_mean, demand_val_stddev)
 
 
 
-    test_df_before_dropping_features = test_df
+    #test_df_before_dropping_features = test_df
 
-    train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID'])
+    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID'])
 
-    #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
-    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Ruta_SAK'])
+    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
+    #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Ruta_SAK'])
     #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID', 'Ruta_SAK'])
     #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID'])
 
