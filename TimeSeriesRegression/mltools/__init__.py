@@ -591,6 +591,9 @@ def check4nan(data):
     print "np.max=", np.max(abs(data))
 
 
+def take_product(choices):
+    return itertools.product(choices)
+
 def create_rondomsearch_configs4DL(ntdepths, ntwidths, dropouts, reglur, lr, trialcount):
     all_dl_configs =[]
     for t in itertools.product(ntdepths, ntwidths, dropouts, reglur, lr):

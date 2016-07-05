@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from mltools import apply_zeroMeanUnit2D, preprocess2DtoZeroMeanUnit, undo_zeroMeanUnit2D
 import time
 
+import re
 
 from sklearn.decomposition import TruncatedSVD
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -336,6 +337,138 @@ def product_stats():
     plt.tight_layout()
     plt.show()
 
+#Tostada Ondulada Reg 30p 360g CU2 MR 6085
+#p = re.compile('loss.*?\[(.*?)\].*?val_loss.*?\[(.*?)\].*?NN(.*?)AC_errorRate=([.0-9]+) RMSEP=([.0-9]+)')
+p = re.compile('([^0-9]+) ([0-9][0-9pKkgG\s]{1,}).*')
+
+
+def contains_pattern(str, pattern):
+    #regexp = re.compile(r'ba[r|z|d]')
+    regexp = re.compile(pattern)
+    return regexp.search(str) is not None
+
+
+def extract_data(product_str):
+    tokens = product_str.split()
+    brand = tokens[-2]
+    description = None
+    weight = -1
+    pieces = -1
+
+    m = p.search(product_str)
+    if m:
+        description = m.group(1)
+        weight_size = m.group(2)
+        if(weight_size):
+            tokens = weight_size.split()
+            for t in tokens:
+                if len(t) > 1:
+                    if t.endswith('p'):
+                        pieces = int(t.replace('p',''))
+                    elif t.endswith('kg') or t.endswith('Kg'):
+                        weight = 1000*int(t.replace('Kg','').replace('kg', ''))
+                    elif t.endswith('g'):
+                        weight = int(t.replace('g',''))
+
+    #    print 'G1: ',
+    #    print "G2: ",
+    else:
+        description = product_str
+
+    has_choco = contains_pattern(description, r'Choco')
+    has_vanilla = contains_pattern(description, r'Va(i)?nilla')
+    has_multigrain = contains_pattern(description, r'Multigrano')
+    return [description, brand, weight, pieces]
+
+
+
+
+def parse_product_data():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/producto_tabla.csv')
+    for p in df['NombreProducto'].values:
+        print extract_data(p)
+    print "Done"
+
+
+def cluster_to_find_similar_products():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/producto_tabla.csv')
+    labels = df['Producto_ID']
+    extracted_features = [extract_data(p) for p in df['NombreProducto'].values]
+    extracted_features_np = np.row_stack(extracted_features)
+
+    extracted_features_df =  pd.DataFrame(extracted_features_np, columns=['description', 'brand', 'weight', 'pieces'])
+
+    print "have " + str(df.shape[0]) + "products"
+
+    #vectorize names
+    vectorizer = TfidfVectorizer(max_df=0.5, max_features=200,
+                                 min_df=2, stop_words='english',
+                                 use_idf=True)
+    X = vectorizer.fit_transform(extracted_features_df['description'])
+
+    print("n_samples: %d, n_features: %d" % X.shape)
+
+    print("Performing dimensionality reduction using LSA")
+    # Vectorizer results are normalized, which makes KMeans behave as
+    # spherical k-means for better results. Since LSA/SVD results are
+    # not normalized, we have to redo the normalization.
+    svd = TruncatedSVD(5)
+    normalizer = Normalizer(copy=False)
+    lsa = make_pipeline(svd, normalizer)
+
+    X = lsa.fit_transform(X)
+
+
+    explained_variance = svd.explained_variance_ratio_.sum()
+    print("Explained variance of the SVD step: {}%".format(
+        int(explained_variance * 100)))
+
+    print("new size", X.shape)
+    print type(X)
+
+
+    extracted_features_df = encode_onehot(extracted_features_df, ['brand'])
+    extracted_features_df = drop_feilds_1df(extracted_features_df,['description'])
+
+    print "X,df", X.shape, extracted_features_df.values.shape
+
+    X = np.hstack((X, extracted_features_df.values))
+
+
+
+    # Do the actual clustering
+    km = KMeans(n_clusters=10, init='k-means++', max_iter=100, n_init=1,
+                verbose=True)
+
+    print("Clustering sparse data with %s" % km)
+    #km.fit(X)
+
+    results = km.fit_predict(X)
+    print len(results), results
+
+
+
+    print("Homogeneity: %0.3f" % metrics.homogeneity_score(labels, km.labels_))
+    print("Completeness: %0.3f" % metrics.completeness_score(labels, km.labels_))
+    print("V-measure: %0.3f" % metrics.v_measure_score(labels, km.labels_))
+    print("Adjusted Rand-Index: %.3f"
+        % metrics.adjusted_rand_score(labels, km.labels_))
+    print("Silhouette Coefficient: %0.3f"
+          % metrics.silhouette_score(X, km.labels_, sample_size=1000))
+
+    print()
+
+    products_clusters = np.column_stack([labels, results])
+    to_saveDf =  pd.DataFrame(products_clusters, columns=["Producto_ID","Cluster"])
+    to_saveDf.to_csv('product_clusters.csv', index=False)
+
+    to_saveDf['NombreProducto']= df['NombreProducto']
+
+    #grouped = to_saveDf.groupby(['Cluster'])['NombreProducto']
+    #grouped.apply(print_cluster)
+
+
+
 def find_similar_products():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/producto_tabla.csv')
 
@@ -376,7 +509,7 @@ def find_similar_products():
 
 
     # Do the actual clustering
-    km = KMeans(n_clusters=10, init='k-means++', max_iter=100, n_init=1,
+    km = KMeans(n_clusters=30, init='k-means++', max_iter=100, n_init=1,
                 verbose=True)
 
     print("Clustering sparse data with %s" % km)
@@ -400,6 +533,15 @@ def find_similar_products():
     products_clusters = np.column_stack([labels, results])
     to_saveDf =  pd.DataFrame(products_clusters, columns=["Producto_ID","Cluster"])
     to_saveDf.to_csv('product_clusters.csv', index=False)
+
+    to_saveDf['NombreProducto']= df['NombreProducto']
+
+    grouped = to_saveDf.groupby(['Cluster'])['NombreProducto']
+    grouped.apply(print_cluster)
+
+def print_cluster(group):
+    print group.values
+    return None
 
 def product_raw_stats():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
@@ -436,7 +578,68 @@ def product_raw_stats():
     plt.tight_layout()
     plt.show()
 
-find_similar_products()
+
+def calculate_and_save_aggrigates(df):
+    grouped = df.groupby(['Producto_ID'])['Demanda_uni_equil'].count()
+    count_df = group_to_df(grouped, "count").sort_values(by=["count"])
+    count_df.to_csv('product_id_count.csv', index=False)
+
+    grouped = df.groupby(['Agencia_ID'])['Demanda_uni_equil'].count()
+    count_df = group_to_df(grouped, "count").sort_values(by=["count"])
+    count_df.to_csv('agency_count.csv', index=False)
+
+def add_precentage():
+    id_count_df = pd.read_csv('product_id_count.csv')
+    total = id_count_df["count"].sum()
+    id_count_df["percent"] = np.round(float(100)*id_count_df["count"].values/total, decimals=2)
+    id_count_df.to_csv('product_id_count_full.csv', index=False)
+
+
+    id_count_df = pd.read_csv('agency_count.csv')
+    total = id_count_df["count"].sum()
+    id_count_df["percent"] = np.round(float(100)*id_count_df["count"].values/total, decimals=2)
+    id_count_df.to_csv('agency_count_full.csv', index=False)
+
+
+def test_one_hot():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+
+    training_set_size = int(0.7*df.shape[0])
+    test_set_size = df.shape[0] - training_set_size
+    train_df = df[:training_set_size]
+    test_df = df[-1*test_set_size:]
+
+    #vec = DictVectorizer()
+    #vec.fit(train_df[['Agencia_ID', 'Canal_ID']].to_dict(orient='records'))
+
+    #transformed_train = vec.transform(train_df[['Agencia_ID', 'Canal_ID']].to_dict(orient='records'))
+    #print "transformed_train", transformed_train.shape
+
+    #transformed_test = vec.transform(test_df[['Agencia_ID', 'Canal_ID']].to_dict(orient='records'))
+    #print "transformed_test", transformed_test.shape
+
+
+    #transformed_train2 = vec.transform(train_df[['Agencia_ID', 'Canal_ID']].to_dict(orient='records'))
+    #print "transformed_train", transformed_train.shape
+
+    #print type(transformed_train)
+    #print np.allclose(transformed_train.toarray(), transformed_train2.toarray())
+
+    train_df_encoded, vec = encode_onehot(train_df, ['Agencia_ID', 'Canal_ID'])
+
+    print "train_df, train_df_encoded", train_df.shape, train_df_encoded.shape
+    print list(train_df_encoded)
+
+    test_df_encoded, vec = encode_onehot(test_df, ['Agencia_ID', 'Canal_ID'], vec)
+    print "test_df, test_df_encoded", test_df.shape, test_df_encoded.shape
+
+
+
+
+#find_similar_products()
+
+#analyze_error()
+
 #product_raw_stats()
 #analyze_error()
 #break_dataset()
@@ -444,6 +647,14 @@ find_similar_products()
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+
+#add_precentage()
+#parse_product_data()
+
+#cluster_to_find_similar_products()
+test_one_hot()
+
+#calculate_and_save_aggrigates(df)
 
 #find_missing_products()
 #print_base_stats(df)
@@ -465,4 +676,5 @@ find_similar_products()
 #print testDf['Producto_ID'].min(), testDf['Producto_ID'].max()
 
 #test_falttern_reshape()
+
 

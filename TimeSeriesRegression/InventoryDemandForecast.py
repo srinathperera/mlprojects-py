@@ -99,8 +99,11 @@ y_actual_test = None
 
 forecasting_feilds = None
 
+test_df_before_dropping_features = None
+
 if not use_preprocessed_file:
     #print "shapes train, test", df.shape, testDf.shape
+    df = df[df['Producto_ID'] > 0]
     print "shapes train, test", df.shape
     df['unit_prize'] = df['Venta_hoy']/df['Venta_uni_hoy']
 
@@ -137,20 +140,36 @@ if not use_preprocessed_file:
     #                                test_df,t[0], testDf, drop=False, agr_feild=t[1])
 
 
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False)
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, False, demand_val_mean, demand_val_stddev)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, False, demand_val_mean, demand_val_stddev)
 
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='unit_prize')
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Dev_proxima')
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='unit_prize')
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Dev_proxima')
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
+
+    #train_df, test_df, testDf =  merge_clusters(train_df, test_df, testDf)
+    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cluster', testDf, drop=True)
+    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Cluster'])
+
+
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Producto_ID', 'Agencia_ID'],
+                                                          'Demanda_uni_equil', "agc_product", demand_val_mean, demand_val_stddev)
+
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Canal_ID', 'Ruta_SAK', 'Cliente_ID'],
+                                                          'Demanda_uni_equil', "routes_combined", demand_val_mean, demand_val_stddev)
 
 
 
+    test_df_before_dropping_features = test_df
 
-    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
+    train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID'])
+
+    #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
+    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Ruta_SAK'])
+    #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID', 'Ruta_SAK'])
     #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID'])
 
 
@@ -164,7 +183,6 @@ if not use_preprocessed_file:
     train_df, test_df = drop_column(train_df, test_df, 'Dev_proxima')
     train_df, test_df = drop_column(train_df, test_df, 'unit_prize')
 
-    feature_df = test_df
 
     print train_df.sample(20)
 
@@ -209,32 +227,30 @@ if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
 
 #model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
 #model = run_lr(X_train, y_train, X_test, y_test)
-#model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecasting_feilds)
+model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecasting_feilds)
 
 #ntdepths, ntwidths, dropouts, reglur, lr, trialcount
-configs = create_rondomsearch_configs4DL((1,2,3), (10, 20), (0.1, 0.2, 0.4),
-                                        (0.1, 0.2, 0.3), (0.001, 0.0001), 10)
-for c  in configs:
-    c.epoch_count = 5
-    model = run_dl(X_train, y_train, X_test, y_test,c)
-    print c.tostr() + "rmsle"
-    y_pred_final = check_accuracy(c.tostr(), model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
+#configs = create_rondomsearch_configs4DL((1,2,3), (10, 20), (0.1, 0.2, 0.4),
+#                                       (0.1, 0.2, 0.3), (0.001, 0.0001), 10)
+#for c  in configs:
+#    c.epoch_count = 5
+#    model = run_dl(X_train, y_train, X_test, y_test,c)
+#    print c.tostr() + "rmsle"
+#    y_pred_final = check_accuracy(c.tostr(), model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
 
 #model = run_dl(X_train, y_train, X_test, y_test)
-#_pred_final = check_accuracy("foo", model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
+y_pred_final = check_accuracy("foo", model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
 
 if save_predictions_with_data:
-    feature_df['predictions'] = y_pred_final
-    feature_df['actual'] = y_actual_test
-    feature_df.to_csv('forecast_with_data.csv', index=False)
-
+    test_df_before_dropping_features['predictions'] = y_pred_final
+    test_df_before_dropping_features['actual'] = y_actual_test
+    test_df_before_dropping_features.to_csv('forecast_with_data.csv', index=False)
 
 #model = None
 
 
 if test_run:
-    corrected_Y_test = modeloutput2predictions(y_test, parmsFromNormalization=parmsFromNormalization,
-                                               default_forecast=test_df["groupedMeans"])
+    corrected_Y_test = modeloutput2predictions(y_test, parmsFromNormalization=parmsFromNormalization)
     if target_as_log:
         corrected_Y_test = retransfrom_from_log(corrected_Y_test)
     print "Undo normalization test passed", np.allclose(corrected_Y_test, y_actual_test, atol=0.01)
@@ -242,14 +258,14 @@ if test_run:
     print "Undo X data test test passed", \
         np.allclose(x_test_raw, undo_zeroMeanUnit2D(X_test, parmsFromNormalization2D), atol=0.01)
 
-    rmsle = None
-    if target_as_log:
-        mean_rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMeans"]))
-        median_rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMedian"]))
-    else:
-        mean_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMeans"])
-        median_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMedian"])
-    print "rmsle for mean prediction ", rmsle
+    #rmsle = None
+    #if target_as_log:
+    #    mean_rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMeans"]))
+    #    median_rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMedian"]))
+    #else:
+    #    mean_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMeans"])
+    #    median_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMedian"])
+    #print "rmsle for mean prediction ", rmsle
 
 
 m_time = time.time()
@@ -273,8 +289,7 @@ if testDf is not None and model is not None:
     print "kaggale_test", kaggale_test.shape
 
     kaggale_predicted_raw = model.predict(kaggale_test)
-    kaggale_predicted = modeloutput2predictions(kaggale_predicted_raw, parmsFromNormalization=parmsFromNormalization,
-                                                default_forecast=test_df["groupedMeans"])
+    kaggale_predicted = modeloutput2predictions(kaggale_predicted_raw, parmsFromNormalization=parmsFromNormalization)
 
     print "kaggale_predicted", kaggale_test.shape
 

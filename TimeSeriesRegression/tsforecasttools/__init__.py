@@ -10,6 +10,14 @@ from sklearn.grid_search import GridSearchCV, RandomizedSearchCV
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error
 
+from xgboost import plot_importance
+
+import operator
+from matplotlib import pylab as plt
+import xgboost
+
+
+
 
 from mltools import rolling_univariate_window, build_rolling_window_dataset
 from mltools import train_test_split,print_graph_test,almost_correct_based_accuracy
@@ -59,7 +67,7 @@ def regression_with_xgboost2(X_train, Y_train, X_test, Y_test):
     return XGBoostModel(xlf), y_pred
 
 
-def regression_with_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds=None):
+def regression_with_xgboost2(X_train, Y_train, X_test, Y_test, forecasting_feilds=None):
     #http://datascience.stackexchange.com/questions/9483/xgboost-linear-regression-output-incorrect
     #http://xgboost.readthedocs.io/en/latest/get_started/index.html
     #https://www.kaggle.com/c/higgs-boson/forums/t/10286/customize-loss-function-in-xgboost
@@ -72,36 +80,30 @@ def regression_with_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds
     if X_test is not None and Y_test is not None:
         train_data = xgb.DMatrix(X_train, Y_train)
         test_data = xgb.DMatrix(X_test, Y_test)
-        #parameters https://github.com/dmlc/xgboost/blob/master/doc/parameter.md
-        #basic version
-        params = {"objective": "reg:linear", "booster":"gblinear"}
-        #params = {"objective": "reg:linear", "booster":"gblinear", 'eta':0.1, 'max_depth':2, 'alpha':0.2, 'lambda':0.8}
-        #params = {"objective": "reg:linear", "booster":"gblinear", 'eta':0.1, 'gamma':1.0 , 'max_depth':3, 'min_child_weight':1}
-
-        #params = {"objective": "reg:linear", "booster":"gbtree", 'eta':0.3}
-        params['subsample'] = 0.5 #0.5-1, Lower values make the algorithm more conservative and prevents overfitting but too small values might lead to under-fitting.
-        params['min_child_weight'] = 3 #      #Used to control over-fitting. Higher values prevent a model from learning relations which might be highly specific to the particular sample selected for a tree.
-        params['max_depth'] = 3 #Used to control over-fitting as higher depth will allow model to learn relations very specific to a particular sample.
-        #params['gamma'] = 0
-        params['alpha'] = 0.2 #L1
-        params['lambda'] = 0.2 #L2
 
 
         params['nthread'] = 4
 
         evallist  = [(test_data,'eval'), (train_data,'train')]
-        num_round =20
+        num_round =50
         gbm = xgb.train( params, train_data, num_round, evallist, verbose_eval = True, early_stopping_rounds=5)
         y_pred = gbm.predict(xgb.DMatrix(X_test))
 
-        gbm.dump_model('xgb.fmap')
-        importance = gbm.get_fscore(fmap='xgb.fmap')
-        print "importance=", importance
+
+        #importance = gbm.get_fscore()
+        #plot_importance(importance)
+        #gbm.dump_model('xgb.fmap')
+        #importance = gbm.get_fscore(fmap='xgb.fmap')
+        #importance = sorted(importance.items(), key=operator.itemgetter(1))
+
+        #print "importance=", importance
+
         return XGBoostModel(gbm), y_pred
     else:
         train_data = xgb.DMatrix(X_train, Y_train)
 
         params = {"objective": "reg:linear", "booster":"gblinear"}
+        #params = {"objective": "reg:linear", "booster":"gblinear"}
         params['nthread'] = 4
 
         evallist  = [(train_data,'train')]
@@ -109,6 +111,89 @@ def regression_with_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds
         gbm = xgb.train( params, train_data, num_round, evallist, verbose_eval = True)
         y_pred = gbm.predict(xgb.DMatrix(X_test))
         return XGBoostModel(gbm), y_pred
+
+
+
+
+def ceate_feature_map_for_feature_importance(features):
+    outfile = open('xgb.fmap', 'w')
+    i = 0
+    for feat in features:
+        outfile.write('{0}\t{1}\tq\n'.format(i, feat))
+        i = i + 1
+
+    outfile.close()
+
+def show_feature_importance(gbdt):
+    importance = gbdt.get_fscore(fmap='xgb.fmap')
+    print importance
+    importance = sorted(importance.items(), key=operator.itemgetter(1))
+
+    df = pd.DataFrame(importance, columns=['feature', 'fscore'])
+    df['fscore'] = df['fscore'] / df['fscore'].sum()
+    print "feature importance", df
+
+    plt.figure()
+    df.plot()
+    df.plot(kind='barh', x='feature', y='fscore', legend=False, figsize=(6, 10))
+    plt.title('XGBoost Feature Importance')
+    plt.xlabel('relative importance')
+    plt.gcf().savefig('feature_importance_xgb.png')
+
+
+def get_default_xgboost_params():
+    xgb_params = {"objective": "reg:linear", "booster":"gblinear"}
+    #xgb_params = {"objective": "reg:linear", "eta": 0.1, "max_depth": 10, "seed": 42, "silent": 0}
+    xgb_params['nthread'] = 4
+
+    #basic version #parameters https://github.com/dmlc/xgboost/blob/master/doc/parameter.md
+    #xgb_params = {"objective": "reg:linear", "booster":"gblinear"}
+    #xgb_params = {"objective": "reg:linear", "booster":"gblinear", 'eta':0.1, 'max_depth':2, 'alpha':0.2, 'lambda':0.8}
+    #xgb_params = {"objective": "reg:linear", "booster":"gblinear", 'eta':0.1, 'gamma':1.0 , 'max_depth':3, 'min_child_weight':1}
+
+    #xgb_params = {"objective": "reg:linear", "booster":"gbtree", 'eta':0.3}
+    #xgb_params['subsample'] = 0.5 #0.5-1, Lower values make the algorithm more conservative and prevents overfitting but too small values might lead to under-fitting.
+    #xgb_params['min_child_weight'] = 3 #      #Used to control over-fitting. Higher values prevent a model from learning relations which might be highly specific to the particular sample selected for a tree.
+    #xgb_params['max_depth'] = 3 #Used to control over-fitting as higher depth will allow model to learn relations very specific to a particular sample.
+    #params['gamma'] = 0
+    #params['alpha'] = 0.2 #L1
+    #params['lambda'] = 0.2 #L2
+    return xgb_params
+
+
+def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use_cv=False, use_sklean=False):
+
+    train_data = xgb.DMatrix(x_train, label=y_train)
+    test_data = xgb.DMatrix(X_test, Y_test)
+    evallist  = [(test_data,'eval'), (train_data,'train')]
+
+    xgb_params = get_default_xgboost_params()
+
+    if not use_cv:
+        num_rounds = 10
+    else:
+        cvresult = xgb.cv(xgb_params, train_data, num_boost_round=10, nfold=5,
+            metrics={'rmse'}, show_progress=True)
+        print cvresult
+        num_rounds = len(cvresult)
+    gbdt = None
+    if(use_sklean):
+        #gbdt = xgboost.XGBRegressor(max_depth=3, learning_rate=0.1, n_estimators=100, silent=True, objective='reg:linear', nthread=-1, gamma=0, min_child_weight=1, max_delta_step=0, subsample=1, colsample_bytree=1, colsample_bylevel=1, reg_alpha=0, reg_lambda=1, scale_pos_weight=1, base_score=0.5, seed=0, missing=None)
+        xgb_params['n_estimators'] = num_rounds
+        gbdt = xgboost.XGBRegressor(xgb_params)
+
+        gbdt.fit(x_train, y_train)
+        y_pred = gbdt.predict(X_test)
+
+        return gbdt, y_pred
+    else:
+        #gbdt = xgb.train( xgb_params, train_data, num_rounds, evallist, verbose_eval = True, early_stopping_rounds=5)
+        gbdt = xgb.train( xgb_params, train_data, num_rounds, evallist, verbose_eval = True)
+        #ceate_feature_map_for_feature_importance(features)
+        #show_feature_importance(gbdt)
+
+        y_pred = gbdt.predict(xgb.DMatrix(X_test))
+        return XGBoostModel(gbdt), y_pred
 
 
 
