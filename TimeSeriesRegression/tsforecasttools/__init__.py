@@ -161,13 +161,14 @@ def get_default_xgboost_params():
     return xgb_params
 
 
-def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use_cv=False, use_sklean=False):
+def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use_cv=True, use_sklean=False, xgb_params=None):
 
     train_data = xgb.DMatrix(x_train, label=y_train)
     test_data = xgb.DMatrix(X_test, Y_test)
     evallist  = [(test_data,'eval'), (train_data,'train')]
 
-    xgb_params = get_default_xgboost_params()
+    if xgb_params == None:
+        xgb_params = get_default_xgboost_params()
 
     if not use_cv:
         num_rounds = 10
@@ -189,6 +190,7 @@ def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use
     else:
         #gbdt = xgb.train( xgb_params, train_data, num_rounds, evallist, verbose_eval = True, early_stopping_rounds=5)
         gbdt = xgb.train( xgb_params, train_data, num_rounds, evallist, verbose_eval = True)
+
         #ceate_feature_map_for_feature_importance(features)
         #show_feature_importance(gbdt)
 

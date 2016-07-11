@@ -29,7 +29,7 @@ if len(sys.argv) > 1:
     command = int(sys.argv[1])
 
 
-test_run = False
+test_run = True
 use_preprocessed_file = False
 save_preprocessed_file = False
 target_as_log = True
@@ -109,7 +109,7 @@ if not use_preprocessed_file:
 
     #df['UClient'] =
 
-    training_set_size = int(0.7*df.shape[0])
+    training_set_size = int(0.95*df.shape[0])
     test_set_size = df.shape[0] - training_set_size
 
     y_all = df['Demanda_uni_equil'].values
@@ -165,7 +165,7 @@ if not use_preprocessed_file:
 
     #test_df_before_dropping_features = test_df
 
-    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID'])
+    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID', 'Cliente_ID'])
 
     train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
     #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Ruta_SAK'])
@@ -184,7 +184,6 @@ if not use_preprocessed_file:
     train_df, test_df = drop_column(train_df, test_df, 'unit_prize')
 
 
-    print train_df.sample(20)
 
 
     if save_preprocessed_file:
@@ -224,10 +223,11 @@ if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
 #print_xy_sample(X_train, y_train)
 #print_xy_sample(X_test, y_test)
 
+check4nan(X_train)
 
-#model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
+model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
 #model = run_lr(X_train, y_train, X_test, y_test)
-model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecasting_feilds)
+#model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecasting_feilds)
 
 #ntdepths, ntwidths, dropouts, reglur, lr, trialcount
 #configs = create_rondomsearch_configs4DL((1,2,3), (10, 20), (0.1, 0.2, 0.4),
@@ -239,7 +239,29 @@ model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecas
 #    y_pred_final = check_accuracy(c.tostr(), model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
 
 #model = run_dl(X_train, y_train, X_test, y_test)
-y_pred_final = check_accuracy("foo", model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
+y_pred_final = check_accuracy("Linear Booster", model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
+
+
+'''
+for t in itertools.product((3, 5, 10), (0,0.1,0.2), (0,0.1,0.2)):
+    xgb_params = {"objective": "reg:linear", "booster":"gblinear", "max.depth":t[0], "lambda":t[1], "lambda_bias":t[2], "alpha":0, "nthread":4}
+    print t, xgb_params
+    model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, xgb_params=xgb_params)
+    y_pred_final = check_accuracy("Linear Booster" + str(t), model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
+'''
+#xgboost(data = X, booster = "gbtree", objective = "binary:logistic", max.depth = 5, eta = 0.5, nthread = 2, nround = 2,  min_child_weight = 1, subsample = 0.5, colsample_bytree = 1,num_parallel_tree = 1)
+
+    #xgb_params['subsample'] = 0.5 #0.5-1, Lower values make the algorithm more conservative and prevents overfitting but too small values might lead to under-fitting.
+    #xgb_params['min_child_weight'] = 3 #      #Used to control over-fitting. Higher values prevent a model from learning relations which might be highly specific to the particular sample selected for a tree.
+    #xgb_params['max_depth'] = 3 #Used to control over-fitting as higher depth will allow model to learn relations very specific to a particular sample.
+'''
+for t in itertools.product((3, 5, 10), (0.1,0.2,0.5)):
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max.depth":t[0], "eta":t[1], "min_child_weight":1,
+                  "subsample":0.5, "nthread":4, "colsample_bytree":1, "num_parallel_tree":1}
+    print t, xgb_params
+    model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, xgb_params=xgb_params)
+    y_pred_final = check_accuracy("Linear Booster" + str(t), model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
+'''
 
 if save_predictions_with_data:
     test_df_before_dropping_features['predictions'] = y_pred_final

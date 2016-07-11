@@ -634,7 +634,20 @@ def test_one_hot():
     print "test_df, test_df_encoded", test_df.shape, test_df_encoded.shape
 
 
+def test_return_multiple_apply(df):
+    df = df.head(100000)
+    grouped = df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    slopeMap = grouped.apply(calculate_slope)
 
+    valuesDf = slopeMap.to_frame("Slopes")
+    valuesDf.reset_index(inplace=True)
+
+    #print "slopeMap", valuesDf.head()
+
+
+
+
+    print expand_array_feild_and_add_df(valuesDf, "Slopes", ["mean", "slope"])
 
 #find_similar_products()
 
@@ -646,13 +659,17 @@ def test_one_hot():
 #build_sample_dataset()
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_10.csv')
+
+
+test_return_multiple_apply(df)
 
 #add_precentage()
 #parse_product_data()
 
 #cluster_to_find_similar_products()
-test_one_hot()
+#test_one_hot()
 
 #calculate_and_save_aggrigates(df)
 
