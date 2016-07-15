@@ -795,12 +795,12 @@ def submission_stats():
 #create_small_datafile(1000,2000, df)
 #create_small_datafile(2000, 10000, df)
 
-#merge_submissions()
+merge_submissions()
 
 #submission_stats()
 
-testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
-break_test_dataset(testDf)
+#testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+#break_test_dataset(testDf)
 
 #
 #print testDf.describe()
