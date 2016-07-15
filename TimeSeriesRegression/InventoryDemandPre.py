@@ -543,6 +543,71 @@ def print_cluster(group):
     print group.values
     return None
 
+
+## category tests #######
+
+def find_top10_category_coverage(df, feild_name):
+    counts = df[feild_name].value_counts()
+    counts = counts.sort_values(ascending=False)
+    top10 = counts[0:10]
+
+    return float(top10.sum())/counts.sum()
+
+
+def category_histograms(df):
+    plt.figure(1, figsize=(20,10))
+
+
+    find_top10_category_coverage(df, 'Producto_ID' )
+
+    print "Producto_ID",len(df['Producto_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Producto_ID' )
+    print "Agencia_ID", len(df['Agencia_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Agencia_ID' )
+    print "Canal_ID", len(df['Canal_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Canal_ID' )
+    print "Ruta_SAK", len(df['Ruta_SAK'].unique()), "coverage", find_top10_category_coverage(df, 'Ruta_SAK' )
+    print "Cliente_ID", len(df['Cliente_ID'].unique()) , "coverage", find_top10_category_coverage(df, 'Cliente_ID' )
+
+
+    plt.subplot(321)
+    plt.xlabel('Producto_ID', fontsize=12)
+    plt.ylabel('Mean', fontsize=18)
+    #plt.yscale('log')
+    #plt.xscale('log')
+    plt.hist(df['Producto_ID'], bins=1000)
+
+    plt.subplot(322)
+    plt.xlabel('Agencia_ID', fontsize=12)
+    plt.ylabel('Mean', fontsize=18)
+    #plt.yscale('log')
+    #plt.xscale('log')
+    plt.hist(df['Agencia_ID'], bins=1000)
+
+
+    plt.subplot(323)
+    plt.xlabel('Canal_ID', fontsize=12)
+    plt.ylabel('Mean', fontsize=18)
+    #plt.yscale('log')
+    #plt.xscale('log')
+    plt.hist(df['Canal_ID'], bins=100)
+
+
+    plt.subplot(324)
+    plt.xlabel('Ruta_SAK', fontsize=12)
+    plt.ylabel('Mean', fontsize=18)
+    #plt.yscale('log')
+    #plt.xscale('log')
+    plt.hist(df['Ruta_SAK'], bins=100)
+
+
+    plt.subplot(325)
+    plt.xlabel('Cliente_ID', fontsize=12)
+    plt.ylabel('Mean', fontsize=18)
+    #plt.yscale('log')
+    #plt.xscale('log')
+    plt.hist(df['Cliente_ID'], bins=100)
+
+    plt.show()
+
+
 def product_raw_stats():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 
@@ -643,10 +708,6 @@ def test_return_multiple_apply(df):
     valuesDf.reset_index(inplace=True)
 
     #print "slopeMap", valuesDf.head()
-
-
-
-
     print expand_array_feild_and_add_df(valuesDf, "Slopes", ["mean", "slope"])
 
 #find_similar_products()
@@ -658,12 +719,17 @@ def test_return_multiple_apply(df):
 #break_dataset()
 #build_sample_dataset()
 
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems5000_10000.csv')
+df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+
+
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_10.csv')
 
 
-test_return_multiple_apply(df)
+category_histograms(df)
+
+#test_return_multiple_apply(df)
 
 #add_precentage()
 #parse_product_data()
