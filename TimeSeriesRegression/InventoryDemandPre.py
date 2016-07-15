@@ -37,6 +37,21 @@ def create_small_datafile(low, high, df):
     print "Size", df.shape
     df.to_csv('data/trainitems'+ str(low) +'_'+ str(high) +'.csv', index=False)
 
+
+def create_small_testfile(low, high, df):
+    df = df[(df['Producto_ID'] < high) & (df['Producto_ID'] >= low)]
+
+    print df['Producto_ID'].min(), df['Producto_ID'].max()
+    print low, " ", high, " Size", df.shape
+    df.to_csv('test_'+ str(low) +'_'+ str(high) +'.csv', index=False)
+
+def break_test_dataset(df):
+    for i in range(0, 50000, 5000):
+        create_small_testfile(i,i+5000, df)
+
+
+
+
 def create_small_test_datafile(low, high):
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
     #if 1000 then 68 products and 35M rows
@@ -720,6 +735,24 @@ def test_return_multiple_apply(df):
     #print "slopeMap", valuesDf.head()
     print expand_array_feild_and_add_df(valuesDf, "Slopes", ["mean", "slope"])
 
+
+def submission_stats():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+    sub1 = pd.read_csv('/Users/srinath/Desktop/final.csv')
+
+    missing = list(set(df['id']) - set(sub1['id']))
+
+    print len(missing), " missing"
+
+    print df[missing]
+
+
+    #print df.describe()
+
+
+
+
+
 #find_similar_products()
 
 #analyze_error()
@@ -762,9 +795,14 @@ def test_return_multiple_apply(df):
 #create_small_datafile(1000,2000, df)
 #create_small_datafile(2000, 10000, df)
 
-merge_submissions()
+#merge_submissions()
 
-#testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+#submission_stats()
+
+testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+break_test_dataset(testDf)
+
+#
 #print testDf.describe()
 #print testDf['Producto_ID'].min(), testDf['Producto_ID'].max()
 

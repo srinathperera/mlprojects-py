@@ -42,12 +42,12 @@ np.set_printoptions(precision=1, suppress=True)
 
 
 data_files = [
-    ["trainitems0_5000.csv", 0, 5000], #1.4G
-    ["trainitems5000_10000.csv", 5000, 10000], #76M
-    ["trainitems30000_35000.csv", 30000, 35000], #559N
-    ["trainitems35000_40000.csv", 35000, 40000], #336M
-    ["trainitems40000_45000.csv", 40000, 45000], #640M
-    ["trainitems45000_50000.csv", 450000, 50000], #123M
+    ["trainitems0_5000.csv", 0, 5000, "test_0_5000.csv"], #1.4G
+    ["trainitems5000_10000.csv", 5000, 10000, "test_5000_10000.csv"], #76M
+    ["trainitems30000_35000.csv", 30000, 35000, "test_30000_35000.csv"], #559N
+    ["trainitems35000_40000.csv", 35000, 40000, "test_35000_40000.csv"], #336M
+    ["trainitems40000_45000.csv", 40000, 45000, "test_40000_45000.csv"], #640M
+    ["trainitems45000_50000.csv", 450000, 50000, "test_45000_50000.csv"], #123M
 ]
 
 
@@ -68,10 +68,7 @@ else:
         dir = "data/"
 
     df = pd.read_csv(dir + data_files[command][0])
-
-    testDf = pd.read_csv(dir +'test.csv')
-    testDf = testDf[(testDf['Producto_ID'] < data_files[command][2]) & (testDf['Producto_ID'] >= data_files[command][1])]
-
+    testDf = pd.read_csv(dir +data_files[command][3])
     print "testDf read", testDf.shape
 
 
