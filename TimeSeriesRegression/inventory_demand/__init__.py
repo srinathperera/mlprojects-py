@@ -529,8 +529,8 @@ class IDConfigs:
 
 
 def generate_features(conf, df, subdf):
-    use_slope = True
-    use_group_aggrigate = False
+    use_slope = False
+    use_group_aggrigate = True
 
 
     #print "shapes train, test", df.shape, testDf.shape
