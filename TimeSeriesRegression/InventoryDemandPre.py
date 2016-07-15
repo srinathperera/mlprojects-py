@@ -198,6 +198,16 @@ def merge_outputs():
 
     print result.shape
 
+
+def merge_submissions():
+    submission_files = [pd.read_csv('submission'+i+'.csv') for i in range(5)]
+    result = pd.concat(submission_files).sort_values(by=['id'])
+    result.to_csv('final.csv', index=False)
+    print "submission file of shape ", result.shape, " created"
+
+
+
+
 def test_falttern_reshape():
     x = np.array([[[1], [2,3]], [[4], [5], [5, 6,7], [], [8]]])
     print "before", x
@@ -720,14 +730,14 @@ def test_return_multiple_apply(df):
 #build_sample_dataset()
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems5000_10000.csv')
-df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems0_10.csv')
 
 
-category_histograms(df)
+#category_histograms(df)
 
 #test_return_multiple_apply(df)
 
@@ -752,7 +762,7 @@ category_histograms(df)
 #create_small_datafile(1000,2000, df)
 #create_small_datafile(2000, 10000, df)
 
-#merge_outputs()
+merge_submissions()
 
 #testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
 #print testDf.describe()
