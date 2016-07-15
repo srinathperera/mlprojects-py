@@ -200,7 +200,7 @@ def merge_outputs():
 
 
 def merge_submissions():
-    submission_files = [pd.read_csv('submission'+i+'.csv') for i in range(5)]
+    submission_files = [pd.read_csv('submission'+str(i)+'.csv') for i in range(5)]
     result = pd.concat(submission_files).sort_values(by=['id'])
     result.to_csv('final.csv', index=False)
     print "submission file of shape ", result.shape, " created"
