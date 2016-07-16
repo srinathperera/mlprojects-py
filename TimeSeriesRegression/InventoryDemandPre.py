@@ -216,6 +216,13 @@ def merge_outputs():
 
 def merge_submissions():
     submission_files = [pd.read_csv('submission'+str(i)+'.csv') for i in range(5)]
+
+    tot = 0
+    for df in submission_files:
+        print "size",df.shape[0]
+        tot = tot + df.shape[0]
+    print "submission size", tot
+
     result = pd.concat(submission_files).sort_values(by=['id'])
     result.to_csv('final.csv', index=False)
     print "submission file of shape ", result.shape, " created"
@@ -574,7 +581,7 @@ def print_cluster(group):
 def find_top10_category_coverage(df, feild_name):
     counts = df[feild_name].value_counts()
     counts = counts.sort_values(ascending=False)
-    top10 = counts[0:10]
+    top10 = counts[0:min(len(counts), 200)]
 
     return float(top10.sum())/counts.sum()
 
@@ -585,11 +592,11 @@ def category_histograms(df):
 
     find_top10_category_coverage(df, 'Producto_ID' )
 
-    print "Producto_ID",len(df['Producto_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Producto_ID' )
-    print "Agencia_ID", len(df['Agencia_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Agencia_ID' )
-    print "Canal_ID", len(df['Canal_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Canal_ID' )
-    print "Ruta_SAK", len(df['Ruta_SAK'].unique()), "coverage", find_top10_category_coverage(df, 'Ruta_SAK' )
-    print "Cliente_ID", len(df['Cliente_ID'].unique()) , "coverage", find_top10_category_coverage(df, 'Cliente_ID' )
+    print "Producto_ID",len(df['Producto_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Producto_ID' ), df['Producto_ID'].max()
+    print "Agencia_ID", len(df['Agencia_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Agencia_ID' ), df['Agencia_ID'].max()
+    print "Canal_ID", len(df['Canal_ID'].unique()), "coverage", find_top10_category_coverage(df, 'Canal_ID' ), df['Canal_ID'].max()
+    print "Ruta_SAK", len(df['Ruta_SAK'].unique()), "coverage", find_top10_category_coverage(df, 'Ruta_SAK' ), df['Ruta_SAK'].max()
+    print "Cliente_ID", len(df['Cliente_ID'].unique()) , "coverage", find_top10_category_coverage(df, 'Cliente_ID' ), df['Cliente_ID'].max()
 
 
     plt.subplot(321)
@@ -797,7 +804,7 @@ def submission_stats():
 
 merge_submissions()
 
-#submission_stats()
+##submission_stats()
 
 #testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
 #break_test_dataset(testDf)
