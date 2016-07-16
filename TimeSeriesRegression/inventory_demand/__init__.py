@@ -735,6 +735,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D ):
     ids = testDf['id']
     temp = testDf.drop('id',1)
+    print "creating submission for ", len(ids), "values"
 
     #pd.colnames(temp)[pd.colSums(is.na(temp)) > 0]
     #print temp.describe()
@@ -762,6 +763,8 @@ def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNorm
     to_saveDf = to_saveDf.fillna(0)
     to_saveDf["id"] = to_saveDf["id"].astype(int)
     to_saveDf.to_csv('submission'+str(conf.command)+ '.csv', index=False)
+
+    print "Submission done for ", to_saveDf.shape[0], "values"
 
     #to_saveDf["groupedMeans"] = testDf["groupedMeans"]
     #to_saveDf["groupedStd"] = testDf["groupedStd"]

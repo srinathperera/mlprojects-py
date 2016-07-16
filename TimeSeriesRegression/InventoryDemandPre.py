@@ -215,7 +215,7 @@ def merge_outputs():
 
 
 def merge_submissions():
-    submission_files = [pd.read_csv('submission'+str(i)+'.csv') for i in range(5)]
+    submission_files = [pd.read_csv('submission'+str(i)+'.csv') for i in range(6)]
 
     tot = 0
     for df in submission_files:
