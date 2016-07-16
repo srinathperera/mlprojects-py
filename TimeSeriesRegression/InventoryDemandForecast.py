@@ -69,6 +69,7 @@ else:
 
     df = pd.read_csv(dir + data_files[command][0])
     testDf = pd.read_csv(dir +data_files[command][3])
+    print "using ", dir + data_files[command][0], " and ", dir +data_files[command][3]
     print "testDf read", testDf.shape
 
 
