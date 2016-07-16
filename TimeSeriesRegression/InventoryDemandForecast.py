@@ -104,6 +104,9 @@ model, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, trai
     #    median_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMedian"])
     #print "rmsle for mean prediction ", rmsle
 
+if conf.generate_submission:
+    create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D)
+
 
 m_time = time.time()
 
