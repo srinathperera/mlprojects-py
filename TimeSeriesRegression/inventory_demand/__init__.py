@@ -538,7 +538,7 @@ def generate_features(conf, df, subdf):
     print "shapes train, test", df.shape
     df['unit_prize'] = df['Venta_hoy']/df['Venta_uni_hoy']
 
-    training_set_size = int(0.7*df.shape[0])
+    training_set_size = int(0.95*df.shape[0])
     test_set_size = df.shape[0] - training_set_size
 
     y_all = df['Demanda_uni_equil'].values
