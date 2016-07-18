@@ -230,6 +230,24 @@ def merge_submissions():
 
 
 
+def merge_csv_files(list, output_file_name, root_dir):
+    submission_files = [pd.read_csv(root_dir+ f) for f in list]
+    result = pd.concat(submission_files)
+    result.to_csv(output_file_name, index=False)
+    print output_file_name, "submission file of shape ", result.shape, " created"
+
+
+def merge_data_and_test_files():
+    train_files = ["trainitems5000_10000.csv", "trainitems35000_40000.csv",  "trainitems45000_50000.csv"]
+    merge_csv_files(train_files, "trainitems5_10_35_40_45_50k.csv", "/Users/srinath/playground/data-science/BimboInventoryDemand/")
+
+    test_files = ["test_5000_10000.csv", "test_35000_40000.csv", "test_45000_50000.csv"]
+    merge_csv_files(test_files, "test_5_10_35_40_45_50k.csv", "/Users/srinath/playground/data-science/BimboInventoryDemand/")
+
+
+
+
+
 def test_falttern_reshape():
     x = np.array([[[1], [2,3]], [[4], [5], [5, 6,7], [], [8]]])
     print "before", x
@@ -802,7 +820,9 @@ def submission_stats():
 #create_small_datafile(1000,2000, df)
 #create_small_datafile(2000, 10000, df)
 
-merge_submissions()
+#merge_submissions()
+
+merge_data_and_test_files()
 
 ##submission_stats()
 

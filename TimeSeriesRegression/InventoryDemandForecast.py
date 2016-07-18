@@ -29,7 +29,7 @@ if len(sys.argv) > 1:
     command = int(sys.argv[1])
 
 
-test_run = False
+test_run = True
 use_preprocessed_file = False
 save_preprocessed_file = False
 target_as_log = True
@@ -40,7 +40,6 @@ s_time = time.time()
 
 np.set_printoptions(precision=1, suppress=True)
 
-
 data_files = [
     ["trainitems0_5000.csv", 0, 5000, "test_0_5000.csv"], #1.4G
     ["trainitems5000_10000.csv", 5000, 10000, "test_5000_10000.csv"], #76M
@@ -49,7 +48,6 @@ data_files = [
     ["trainitems40000_45000.csv", 40000, 45000, "test_40000_45000.csv"], #640M
     ["trainitems45000_50000.csv", 450000, 50000, "test_45000_50000.csv"], #123M
 ]
-
 
 
 y_actual = None
@@ -79,6 +77,9 @@ print "read took %f" %(r_time-s_time)
 
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.command = command
+
+
+#df = remove_rare_categories(df)
 
 train_df, test_df, testDf, y_actual_test = generate_features(conf, df, testDf)
 
