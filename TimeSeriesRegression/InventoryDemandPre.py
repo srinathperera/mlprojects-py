@@ -215,7 +215,7 @@ def merge_outputs():
 
 
 def merge_submissions():
-    submission_files = [pd.read_csv('submission'+str(i)+'.csv') for i in range(6)]
+    submission_files = [pd.read_csv('submission'+str(i)+'.csv') for i in range(4)]
 
     tot = 0
     for df in submission_files:
@@ -820,9 +820,9 @@ def submission_stats():
 #create_small_datafile(1000,2000, df)
 #create_small_datafile(2000, 10000, df)
 
-#merge_submissions()
+merge_submissions()
 
-merge_data_and_test_files()
+#merge_data_and_test_files()
 
 ##submission_stats()
 
