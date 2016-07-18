@@ -239,10 +239,10 @@ def merge_csv_files(list, output_file_name, root_dir):
 
 def merge_data_and_test_files():
     train_files = ["trainitems5000_10000.csv", "trainitems35000_40000.csv",  "trainitems45000_50000.csv"]
-    merge_csv_files(train_files, "trainitems5_10_35_40_45_50k.csv", "/Users/srinath/playground/data-science/BimboInventoryDemand/")
+    merge_csv_files(train_files, "trainitems5_10_35_40_45_50k.csv", "data/")
 
     test_files = ["test_5000_10000.csv", "test_35000_40000.csv", "test_45000_50000.csv"]
-    merge_csv_files(test_files, "test_5_10_35_40_45_50k.csv", "/Users/srinath/playground/data-science/BimboInventoryDemand/")
+    merge_csv_files(test_files, "test_5_10_35_40_45_50k.csv", "data/")
 
 
 
