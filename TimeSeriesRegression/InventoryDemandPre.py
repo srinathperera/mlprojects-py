@@ -7,7 +7,8 @@ import time
 import re
 
 from sklearn.decomposition import TruncatedSVD
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.pipeline import make_pipeline
@@ -274,6 +275,24 @@ def find_missing_products():
 
     print "full entries count", test.shape[0]
 
+
+
+def testset_stats():
+    train_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+    counts = train_df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])['Demanda_uni_equil'].count()
+    valuesDf = counts.to_frame("Count")
+    valuesDf.reset_index(inplace=True)
+
+    test_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+    merged = pd.merge(test_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+
+    print "np.inf=", np.where(np.isnan(merged))
+
+    missing_count = merged["Count"].isnull().sum()
+
+    print float(missing_count)/ test_df.shape[0], " entries are known ", missing_count, ",", test_df.shape[0]
+
+
 def build_sample_dataset():
     #
     #227,3,1110,7,3301,1263779,145,1,19.75,0,0.0,1
@@ -342,6 +361,10 @@ def analyze_error():
     plt.xlabel('groupedMeans', fontsize=18)
     plt.ylabel('Mean Error', fontsize=18)
     plt.scatter(groupe2d.index.values, groupe2d.values, alpha=0.5)
+
+
+
+
 
 def product_stats():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
@@ -428,7 +451,85 @@ def extract_data(product_str):
     has_choco = contains_pattern(description, r'Choco')
     has_vanilla = contains_pattern(description, r'Va(i)?nilla')
     has_multigrain = contains_pattern(description, r'Multigrano')
-    return [description, brand, weight, pieces]
+    return [description, brand, weight, pieces, has_choco, has_vanilla, has_multigrain]
+
+
+
+def convert_cat_feild2_interger(df, feild_name):
+    brands = df[feild_name].unique()
+    brands_data = np.column_stack([brands, range(len(brands))])
+    brand_df =  pd.DataFrame(brands_data, columns=[feild_name, feild_name + '_id'])
+    merged = pd.merge(df, brand_df, how='left', on=[feild_name])
+    return drop_feilds_1df(merged, [feild_name])
+
+
+
+def build_state_info():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/town_state.csv')
+    merged = convert_cat_feild2_interger(df, 'Town')
+    merged = convert_cat_feild2_interger(merged, 'State')
+    merged.to_csv('agency_data.csv', index=False)
+
+
+
+
+def build_product_info():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/producto_tabla.csv')
+    extracted_features = [extract_data(p) for p in df['NombreProducto'].values]
+    extracted_features_np = np.row_stack(extracted_features)
+    extracted_features_df =  pd.DataFrame(extracted_features_np, columns=['description', 'brand', 'weight', 'pieces',
+                                                                          "has_choco", "has_vanilla", "has_multigrain"])
+
+    extracted_features_df['Producto_ID'] = df['Producto_ID']
+
+    words = []
+    for  w in  extracted_features_df['description']:
+        wl = w.lower().split()
+        words = words + wl
+    uniqWords = sorted(set(words)) #remove duplicate words and sort
+    wordcounts = [[word, words.count(word)] for word in uniqWords]
+
+    wordcounts_np = np.row_stack(wordcounts)
+    wordcounts_df =  pd.DataFrame(wordcounts_np, columns=['word', 'count'])
+    wordcounts_df["count"] = wordcounts_df["count"].astype(int)
+
+    wordcounts_df = wordcounts_df.sort_values(by=['count'], ascending=False)
+
+    wordcounts_dict = dict(wordcounts_df.values)
+
+    dic_id = dict(zip(wordcounts_df['word'], range(len(wordcounts_df['word']))))
+
+    print wordcounts_dict
+
+
+    word_type = []
+    for  w in  extracted_features_df['description']:
+        max_word = None
+        max_count = 0
+        for t in w.lower().split():
+            c = wordcounts_dict.get(t, 0)
+            if c > max_count:
+                max_count = c
+                max_word = t
+        word_type.append(dic_id[max_word])
+
+    extracted_features_df['product_word'] = word_type
+
+
+
+    print extracted_features_df.shape
+    extracted_features_df = drop_feilds_1df(extracted_features_df, ['description'])
+
+    #replace brand with ID
+    brands = extracted_features_df['brand'].unique()
+    brands_data = np.column_stack([brands, range(len(brands))])
+    print brands_data.shape
+    brand_df =  pd.DataFrame(brands_data, columns=['brand', 'brand_id'])
+    merged = pd.merge(extracted_features_df, brand_df, how='left', on=['brand'])
+    merged = drop_feilds_1df(merged, ['brand'])
+
+    merged.to_csv('product_data.csv', index=False)
+
 
 
 
@@ -446,7 +547,7 @@ def cluster_to_find_similar_products():
     extracted_features = [extract_data(p) for p in df['NombreProducto'].values]
     extracted_features_np = np.row_stack(extracted_features)
 
-    extracted_features_df =  pd.DataFrame(extracted_features_np, columns=['description', 'brand', 'weight', 'pieces'])
+    extracted_features_df =  pd.DataFrame(extracted_features_np, columns=['description', 'brand', 'weight', 'pieces', "has_choco", "has_vanilla", "has_multigrain"])
 
     print "have " + str(df.shape[0]) + "products"
 
@@ -455,6 +556,8 @@ def cluster_to_find_similar_products():
                                  min_df=2, stop_words='english',
                                  use_idf=True)
     X = vectorizer.fit_transform(extracted_features_df['description'])
+
+    print X
 
     print("n_samples: %d, n_features: %d" % X.shape)
 
@@ -658,6 +761,41 @@ def category_histograms(df):
     plt.show()
 
 
+
+def write_graph(values, names, file):
+    data = np.hstack(values)
+    to_saveDf =  pd.DataFrame(data, columns=names)
+    to_saveDf.to_csv(file, index=False)
+
+
+def agency_product_stats(df):
+    feild_name = 'Agencia_ID_Producto_ID'
+    counts = df.groupby(['Agencia_ID', 'Producto_ID'])['Demanda_uni_equil'].count()
+    valuesDf = counts.to_frame("Count")
+    valuesDf.reset_index(inplace=True)
+    valuesDf = valuesDf.sort_values(by=['Count'], ascending=False)
+    valuesDf['c'+feild_name] = range(valuesDf.shape[0])
+    valuesDf.to_csv('Agencia_ID_Producto_ID_data.csv', index=False)
+    print valuesDf.describe()
+    print feild_name+ '_data.csv Done'
+
+    valuesDf['Source'] = valuesDf['Agencia_ID']
+    valuesDf['Target'] = valuesDf['Producto_ID']
+    valuesDf = drop_feilds_1df(valuesDf, ['Agencia_ID', 'Producto_ID'])
+    valuesDf.to_csv('Agencia_ID_Producto_ID_data_g.csv', index=False)
+
+    feild_name = 'Agencia_ID_Canal_ID'
+    counts = df.groupby(['Agencia_ID', 'Canal_ID'])['Demanda_uni_equil'].count()
+    valuesDf = counts.to_frame("Count")
+    valuesDf.reset_index(inplace=True)
+    valuesDf = valuesDf.sort_values(by=['Count'], ascending=False)
+    valuesDf['c'+feild_name] = range(valuesDf.shape[0])
+    valuesDf.to_csv('Agencia_ID_Canal_ID_data.csv', index=False)
+    print valuesDf.describe()
+    print feild_name+ '_data.csv Done'
+
+
+
 def product_raw_stats():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 
@@ -788,7 +926,6 @@ def submission_stats():
 #build_sample_dataset()
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems5000_10000.csv')
-#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 
 
 #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
@@ -820,7 +957,14 @@ def submission_stats():
 #create_small_datafile(1000,2000, df)
 #create_small_datafile(2000, 10000, df)
 
-merge_submissions()
+#merge_submissions()
+
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+#agency_product_stats(df)
+
+#testset_stats()
+
+#build_product_info()
 
 #merge_data_and_test_files()
 
@@ -834,5 +978,15 @@ merge_submissions()
 #print testDf['Producto_ID'].min(), testDf['Producto_ID'].max()
 
 #test_falttern_reshape()
+
+
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+#create_small_datafile(5000,15000, df)
+
+#cluster_to_find_similar_products()
+#build_product_info()
+
+build_state_info()
+
 
 

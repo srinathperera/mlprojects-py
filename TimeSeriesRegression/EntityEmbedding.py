@@ -24,10 +24,17 @@ def save_embeddings(model, saved_embeddings_fname):
 
 
 def split_features(X):
+    X_list = [X[:, 0].reshape(-1, 1), X[:, 1].reshape(-1, 1),
+                    X[:, 2].reshape(-1, 1), X[:, 3].reshape(-1, 1),
+                    X[:, 4].reshape(-1, 1)
+              ]
+
+
+    '''
     X_list = []
     #Forecasting Feilds ['(0)Semana', '(1)Agencia_ID', '(2)Canal_ID', '(3)Ruta_SAK', '(4)Cliente_ID', '(5)Producto_ID']
 
-    week = X[..., 0]
+    week = X[..., [0]]
     X_list.append(week)
 
     agency = X[..., [1]]
@@ -48,6 +55,7 @@ def split_features(X):
     #print week.shape
     print agency.shape
     print canal.shape
+    '''
 
     return X_list
 
@@ -55,41 +63,60 @@ def train_model_with_embeddings(X_train, y_train, X_test, y_test):
     models = []
     #    groups = ('Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID')
     #Forecasting Feilds ['(0)Semana', '(1)Agencia_ID', '(2)Canal_ID', '(3)Ruta_SAK', '(4)Cliente_ID', '(5)Producto_ID']
+
+    '''
+    Producto_ID 1799 coverage 0.225799153804 49997
+Agencia_ID 552 coverage 0.085824901284 25759
+Canal_ID 9 coverage 1.0 11
+Ruta_SAK 3603 coverage 0.0545328888749 9991
+Cliente_ID 880604 coverage 0.00190191584674 2015152015
+    '''
     model_week = Sequential()
     model_week.add(Dense(1, input_dim=1))
     models.append(model_week)
 
     model_agency = Sequential()
     model_agency.add(Embedding(552, 5, input_length=1))
-    model_agency.add(Reshape((5,)))
+    model_agency.add(Reshape(dims=(5,)))
     models.append(model_agency)
 
     model_canal = Sequential()
     model_canal.add(Embedding(9, 3, input_length=1))
-    model_canal.add(Reshape((3,)))
+    model_canal.add(Reshape(dims=(3,)))
     models.append(model_canal)
 
-    model_ruta_sak = Sequential()
-    model_ruta_sak.add(Embedding(3603, 7, input_length=1))
-    model_ruta_sak.add(Reshape((7,)))
-    models.append(model_ruta_sak)
+    #model_ruta_sak = Sequential()
+    #model_ruta_sak.add(Embedding(1905, 7, input_length=1)) #3603
+    #model_ruta_sak.add(Reshape(dims=(7,)))
+    #models.append(model_ruta_sak)
 
-    model_client = Sequential()
-    model_client.add(Embedding(880604, 20, input_length=1))
-    model_client.add(Reshape((20,)))
-    models.append(model_client)
+    #model_client = Sequential()
+    #model_client.add(Embedding(657092, 20, input_length=1)) #880604
+    #model_client.add(Reshape(dims=(20,)))
+    #models.append(model_client)
 
     model_product = Sequential()
     model_product.add(Embedding(1799, 10, input_length=1))
-    model_product.add(Reshape((10,)))
+    model_product.add(Reshape(dims=(10,)))
     models.append(model_product)
+
+    model_rs_client = Sequential()
+    model_rs_client.add(Embedding(1700000, 20, input_length=1)) #880604
+    model_rs_client.add(Reshape(dims=(20,)))
+    models.append(model_rs_client)
+
+
 
     model = Sequential()
     model.add(Merge(models, mode='concat'))
-    model.add(Dense(1000, init='uniform'))
-    model.add(Activation('relu'))
     model.add(Dense(500, init='uniform'))
     model.add(Activation('relu'))
+    model.add(Dropout(0.2))
+
+    model.add(Dense(250, init='uniform'))
+    model.add(Activation('relu'))
+    model.add(Dropout(0.2))
+
     model.add(Dense(1))
     model.add(Activation('sigmoid'))
 
@@ -97,7 +124,9 @@ def train_model_with_embeddings(X_train, y_train, X_test, y_test):
 
     model.fit(X_train, y_train,
                        validation_data=(X_test, y_test),
-                       nb_epoch=10, batch_size=128)
+                       nb_epoch=5, batch_size=4096)
+
+    return model
 
 
 
@@ -216,16 +245,149 @@ class NN_with_EntityEmbedding():
         result = self.model.predict(features).flatten()
         return self._val_for_pred(result)
 
+
+def combine_routes_client_categories2continous_intergers(df):
+    feild_name = 'Ruta_SAK_Cliente_ID'
+    counts = df.groupby(['Ruta_SAK', 'Cliente_ID'])['Demanda_uni_equil'].count()
+    valuesDf = counts.to_frame("Count")
+    valuesDf.reset_index(inplace=True)
+    valuesDf = valuesDf.sort_values(by=['Count'], ascending=False)
+    valuesDf['c'+feild_name] = range(valuesDf.shape[0])
+    valuesDf.to_csv(feild_name+ '_data.csv', index=False)
+    print feild_name+ '_data.csv Done'
+
+
+
+
+
+
+def categories2continous_intergers(df):
+    feilds = ['Semana', 'Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+    for feild_name in feilds:
+        counts = df[feild_name].value_counts()
+        counts = counts.sort_values(ascending=False)
+        valuesDf = counts.to_frame("Count")
+        valuesDf.reset_index(inplace=True)
+        valuesDf['c'+feild_name] = range(valuesDf.shape[0])
+        valuesDf.to_csv(feild_name+ '_data.csv', index=False)
+        print feild_name+ '_data.csv Done'
+
+
+def replace_ids(df, feild_name, data_file_name, cutoff):
+    t = time.time()
+    id_df = pd.read_csv(data_file_name)
+    id_df = id_df[id_df['Count'] > cutoff]
+    id_df = drop_feilds_1df(id_df, ['Count'])
+    merged = pd.merge(df, id_df, on=[feild_name])
+    merged = drop_feilds_1df(merged, [feild_name])
+    print "took ", (time.time() -t), "s"
+    return merged
+
+def replace_ruta_sak_clientid(df, data_file_name, cutoff):
+    t = time.time()
+    id_df = pd.read_csv(data_file_name)
+    id_df = id_df[id_df['Count'] > cutoff]
+    id_df = drop_feilds_1df(id_df, ['Count'])
+    merged = pd.merge(df, id_df, on=['Ruta_SAK', 'Cliente_ID'])
+    merged = drop_feilds_1df(merged, ['Ruta_SAK', 'Cliente_ID'])
+    print "took ", (time.time() -t), "s"
+    return merged
+
+
+
+
+
+def print_category_stats():
+    test_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+    tot_test_count = test_df.shape[0]
+
+    #files = ['Agencia_ID_data.csv', 'Canal_ID_data.csv', 'Ruta_SAK_data.csv', 'Cliente_ID_data.csv', 'Producto_ID_data.csv']
+    files = ['Agencia_ID_data.csv', 'Ruta_SAK_data.csv', 'Cliente_ID_data.csv', 'Producto_ID_data.csv']
+    feilds = ['Agencia_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+    cutoff = [500, 500, 20, 250]
+    index = 0
+    for f in files:
+        id_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/'+f)
+        id_df = id_df[id_df['Count'] > cutoff[index]]
+        print id_df.describe()
+
+        merged = pd.merge(test_df, id_df,  on=[feilds[index]])
+        print feilds[index], " top covers "+ str(float(merged.shape[0])/tot_test_count) + "of tests"
+        index = index +1
+
+    id_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/Ruta_SAK_Cliente_ID_data.csv')
+    id_df = id_df[id_df['Count'] > 10]
+    print id_df.describe()
+
+    merged = pd.merge(test_df, id_df,  on=['Ruta_SAK', 'Cliente_ID'])
+    print "Ruta_SAK_Cliente_ID_data top covers "+ str(float(merged.shape[0])/tot_test_count) + "of tests"
+
+
+
+    '''
+    train_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+    train_size = train_df.shape[0]
+    merged = train_df
+    index = 0
+    for f in files:
+        feild_name = feilds[index]
+        id_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/'+f)
+        id_df = id_df[id_df['Count'] > cutoff[index]]
+        merged = merged[merged[feilds[index]].isin(id_df[feilds[index]])]
+        #merged = pd.merge(merged, id_df,  on=[feild_name])
+
+        print "after ",feild_name, " size=", float(merged.shape[0])/train_size
+        index = index +1
+    '''
+
+
+def remove_rare_categories(train_df):
+    files = ['Agencia_ID_data.csv', 'Producto_ID_data.csv']
+    feilds = ['Agencia_ID', 'Producto_ID']
+    cutoff = [500, 250]
+
+    train_size = train_df.shape[0]
+    merged = train_df
+    index = 0
+    for f in files:
+        feild_name = feilds[index]
+        id_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/'+f)
+        id_df = id_df[id_df['Count'] > cutoff[index]]
+        merged = merged[merged[feilds[index]].isin(id_df[feilds[index]])]
+        #merged = pd.merge(merged, id_df,  on=[feild_name])
+
+        print "after ",feild_name, " size=", float(merged.shape[0])/train_size
+        index = index +1
+
+    id_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/Ruta_SAK_Cliente_ID_data.csv')
+    id_df = id_df[id_df['Count'] > 10]
+    merged = pd.merge(merged, id_df,  on=['Ruta_SAK', 'Cliente_ID'])
+    print "after Ruta_SAK_Cliente_ID size=", float(merged.shape[0])/train_size
+
+    return merged
+
+
 def run_model():
-    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems5000_10000.csv')
+    target_as_log = True
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems30000_35000.csv')
     df = drop_feilds_1df(df, ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima'])
+
+    #df = remove_rare_categories(df) # not needed, done in inner join
+
+    #Agencia_ID', '(2)Canal_ID', '(3)Ruta_SAK', '(4)Cliente_ID', '(5)Producto_ID
+    df = replace_ids(df, 'Agencia_ID', '/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/Agencia_ID_data.csv', 500)
+    df = replace_ids(df, 'Canal_ID', '/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/Canal_ID_data.csv', 0)
+    #df = replace_ids(df, 'Ruta_SAK', '/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/Ruta_SAK_data.csv')
+    #df = replace_ids(df, 'Cliente_ID', '/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/Cliente_ID_data.csv')
+    df = replace_ids(df, 'Producto_ID', '/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/Producto_ID_data.csv', 250)
+
+    df = replace_ruta_sak_clientid(df, '/Users/srinath/playground/data-science/BimboInventoryDemand/category_data/Ruta_SAK_Cliente_ID_data.csv', 10)
+
 
     training_set_size = int(0.7*df.shape[0])
     test_set_size = df.shape[0] - training_set_size
 
     y_all = df['Demanda_uni_equil'].values
-
-    df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
 
     train_df = df[:training_set_size]
     test_df = df[-1*test_set_size:]
@@ -233,23 +395,72 @@ def run_model():
     y_actual_train = y_all[:training_set_size]
     y_actual_test = y_all[-1*test_set_size:]
 
+    y_train = y_actual_train
+    y_test = y_actual_test
+    if target_as_log:
+        y_train = transfrom_to_log(y_train)
+        y_test = transfrom_to_log(y_test)
+
     train_df, test_df = drop_column(train_df, test_df, 'Demanda_uni_equil')
 
     forecasting_feilds = list(train_df)
     print "Forecasting Feilds", [ "("+str(i)+")" + forecasting_feilds[i] for i in range(len(forecasting_feilds))]
 
-    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_actual_train)
-    y_test = apply_zeroMeanUnit(y_actual_test, parmsFromNormalization)
+    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
+    y_test = apply_zeroMeanUnit(y_test, parmsFromNormalization)
 
     X_train = split_features(train_df.values.copy())
     X_test = split_features(test_df.values.copy())
 
-    train_model_with_embeddings(X_train, y_train, X_test, y_test)
+    model = train_model_with_embeddings(X_train, y_train, X_test, y_test)
+
+    #test_embeddings(train_df, y_train)
+
+    check_accuracy("DL with embedding", model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, "-1")
+
+#https://groups.google.com/forum/#!topic/keras-users/4k2VMUApfoM
+def test_embeddings(df, y_train):
+
+    df = df[['Agencia_ID','Canal_ID']]
+    X = np.array(df.values.copy())
+    y = y_train
+    print "Before", X.shape, y.shape
+
+    print np.max(X[:,0]), np.max(X[:,1])
+
+    #X = np.array([[0, 0], [1, 1], [2, 2], [3, 3], [3, 4], [5,6]])
+    X_list = [X[:, 0].reshape(-1, 1), X[:, 1].reshape(-1, 1)]
+
+    #y = np.array([0, 0, 0, 1, 1, 6])
+
+    print "After", X.shape, y.shape, X_list[0].shape, X_list[1].shape
 
 
+    embed1 = Sequential()
+    embed1.add(Embedding(30000, 5, input_length=1))
+    embed1.add(Reshape(dims=(5,)))
 
-    #y_pred_final = check_accuracy("DL with embedding", X_test, parmsFromNormalization, test_df,
-    #                                  True, y_actual_test, "1")
+    embed2 = Sequential()
+    embed2.add(Embedding(12, 3, input_length=1))
+    embed2.add(Reshape(dims=(3,)))
 
 
+    model = Sequential()
+    model.add(Merge([embed1, embed2], mode='concat'))
+    model.add(Dense(32, init='uniform'))
+    model.add(Activation('relu'))
+    model.add(Dense(1, init='uniform'))
+    model.add(Activation('sigmoid'))
+    model.compile(loss='mean_absolute_error', optimizer='adam')
+
+    model.fit(X_list, y, nb_epoch=10, batch_size=4)
+
+#print_category_stats()
+#test_embeddings()
 run_model()
+
+#df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+#categories2continous_intergers(df)
+#combine_routes_client_categories2continous_intergers(df)
+
+

@@ -29,7 +29,7 @@ if len(sys.argv) > 1:
     command = int(sys.argv[1])
 
 
-test_run = False
+test_run = True
 use_preprocessed_file = False
 save_preprocessed_file = False
 target_as_log = True
@@ -45,16 +45,17 @@ data_files = [
     ["trainitems5_10_35_40_45_50k.csv", 5000, 10000, "test_5_10_35_40_45_50k.csv"], #534M
     ["trainitems30000_35000.csv", 30000, 35000, "test_30000_35000.csv"], #559M
     ["trainitems40000_45000.csv", 40000, 45000, "test_40000_45000.csv"], #640M
+    ["trainitems5000_15000.csv", -1, -1, "test_40000_45000.csv"]
 ]
 
 
 
 y_actual = None
 if command == -2:
-    df = pd.read_csv('data/train.csv')
+    df = read_train_file('data/train.csv')
     testDf = pd.read_csv('data/test.csv')
 elif command == -1:
-    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+    df = read_train_file('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
     testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
     testDf = testDf[(testDf['Producto_ID'] <= 300)]
 else:
@@ -64,7 +65,7 @@ else:
     else:
         dir = "data/"
 
-    df = pd.read_csv(dir + data_files[command][0])
+    df = read_train_file(dir + data_files[command][0])
     testDf = pd.read_csv(dir +data_files[command][3])
     print "using ", dir + data_files[command][0], " and ", dir +data_files[command][3]
     print "testDf read", testDf.shape

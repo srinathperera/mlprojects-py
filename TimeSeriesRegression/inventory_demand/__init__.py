@@ -22,6 +22,35 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
 
 from mltools import *
+import scipy
+
+def read_train_file(file_name):
+    #extended memory  https://xgboost.readthedocs.io/en/latest//how_to/external_memory.html
+    train = pd.read_csv(file_name,
+                    dtype  = {'Semana' : 'int32',
+                              'Agencia_ID' :'int32',
+                              'Canal_ID' : 'int32',
+                              'Ruta_SAK' : 'int32',
+                              'Cliente-ID' : 'int64',
+                              'Producto_ID':'int32',
+                              'Venta_hoy':'float32',
+                              'Venta_uni_hoy': 'int32',
+                              'Dev_uni_proxima':'int32',
+                              'Dev_proxima':'float32',
+                              'Demanda_uni_equil':'int32'})
+    return train
+
+def read_productdata_file(file_name):
+    #weight,pieces,has_choco,has_vanilla,has_multigrain,Producto_ID,brand_id
+    train = pd.read_csv(file_name,
+                    dtype  = {'weight' : 'int16',
+                              'pieces' :'int16',
+                              'has_choco' : 'int16',
+                              'has_vanilla' : 'int16',
+                              'has_multigrain' : 'int16',
+                              'Producto_ID':'int32',
+                              'brand_id':'float32'})
+    return train
 
 
 
@@ -281,19 +310,42 @@ def addSlopes(train_df, test_df, testDf):
     return train_df_m, test_df_m, testDf
 
 
-def run_rfr(X_train, Y_train, X_test, y_test, forecasting_feilds=None):
-    #X_train = X_train.astype('float32')
-    #X_train = np.nan_to_num(X_train)
 
-    print "Running RFR"
-    rfr = RandomForestRegressor(n_jobs=4)
-    rfr.fit(X_train, Y_train)
+class RFRModel:
+    def __init__(self, conf):
+        self.conf = conf
+    def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        self.model = RandomForestRegressor(n_jobs=4)
+        self.model.fit(X_train, y_train)
+        print_feature_importance(self.model.feature_importances_, forecasting_feilds)
 
-    print_feature_importance(rfr.feature_importances_, forecasting_feilds)
+        #save model
+        #joblib.dump(rfr, 'model.pkl')
+        y_pred_final, rmsle = check_accuracy("RFR", self.model, X_test, self.conf.parmsFromNormalization,
+                                      self.conf.target_as_log, y_actual, self.conf.command)
+        self.rmsle =  rmsle
+        return y_pred_final
 
-    #save model
-    joblib.dump(rfr, 'model.pkl')
-    return rfr
+    def predict(self, X_test):
+        return self.model.predict(X_test)
+
+
+
+class XGBoostModel:
+    def __init__(self, conf, xgb_params):
+        self.conf = conf
+        self.xgb_params = xgb_params
+    def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+                                                      xgb_params=self.xgb_params,num_rounds=200)
+        self.model = model
+        y_pred_final, rmsle = check_accuracy("XGBoost", self.model, X_test, self.conf.parmsFromNormalization,
+                                      self.conf.target_as_log, y_actual, self.conf.command)
+        self.rmsle =  rmsle
+        return y_pred_final
+
+    def predict(self, X_test):
+        return self.model.predict(X_test)
 
 
 def run_lr(X_train, Y_train, X_test, y_test):
@@ -382,9 +434,7 @@ def calculate_slope(group):
         return [0, 0]
 
 
-
-
-def check_accuracy(label, model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command):
+def check_accuracy(label, model, X_test, parmsFromNormalization, target_as_log, y_actual_test, command):
     y_pred_raw = model.predict(X_test)
     #undo the normalization
     y_pred_final = modeloutput2predictions(y_pred_raw, parmsFromNormalization=parmsFromNormalization)
@@ -394,7 +444,7 @@ def check_accuracy(label, model, X_test, parmsFromNormalization, test_df, target
     error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_pred_final, 10)
     rmsle = calculate_rmsle(y_actual_test, y_pred_final)
     print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + str(command)+ " "+ label, error_ac, rmsep, mape, rmse, rmsle)
-    return y_pred_final
+    return y_pred_final, rmsle
 
 
 def merge_clusters(traindf, testdf, subdf):
@@ -515,7 +565,11 @@ def expand_array_feild_and_add_df(tdf, composite_feild, feilds):
 
     return tdf
 
-
+def merge_csv_by_feild(train_df, test_df, testDf, base_df, feild_name ):
+    train_df = pd.merge(train_df, base_df, how='left', on=[feild_name])
+    test_df = pd.merge(test_df, base_df, how='left', on=[feild_name])
+    testDf = pd.merge(testDf, base_df, how='left', on=[feild_name])
+    return train_df, test_df, testDf
 
 
 class IDConfigs:
@@ -531,6 +585,9 @@ class IDConfigs:
 def generate_features(conf, df, subdf):
     use_slope = False
     use_group_aggrigate = True
+    use_product_features = True
+
+    use_agency_features = False
 
 
     #print "shapes train, test", df.shape, testDf.shape
@@ -572,12 +629,12 @@ def generate_features(conf, df, subdf):
     #                                test_df,t[0], testDf, drop=False, agr_feild=t[1])
 
     if use_group_aggrigate:
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False)
+        #removed for agency state etc *train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False)
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-                                                          'Demanda_uni_equil', "routes_combined", demand_val_mean, demand_val_stddev)
+                                                          'Demanda_uni_equil', "clients_combined", demand_val_mean, demand_val_stddev)
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, False, demand_val_mean, demand_val_stddev)
 
@@ -588,7 +645,7 @@ def generate_features(conf, df, subdf):
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
 
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-                                                          'Venta_hoy', "routes_combined_vh", demand_val_mean, demand_val_stddev)
+                                                          'Venta_hoy', "clients_combined_vh", demand_val_mean, demand_val_stddev)
 
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Dev_proxima')
@@ -598,7 +655,31 @@ def generate_features(conf, df, subdf):
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False, agr_feild='Dev_proxima')
 
 
+    if use_product_features:
+        product_data_df = read_productdata_file('product_data.csv')
+        #remove  unused feilds
+        #product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', 'weight','pieces'])
+        product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco'])
 
+        train_df = pd.merge(train_df, product_data_df, how='left', on=['Producto_ID'])
+        test_df = pd.merge(test_df, product_data_df, how='left', on=['Producto_ID'])
+        testDf = pd.merge(testDf, product_data_df, how='left', on=['Producto_ID'])
+
+        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'brand_id', testDf, drop=False)
+        train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['brand_id'])
+
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'product_word', testDf, drop=False)
+        train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['product_word'])
+
+    if use_agency_features:
+        agency_data_df = read_productdata_file('agency_data.csv')
+        train_df, test_df, testDf =  merge_csv_by_feild(train_df, test_df, testDf, agency_data_df, 'Agencia_ID')
+
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Town_id', testDf, drop=False)
+        train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Town_id'])
+
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'State_id', testDf, drop=False)
+        train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['State_id'])
 
 
 
@@ -670,6 +751,8 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     x_test_raw = test_df.values.copy()
     X_test = apply_zeroMeanUnit2D(x_test_raw, parmsFromNormalization2D)
 
+    #conf.parmsFromNormalization = parmsFromNormalization
+
 
 
     if X_train.shape[1] != X_test.shape[1]:
@@ -682,6 +765,29 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     #print_xy_sample(X_test, y_test)
 
     check4nan(X_train)
+
+    '''
+    de_normalized_forecasts = []
+
+    models = [RFRModel(conf)]
+
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+    for md  in [0]:
+        #xgb_params['max_depth'] = md[0]
+        #xgb_params['subsample'] = md[1]
+        #xgb_params['min_child_weight'] = md[2]
+        models.append(XGBoostModel(conf, xgb_params))
+
+
+    for m in models:
+        den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=None)
+        de_normalized_forecasts.append(den_forecasted_data)
+
+    if len(de_normalized_forecasts) > 1:
+        avg_models(np.column_stack(de_normalized_forecasts))
+    '''
+
 
     #model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
     #model = run_lr(X_train, y_train, X_test, y_test)
@@ -716,18 +822,24 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     #xgb_params['max_depth'] = 3 #Used to control over-fitting as higher depth will allow model to learn relations very specific to a particular sample.
 
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
-            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1}
-    #for md  in [(1,0.8), (1.0, 0.5), (0.8, 0.8), (0.5, 0.5), (0.5, 0.8)]:
+            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+    #for md  in [(3, 0.5, 5), (5, 0.5, 10), (8, 0.7, 10)]:
     #for md  in [(0.5, 0.5)]:
     #for md  in [1, 5, 10]:
     for md  in [0]:
-        xgb_params['gamma'] = md
+        #xgb_params['max_depth'] = md[0]
+        #xgb_params['subsample'] = md[1]
+        #xgb_params['min_child_weight'] = md[2]
+
+        #xgb_params['max_delta_step'] = 1
+
         print md, xgb_params
         #model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, xgb_params=xgb_params)
         model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-                                                      xgb_params=xgb_params,num_rounds=50)
-        y_pred_final = check_accuracy("Linear Booster " + str(md), model, X_test, parmsFromNormalization, test_df,
+                                                      xgb_params=xgb_params,num_rounds=200)
+        y_pred_final = check_accuracy("Linear Booster " + str(md), model, X_test, parmsFromNormalization,
                                       conf.target_as_log, y_actual_test, conf.command)
+
 
 
     if conf.verify_data:
@@ -739,7 +851,32 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
         print "Undo X data test test passed", \
             np.allclose(x_test_raw, undo_zeroMeanUnit2D(X_test, parmsFromNormalization2D), atol=0.01)
 
+    #find best model
+    '''
+    best_model = None
+    best_error = math.inf
+    for m in models:
+        if m.rmsle < best_error:
+            best_error = m.rmsle
+            best_model = m
+
+    return best_model, parmsFromNormalization, parmsFromNormalization2D
+    '''
     return model, parmsFromNormalization, parmsFromNormalization2D
+
+
+def calculate_accuracy(label, y_actual_test, y_forecast):
+    error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_forecast, 10)
+    rmsle = calculate_rmsle(y_actual_test, y_forecast)
+    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + label, error_ac, rmsep, mape, rmse, rmsle)
+
+
+def avg_models(forecasts, y_actual):
+    median_forecast = np.median(forecasts, axis=1)
+    calculate_accuracy("median_forecast", y_actual, median_forecast)
+
+    hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
+    calculate_accuracy("median_forecast", y_actual, hmean_forecast)
 
 
 def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D ):
