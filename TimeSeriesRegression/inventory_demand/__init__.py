@@ -82,19 +82,34 @@ def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, defaul
         merged[name+"_StdDev"].fillna(default_stddev, inplace=True)
     return merged
 
+def calcuate_hmean(group):
+    x = group.values
+    non_zero_x = np.where(x > 0)
+    if len(non_zero_x) > 0:
+        #print non_zero_x
+        return scipy.stats.hmean(x[non_zero_x])
+    else:
+        return 0
 
 
-def calculate_feild_stats(bdf, feild_name, agr_feild):
+def calculate_feild_stats(bdf, feild_name, agr_feild, do_count=True, do_stddev=True):
     groupData = bdf.groupby([feild_name])[agr_feild]
-    meanData = groupData.mean()
-    #meanData = groupData.median()
-    stddevData = groupData.std()
-    countData = groupData.count()
+    #meanData = groupData.mean()
 
+    meanData = groupData.apply(calcuate_hmean)
     valuesDf = meanData.to_frame(feild_name+"_"+agr_feild+"_Mean")
     valuesDf.reset_index(inplace=True)
-    valuesDf[feild_name+"_"+agr_feild+"_StdDev"] = stddevData.values
-    valuesDf[feild_name+"_"+agr_feild+"_Count"] = countData.values
+
+    #valuesDf[feild_name+"_"+agr_feild+"_hMean"] =
+    #valuesDf = drop_feilds_1df(valuesDf, [feild_name+"_"+agr_feild+"_Mean"])
+    #meanData = groupData.median()
+
+    if do_stddev:
+        stddevData = groupData.std()
+        valuesDf[feild_name+"_"+agr_feild+"_StdDev"] = stddevData.values
+    if do_count:
+        countData = groupData.count()
+        valuesDf[feild_name+"_"+agr_feild+"_Count"] = countData.values
     return valuesDf
 
 
@@ -109,9 +124,9 @@ def merge_stats_with_df(bdf, stat_df, feild_name, default_mean=None, default_std
 
 
 def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, drop=False, default_mean=None,
-                            default_stddev=None, agr_feild='Demanda_uni_equil'):
+                            default_stddev=None, agr_feild='Demanda_uni_equil', do_count=True, do_stddev=True):
     start = time.time()
-    valuesDf = calculate_feild_stats(train_df, feild_name, agr_feild)
+    valuesDf = calculate_feild_stats(train_df, feild_name, agr_feild, do_count=do_count, do_stddev=do_stddev)
 
     calculate_ts = time.time()
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=[feild_name])
@@ -125,7 +140,7 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, drop=False, d
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
         if default_mean is not None:
             testDf[feild_name+"_"+agr_feild+"_Mean"].fillna(default_mean, inplace=True)
-        if default_stddev is not None:
+        if default_stddev is not None and feild_name+"_"+agr_feild+"_StdDev" in testDf:
             testDf[feild_name+"_"+agr_feild+"_StdDev"].fillna(default_stddev, inplace=True)
         if drop:
             testDf = testDf.drop(feild_name,1)
@@ -347,23 +362,40 @@ class XGBoostModel:
     def predict(self, X_test):
         return self.model.predict(X_test)
 
+class LRModel:
+    def __init__(self, conf):
+        self.conf = conf
+    def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        self.model = LinearRegression(normalize=True)
+        self.model.fit(X_train, y_train)
 
-def run_lr(X_train, Y_train, X_test, y_test):
-    print "Running LR"
-    lr = LinearRegression(normalize=True)
-    lr.fit(X_train, Y_train)
-    return lr
+        y_pred_final, rmsle = check_accuracy("LR", self.model, X_test, self.conf.parmsFromNormalization,
+                                      self.conf.target_as_log, y_actual, self.conf.command)
+        self.rmsle =  rmsle
+        return y_pred_final
+
+    def predict(self, X_test):
+        return self.model.predict(X_test)
 
 
+class DLModel:
+    def __init__(self, conf, dlconf=None):
+        self.conf = conf
+        self.dlconf = dlconf
+    def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        if self.dlconf == None:
+            self.dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
+                epoch_count=10, optimizer=Adam(lr=0.0001), regularization=0.2)
+        model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, self.dlconf)
+        self.model = model
 
-def run_dl(X_train, y_train, X_test, y_test, c=None):
-    print "Running DL"
-    if c == None:
-        c = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
-             epoch_count=10, optimizer=Adam(lr=0.0001), regularization=0.1)
-    model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, c)
+        y_pred_final, rmsle = check_accuracy("LR", self.model, X_test, self.conf.parmsFromNormalization,
+                                      self.conf.target_as_log, y_actual, self.conf.command)
+        self.rmsle =  rmsle
+        return y_pred_final
 
-    return model
+    def predict(self, X_test):
+        return self.model.predict(X_test)
 
 
 def run_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds=None):
@@ -595,7 +627,7 @@ def generate_features(conf, df, subdf):
     print "shapes train, test", df.shape
     df['unit_prize'] = df['Venta_hoy']/df['Venta_uni_hoy']
 
-    training_set_size = int(0.95*df.shape[0])
+    training_set_size = int(0.7*df.shape[0])
     test_set_size = df.shape[0] - training_set_size
 
     y_all = df['Demanda_uni_equil'].values
@@ -648,8 +680,9 @@ def generate_features(conf, df, subdf):
                                                           'Venta_hoy', "clients_combined_vh", demand_val_mean, demand_val_stddev)
 
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Dev_proxima')
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False, agr_feild='Dev_proxima')
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
+                                                            agr_feild='Dev_proxima', do_count=False, do_stddev=False)
+        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False, agr_feild='Dev_proxima')
@@ -751,7 +784,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     x_test_raw = test_df.values.copy()
     X_test = apply_zeroMeanUnit2D(x_test_raw, parmsFromNormalization2D)
 
-    #conf.parmsFromNormalization = parmsFromNormalization
+    conf.parmsFromNormalization = parmsFromNormalization
 
 
 
@@ -766,10 +799,10 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
     check4nan(X_train)
 
-    '''
     de_normalized_forecasts = []
 
-    models = [RFRModel(conf)]
+    #models = []
+    models = [RFRModel(conf), DLModel(conf), LRModel(conf)]
 
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
@@ -781,12 +814,12 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
 
     for m in models:
-        den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=None)
+        den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=forecasting_feilds)
         de_normalized_forecasts.append(den_forecasted_data)
 
     if len(de_normalized_forecasts) > 1:
-        avg_models(np.column_stack(de_normalized_forecasts))
-    '''
+        avg_models(np.column_stack(de_normalized_forecasts), y_actual_test)
+
 
 
     #model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
@@ -821,6 +854,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     #xgb_params['min_child_weight'] = 3 #      #Used to control over-fitting. Higher values prevent a model from learning relations which might be highly specific to the particular sample selected for a tree.
     #xgb_params['max_depth'] = 3 #Used to control over-fitting as higher depth will allow model to learn relations very specific to a particular sample.
 
+    '''
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
     #for md  in [(3, 0.5, 5), (5, 0.5, 10), (8, 0.7, 10)]:
@@ -839,7 +873,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
                                                       xgb_params=xgb_params,num_rounds=200)
         y_pred_final = check_accuracy("Linear Booster " + str(md), model, X_test, parmsFromNormalization,
                                       conf.target_as_log, y_actual_test, conf.command)
-
+    '''
 
 
     if conf.verify_data:
@@ -852,17 +886,15 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
             np.allclose(x_test_raw, undo_zeroMeanUnit2D(X_test, parmsFromNormalization2D), atol=0.01)
 
     #find best model
-    '''
     best_model = None
-    best_error = math.inf
+    best_error = 100000
     for m in models:
         if m.rmsle < best_error:
             best_error = m.rmsle
             best_model = m
 
     return best_model, parmsFromNormalization, parmsFromNormalization2D
-    '''
-    return model, parmsFromNormalization, parmsFromNormalization2D
+    #return model, parmsFromNormalization, parmsFromNormalization2D
 
 
 def calculate_accuracy(label, y_actual_test, y_forecast):
@@ -876,7 +908,7 @@ def avg_models(forecasts, y_actual):
     calculate_accuracy("median_forecast", y_actual, median_forecast)
 
     hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
-    calculate_accuracy("median_forecast", y_actual, hmean_forecast)
+    calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
 
 
 def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D ):
