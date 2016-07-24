@@ -107,12 +107,12 @@ def show_error_by_feature(df, feature_name, chartloc):
 
     plt.subplot(chartloc)
     plt.xlabel(feature_name + " in sorted order by Mean", fontsize=18)
-    plt.ylabel('Mean Error', fontsize=18)
+    plt.ylabel('Mean Error/Rank', fontsize=18)
     #plt.yscale('log')
     #plt.xscale('log')
     #plt.scatter(errors_by_feature[feature_name].values, errors_by_feature['mean'].values, alpha=0.5)
     plt.scatter(range(0, errors_by_feature.shape[0]), errors_by_feature['mean'].values, alpha=0.5, color='b')
-    plt.scatter(range(0, errors_by_feature.shape[0]), np.log(errors_by_feature['count'].values), alpha=0.5, color='r')
+    plt.scatter(range(0, errors_by_feature.shape[0]), np.log(errors_by_feature['rank'].values), alpha=0.5, color='r')
 
     return errors_by_feature
 
@@ -129,10 +129,92 @@ def show_error_by_features():
     show_error_by_feature(df, 'Ruta_SAK', 325)
 
 
-    clusters = pd.read_csv('product_clusters.csv')
-    df_with_cluster = pd.merge(df, clusters, how='left', on=['Producto_ID'])
-    print "df_with_cluster", df_with_cluster.shape
-    show_error_by_feature(df_with_cluster, 'Cluster', 326)
+    #clusters = pd.read_csv('product_clusters.csv')
+    #df_with_cluster = pd.merge(df, clusters, how='left', on=['Producto_ID'])
+    #print "df_with_cluster", df_with_cluster.shape
+    #show_error_by_feature(df_with_cluster, 'Cluster', 326)
+
+
+    plt.tight_layout()
+    plt.show()
+
+def print_data(group):
+    print ">",group.values
+
+def find_missing_feild_stats(df, feild_name):
+    print ">>",feild_name
+    training_set_size = int(0.7*df.shape[0])
+    test_set_size = df.shape[0] - training_set_size
+
+
+    train = df[:training_set_size]
+    test = df[-1*test_set_size:]
+
+    #train = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+    train_ids = train[feild_name].unique()
+    #test = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+    test_ids = test[feild_name].unique()
+
+    missing_ids = pd.Index(test_ids).difference(pd.Index(train_ids))
+    print "missing ID count ", len(missing_ids)
+
+    missing_ids_df =  pd.DataFrame(missing_ids, columns=[feild_name])
+    #missing_ids_df.to_csv('missing_ids.csv', index=False)
+
+    print "missing ", feild_name, " count", missing_ids_df.shape
+
+    entries_with_missing = pd.merge(test, missing_ids_df, on=[feild_name])
+
+    print "Mising entries=", entries_with_missing.shape[0], "percentage=", float(entries_with_missing.shape[0])*100/test.shape[0]
+
+    print "full entries count", test.shape[0]
+
+def find_missing_data():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems5_10_35_40_45_50k.csv')
+    find_missing_feild_stats(df, 'Producto_ID')
+    find_missing_feild_stats(df, 'Canal_ID')
+    find_missing_feild_stats(df, 'Ruta_SAK')
+    find_missing_feild_stats(df, 'Cliente_ID')
+    find_missing_feild_stats(df, 'Agencia_ID')
+
+
+def show_timelines_toperrors():
+    df = pd.read_csv('forecast_with_data_s1.csv')
+    print df['Semana'].unique()
+
+    df['error'] = np.abs(np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1))
+
+    #df = df[['Semana','Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID', 'error', 'predictions']]
+
+    group1 = df.groupby(['Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID'])['error']
+    top_error_groups = group_to_df_sum_mean(group1).sort_values(by=['sum'], ascending=False)
+
+    top_error_groups = top_error_groups.head(20)
+    #top_error_groups = top_error_groups.head(1000)
+
+    #print top_error_groups
+
+    raw_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems5_10_35_40_45_50k.csv')
+
+    merged_with_raw = pd.merge(raw_df, top_error_groups, on=['Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID'])
+    print merged_with_raw
+
+    merged_with_raw.groupby(['Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID'])['Demanda_uni_equil'].apply(print_data)
+
+    merged_with_forecasts = pd.merge(df, top_error_groups, on=['Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID'])
+    print merged_with_forecasts
+
+    plt.figure(1, figsize=(20,10))
+
+    plt.subplot(321)
+    #plt.scatter(merged_with_raw['Semana'], merged_with_raw['Demanda_uni_equil'], color='b', alpha=0.3)
+    plt.plot(merged_with_raw['Semana'], merged_with_raw['Demanda_uni_equil'], color='b', alpha=0.6)
+    plt.plot(merged_with_forecasts['Semana'], merged_with_forecasts['predictions'], color='r', alpha=0.3)
+
+    plt.subplot(322)
+    #plt.scatter(merged_with_forecasts['Semana'], merged_with_forecasts['predictions'], color='r', alpha=0.3)
+    plt.plot(merged_with_forecasts['Semana'], merged_with_forecasts['predictions'], color='r', alpha=0.3)
+
 
 
     plt.tight_layout()
@@ -201,11 +283,12 @@ def top_errors():
 
     show_errors_by_timeline(entries4products)
 
+find_missing_data()
 
 
 
 
 
-
-show_error_by_features()
+#show_error_by_features()
+#show_timelines_toperrors()
 

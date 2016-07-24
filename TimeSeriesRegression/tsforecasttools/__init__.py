@@ -37,12 +37,15 @@ def aggregate_hl(mavg1_vals, window_size):
 
 
 class XGBoostModel:
-    def __init__(self, model):
+    def __init__(self, model, isgbtree=False):
         self.model = model
+        self.isgbtree = isgbtree
 
     def predict(self, data):
-        return self.model.predict(xgb.DMatrix(data), ntree_limit=self.model.best_ntree_limit)
-
+        if self.isgbtree:
+            return self.model.predict(xgb.DMatrix(data), ntree_limit=self.model.best_ntree_limit)
+        else:
+            return self.model.predict(xgb.DMatrix(data))
 '''
 def regression_with_xgboost1(X_train, Y_train, X_test):
     #http://datascience.stackexchange.com/questions/9483/xgboost-linear-regression-output-incorrect
@@ -172,10 +175,14 @@ def regression_with_xgboost_no_cv(x_train, y_train, X_test, Y_test, features=Non
 
     gbdt = xgb.train(xgb_params, train_data, num_rounds, evallist, verbose_eval = True, early_stopping_rounds=5)
 
-    ceate_feature_map_for_feature_importance(features)
-    show_feature_importance(gbdt)
+    isgbtree = xgb_params["booster"] == "gbtree"
+    if isgbtree :
+        ceate_feature_map_for_feature_importance(features)
+        show_feature_importance(gbdt)
+        y_pred = gbdt.predict(xgb.DMatrix(X_test), ntree_limit=gbdt.best_ntree_limit)
+    else:
+        y_pred = gbdt.predict(xgb.DMatrix(X_test))
 
-    y_pred = gbdt.predict(xgb.DMatrix(X_test), ntree_limit=gbdt.best_ntree_limit)
     return XGBoostModel(gbdt), y_pred
 
 

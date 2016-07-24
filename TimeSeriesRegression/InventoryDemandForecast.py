@@ -44,6 +44,7 @@ data_files = [
     ["trainitems0_5000.csv", 0, 5000, "test_0_5000.csv"], #1.4G
     ["trainitems5_10_35_40_45_50k.csv", 5000, 10000, "test_5_10_35_40_45_50k.csv"], #534M
     ["trainitems30000_35000.csv", 30000, 35000, "test_30000_35000.csv"], #559M
+    #["trainitems30000_35000.csv", 30000, 35000, "trainitems5_10_35_40_45_50k.csv"], #559M # to remove ** pass #1 as #2 test
     ["trainitems40000_45000.csv", 40000, 45000, "test_40000_45000.csv"], #640M
     ["trainitems5000_15000.csv", -1, -1, "test_40000_45000.csv"]
 ]
@@ -71,6 +72,13 @@ else:
     print "testDf read", testDf.shape
 
 
+y_actual_2nd_verification = None
+if 'Demanda_uni_equil' in testDf:
+    #then this is a datafile passed as submission file
+    y_actual_2nd_verification = testDf['Demanda_uni_equil']
+    testDf = testDf[['Semana','Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID']]
+    testDf['id'] = range(testDf.shape[0])
+
 r_time = time.time()
 
 print "read took %f" %(r_time-s_time)
@@ -81,17 +89,52 @@ conf.command = command
 
 #df = remove_rare_categories(df)
 
-train_df, test_df, testDf, y_actual_test = generate_features(conf, df, testDf)
+df = df[df['Producto_ID'] > 0]
+
+#df['unit_prize'] = df['Venta_hoy']/df['Venta_uni_hoy']
+
+find_NA_rows_percent(df, "data set stats")
+
+
+training_set_size = int(0.7*df.shape[0])
+test_set_size = df.shape[0] - training_set_size
+
+y_all = df['Demanda_uni_equil'].values
+
+if conf.target_as_log:
+    #then all values are done as logs
+    df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
+
+train_df = df[:training_set_size]
+test_df = df[-1*test_set_size:]
+
+y_actual_train = y_all[:training_set_size]
+y_actual_test = y_all[-1*test_set_size:]
+
+
+#train_df = train_df[train_df['Demanda_uni_equil'] > 0] # to remove
+
+
+print "train", train_df['Semana'].unique(), train_df.shape,"test", test_df['Semana'].unique(), test_df.shape
+
+
+train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features = generate_features(conf, train_df,
+                                                                                               test_df, testDf, y_actual_test)
+
+print "after features", test_df['Semana'].unique(), test_df.shape
+print "after features bd", test_df_before_dropping_features['Semana'].unique(), test_df_before_dropping_features.shape
 
 prep_time = time.time()
 
 
-model, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
+model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
 
-#if save_predictions_with_data:
-#    test_df_before_dropping_features['predictions'] = y_pred_final
-#    test_df_before_dropping_features['actual'] = y_actual_test
-#    test_df_before_dropping_features.to_csv('forecast_with_data.csv', index=False)
+
+if conf.save_predictions_with_data:
+    test_df_before_dropping_features['predictions'] = best_forecast
+    test_df_before_dropping_features['actual'] = y_actual_test
+    test_df_before_dropping_features.to_csv('forecast_with_data.csv', index=False)
+
 
 #model = None
 
@@ -106,7 +149,12 @@ model, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, trai
     #print "rmsle for mean prediction ", rmsle
 
 if conf.generate_submission:
-    create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D)
+    y_forecast_submission = create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D)
+
+    if y_actual_2nd_verification is not None:
+        rmsle = calculate_rmsle(y_actual_2nd_verification, y_forecast_submission)
+        print "2nd Verification rmsle=", rmsle
+
 
 
 m_time = time.time()

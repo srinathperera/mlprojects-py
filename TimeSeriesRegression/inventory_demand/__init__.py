@@ -20,6 +20,9 @@ from keras.optimizers import Adam
 from sklearn.decomposition import TruncatedSVD
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import Normalizer
+from sklearn import linear_model
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import Pipeline
 
 from mltools import *
 import scipy
@@ -53,6 +56,74 @@ def read_productdata_file(file_name):
     return train
 
 
+def find_alt_for_missing(to_merge, seen_with_stats):
+    print "feilds 0", list(to_merge), list(seen_with_stats)
+    seen_without_stat = seen_with_stats[['Ruta_SAK', 'Cliente_ID']]
+    seen_without_stat = seen_without_stat.copy() #TODO might need to improve and do without copy
+    seen_without_stat['has_seen'] = 1
+    merged = pd.merge(to_merge, seen_without_stat, how='left', on=['Ruta_SAK', 'Cliente_ID'])
+    merged = merged.fillna(0)
+    #merged['id'] = range(len(merged))
+
+    #workdf = merged[['has_seen', 'Ruta_SAK', 'Cliente_ID', 'id']]
+
+    similar_clients_df = pd.read_csv('similar_client_data.csv');
+    similar_clients_df = drop_feilds_1df(similar_clients_df, ['mean_sales'])
+
+    merged_with_order = pd.merge(merged, similar_clients_df, how='left', on=['Ruta_SAK', 'Cliente_ID'])
+    merged_with_order = merged_with_order.sort_values(by=['index'])
+    merged_with_order = drop_feilds_1df(merged_with_order, ['index'])
+
+    merged_with_order['Ruta_SAK_p'] = merged_with_order['Ruta_SAK']
+    merged_with_order['Cliente_ID_p'] = merged_with_order['Cliente_ID']
+
+    print "feilds 1", list(merged_with_order) #['Ruta_SAK', 'Cliente_ID', 'has_seen', 'Ruta_SAK_p', 'Cliente_ID_p']
+    merged_with_order_np = merged_with_order.values
+
+    #now we find replacements
+
+    #first find one seen value
+    seen_index = -1
+    for i in range(len(merged_with_order_np)):
+        if merged_with_order_np[i][2] == 1:
+            seen_index = i
+    #walk though and replace with old seen value
+    for i in range(len(merged_with_order_np)):
+        if merged_with_order_np[i][2] == 0:
+            merged_with_order_np[i][0] = merged_with_order_np[seen_index][0]
+            merged_with_order_np[i][1] = merged_with_order_np[seen_index][1]
+        else:
+            seen_index = i
+
+    merged_with_alt =  pd.DataFrame(merged_with_order_np, columns=['Ruta_SAK', 'Cliente_ID', 'has_seen', 'Ruta_SAK_p', 'Cliente_ID_p'])
+
+    merged_withstats = pd.merge(merged_with_alt, seen_with_stats, how='left', on=['Ruta_SAK', 'Cliente_ID'])
+    merged_withstats = drop_feilds_1df(merged_withstats, ['has_seen', 'Ruta_SAK', 'Cliente_ID'])
+    merged_withstats.rename(columns = {'Ruta_SAK_p':'Ruta_SAK'}, inplace=True)
+    merged_withstats.rename(columns = {'Cliente_ID_p':'Cliente_ID'}, inplace=True)
+
+    #make sure no NA's in the list
+    find_NA_rows_percent(merged_withstats, "after find_alt_for_missing()")
+    print "find replacement done", seen_with_stats.shape, "->", merged_withstats.shape, " feilds", list(merged_withstats)
+
+    #make sure all values are contained
+
+    missing_ids_count = setdiff_counts_froms_dfs(to_merge, merged_withstats[['Ruta_SAK','Cliente_ID']])
+    if missing_ids_count > 0:
+        raise "missing from target ", missing_ids_count
+    missing_ids_count = setdiff_counts_froms_dfs(seen_with_stats[['Ruta_SAK','Cliente_ID']], merged_withstats[['Ruta_SAK','Cliente_ID']])
+    if missing_ids_count > 0:
+        raise "missing from seen ", missing_ids_count
+
+    return merged_withstats
+
+
+def setdiff_counts_froms_dfs(df1, df2):
+    #missing_ids = pd.Index(to_merge).difference(pd.Index(merged_withstats[['Ruta_SAK','Cliente_ID']]))
+
+    ds1 = set([ tuple(line) for line in df1.values.tolist()])
+    ds2 = set([ tuple(line) for line in df2.values.tolist()])
+    ds1.difference(ds2)
 
 
 def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_mean=None, default_stddev=None):
@@ -65,6 +136,14 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     valuesDf.reset_index(inplace=True)
     valuesDf[name+"_StdDev"] = stddevData.values
     valuesDf[name+"_"+agr_feild+"_Count"] = countData.values
+    valuesDf.fillna(0, inplace=True)
+
+    if feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
+        to_merge = pd.concat([testdf[['Ruta_SAK','Cliente_ID']], subdf[['Ruta_SAK','Cliente_ID']]])
+        to_merge = to_merge.drop_duplicates()
+        valuesDf = find_alt_for_missing(to_merge, valuesDf)
+        print "removing NA's"
+
 
     bdf = merge__multiple_feilds_stats_with_df(name, bdf, valuesDf, feild_names, default_mean, default_stddev)
     testdf = merge__multiple_feilds_stats_with_df(name, testdf, valuesDf, feild_names, default_mean, default_stddev)
@@ -73,9 +152,25 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     return bdf, testdf, subdf
 
 
-def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, default_mean=None, default_stddev=None, agr_feild='Demanda_uni_equil'):
-    merged = pd.merge(bdf, stat_df, how='left', on=feild_names)
+def find_NA_rows_percent(df_check, label):
+    all_rows = df_check.shape[0]
+    na_rows = df_check[df_check.isnull().any(axis=1)].shape[0]
+    na_percent = float(na_rows)/all_rows
+    if na_rows > 0:
+        na_cols = df_check.isnull().sum(axis=0)
+        column_names = list(df_check)
+        na_colmuns = []
+        for i in range(len(column_names)):
+            if na_cols[i] > 0:
+                na_colmuns.append(column_names[i] + "=" + str(na_cols[i]))
+        print "NA in ", label, "count=", na_rows, "(", na_percent, ")", na_colmuns
+    return na_percent
 
+
+def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, default_mean=None, default_stddev=None, agr_feild='Demanda_uni_equil'):
+    find_NA_rows_percent(bdf, "before add stat " + str(feild_names))
+    merged = pd.merge(bdf, stat_df, how='left', on=feild_names)
+    find_NA_rows_percent(bdf, "after add stat " + str(feild_names))
     if default_mean is not None:
         merged[name+"_Mean"].fillna(default_mean, inplace=True)
     if default_stddev is not None:
@@ -94,9 +189,8 @@ def calcuate_hmean(group):
 
 def calculate_feild_stats(bdf, feild_name, agr_feild, do_count=True, do_stddev=True):
     groupData = bdf.groupby([feild_name])[agr_feild]
-    #meanData = groupData.mean()
-
-    meanData = groupData.apply(calcuate_hmean)
+    meanData = groupData.mean()
+    #meanData = groupData.apply(calcuate_hmean)
     valuesDf = meanData.to_frame(feild_name+"_"+agr_feild+"_Mean")
     valuesDf.reset_index(inplace=True)
 
@@ -107,9 +201,17 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, do_count=True, do_stddev=T
     if do_stddev:
         stddevData = groupData.std()
         valuesDf[feild_name+"_"+agr_feild+"_StdDev"] = stddevData.values
+        valuesDf = valuesDf.fillna(0)
     if do_count:
         countData = groupData.count()
         valuesDf[feild_name+"_"+agr_feild+"_Count"] = countData.values
+
+    #valuesDf[feild_name+"_"+agr_feild+"_pcerntile10"] = min(groupData.quantile(q=0.10), 10000)
+    #valuesDf[feild_name+"_"+agr_feild+"_pcerntile90"] = min(groupData.quantile(q=0.90), 10000)
+    #valuesDf[feild_name+"_"+agr_feild+"_kurtosis"] = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
+
+    #valuesDf = valuesDf.fillna(0)
+
     return valuesDf
 
 
@@ -132,12 +234,15 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, drop=False, d
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=[feild_name])
     test_df_m = pd.merge(test_df, valuesDf, how='left', on=[feild_name])
 
+    print "Add Stats by ", feild_name, "test NAs", 100*train_df_m[train_df_m.isnull().any(axis=1)].shape[0]/ train_df_m.shape[0]
+
     if drop:
         train_df_m = train_df_m.drop(feild_name,1)
         test_df_m = test_df_m.drop(feild_name,1)
 
     if testDf is not None:
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
+        print "Add Stats by ", feild_name, "sub NAs", 100*testDf[testDf.isnull().any(axis=1)].shape[0]/ testDf.shape[0]
         if default_mean is not None:
             testDf[feild_name+"_"+agr_feild+"_Mean"].fillna(default_mean, inplace=True)
         if default_stddev is not None and feild_name+"_"+agr_feild+"_StdDev" in testDf:
@@ -231,8 +336,8 @@ def calcuate_slope_stats(group):
 
 def process_merged_df(dfp):
     dfp["Time_Since_Last_Sale_Value"] = dfp['Semana'] - dfp["Last_Sale_Week"]
-    dfp["Simple_Forecast"] = dfp['Last_Sale'] + dfp["Mean_Slope"]*dfp["Time_Since_Last_Sale_Value"]
-    dfp = drop_feilds_1df(dfp, ["Last_Sale_Week"])
+    #dfp["Simple_Forecast"] = dfp['Last_Sale'] + dfp["Mean_Slope"]*dfp["Time_Since_Last_Sale_Value"]
+    #dfp = drop_feilds_1df(dfp, ["Last_Sale_Week"])
     return dfp
 
 
@@ -324,6 +429,152 @@ def addSlopes(train_df, test_df, testDf):
     print "Slopes took %f (%f, %f)" %(slopes_time - start_ts, slopes_aggr_time-start_ts, slopes_time-slopes_aggr_time)
     return train_df_m, test_df_m, testDf
 
+def calculate_last_sale_and_week(group):
+    sales = np.array(group['Demanda_uni_equil'].values)
+    samana = group['Semana'].values
+    max_index = np.argmax(samana)
+    return sales[max_index], samana[max_index]
+
+
+def calculate_delivery_probability_this_week(base_df):
+    timebtdlv = base_df['pg_time_between_delivery_mean']
+    this_week = base_df['Semana']
+    start = np.mod((this_week - base_df['Last_Sale_Week']),timebtdlv)
+
+    delivery_probability_this_week = np.where(this_week - start < timebtdlv/2,
+            1 - 2*(this_week - start)/timebtdlv,
+            2*(this_week - start)/timebtdlv - 1)
+
+    base_df['delivery_probability_this_week'] = delivery_probability_this_week
+    base_df['time_since_last_sale_cycle'] = start
+    return base_df
+
+
+def time_between_delivery(group):
+    deliveries = np.sort(group.values)
+    if len(deliveries) == 0:
+        return [100, 0]
+    if len(deliveries) == 1:
+        return [8, 1]
+    if deliveries[0] != 3:
+        deliveries = [3] + deliveries
+    if deliveries[-1] != 7:
+        deliveries = deliveries + [8]
+
+    time_between_delivery = [deliveries[i] - deliveries[i-1] for i in range(1,len(deliveries))]
+    return [np.mean(time_between_delivery), np.std(time_between_delivery)]
+
+
+def expand_array_feild_and_add_df(tdf, composite_feild, feilds):
+    npa = np.vstack(tdf[composite_feild].values)
+
+    #valuesDf['mean'] = npa[:,1]
+    index = 0
+    for f in feilds:
+        tdf[f] = npa[:,index]
+        index = index +1
+
+    tdf = drop_feilds_1df(tdf, [composite_feild])
+
+    return tdf
+
+def add_time_bwt_delivery(train_df, test_df, testDf):
+    start_ts = time.time()
+    df1 = train_df[train_df['Venta_uni_hoy'] > 0]
+    grouped = df1.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])['Semana']
+    tbdelivery = grouped.apply(time_between_delivery)
+
+    tbdelivery_df = tbdelivery.to_frame("delivery_data")
+    tbdelivery_df.reset_index(inplace=True)
+    tbdelivery_df = expand_array_feild_and_add_df(tbdelivery_df, 'delivery_data',
+                                                  ["pg_time_between_delivery_mean", "pg_time_between_delivery_stddev"])
+
+    train_df_m = pd.merge(train_df, tbdelivery_df, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    train_df_m.fillna(0, inplace=True)
+    test_df_m = pd.merge(test_df, tbdelivery_df, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    test_df_m.fillna(0, inplace=True)
+
+    if testDf is not None:
+        testDf = pd.merge(testDf, tbdelivery_df, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+        testDf.fillna(0, inplace=True)
+    print "add_time_bwt_delivery took ", (time.time() - start_ts)
+    return train_df_m, test_df_m, testDf
+
+
+def add_last_sale_and_week(train_df, test_df, testDf):
+    start_ts = time.time()
+
+    #we first remove any entry that has only returns
+    sales_df = train_df[train_df['Demanda_uni_equil'] > 0]
+    grouped = sales_df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+
+    #following code if we need multiple features
+    #slope_data_df = grouped.apply(calculate_last_sale_and_week)
+    #sales_data_df = slope_data_df.to_frame("sales_data")
+    #sales_data_df.reset_index(inplace=True)
+    #valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["Last_Sale", "Last_Sale_Week"])
+
+    #this is to one feature
+    slope_data_df = grouped['Semana'].max()
+    sales_data_df = slope_data_df.to_frame("Last_Sale_Week")
+    sales_data_df.reset_index(inplace=True)
+    valuesDf = sales_data_df
+
+    #now we merge the data
+    sale_data_aggr_time = time.time()
+    train_df_m = pd.merge(train_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    train_df_m.fillna(0, inplace=True)
+    test_df_m = pd.merge(test_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    test_df_m.fillna(0, inplace=True)
+
+    if testDf is not None:
+        testDf = pd.merge(testDf, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+        testDf.fillna(0, inplace=True)
+
+    train_df_m = calculate_delivery_probability_this_week(train_df_m)
+    test_df_m = calculate_delivery_probability_this_week(test_df_m)
+    testDf = calculate_delivery_probability_this_week(testDf)
+
+    slopes_time = time.time()
+    print "Add Sales Data took %f (%f, %f)" %(slopes_time - start_ts, sale_data_aggr_time-start_ts, slopes_time-sale_data_aggr_time)
+    return train_df_m, test_df_m, testDf
+
+def five_group_stats(group):
+    sales = np.array(group['Demanda_uni_equil'].values)
+    #samana = group['Semana'].values
+    #max_index = np.argmax(samana)
+    #return np.mean(sales), len(sales), np.std(sales)
+    return len(sales)
+
+
+
+def add_five_grouped_stats(train_df, test_df, testDf):
+    start_ts = time.time()
+
+    #we first remove any entry that has only returns
+    sales_df = train_df[train_df['Demanda_uni_equil'] > 0]
+    grouped = sales_df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+
+    slope_data_df = grouped.apply(five_group_stats)
+    sales_data_df = slope_data_df.to_frame("sales_data")
+    sales_data_df.reset_index(inplace=True)
+    #valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["mean_sales", "sales_count", "sales_stddev"])
+    valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["sales_count"])
+
+    #now we merge the data
+    sale_data_aggr_time = time.time()
+    train_df_m = pd.merge(train_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    train_df_m.fillna(0, inplace=True)
+    test_df_m = pd.merge(test_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    test_df_m.fillna(0, inplace=True)
+
+    if testDf is not None:
+        testDf = pd.merge(testDf, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+        testDf.fillna(0, inplace=True)
+
+    slopes_time = time.time()
+    print "Add Sales Data took %f (%f, %f)" %(slopes_time - start_ts, sale_data_aggr_time-start_ts, slopes_time-sale_data_aggr_time)
+    return train_df_m, test_df_m, testDf
 
 
 class RFRModel:
@@ -363,19 +614,24 @@ class XGBoostModel:
         return self.model.predict(X_test)
 
 class LRModel:
-    def __init__(self, conf):
+    def __init__(self, conf, model=None):
         self.conf = conf
+        if model is None:
+            self.model = LinearRegression(normalize=False)
+        else:
+            self.model = model
+
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
-        self.model = LinearRegression(normalize=True)
         self.model.fit(X_train, y_train)
 
-        y_pred_final, rmsle = check_accuracy("LR", self.model, X_test, self.conf.parmsFromNormalization,
+        y_pred_final, rmsle = check_accuracy("LR"+str(self.model), self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
         self.rmsle =  rmsle
         return y_pred_final
 
     def predict(self, X_test):
         return self.model.predict(X_test)
+
 
 
 class DLModel:
@@ -584,18 +840,6 @@ def group_to_df_sum_mean(group):
     return valuesDf
 
 
-def expand_array_feild_and_add_df(tdf, composite_feild, feilds):
-    npa = np.vstack(tdf[composite_feild].values)
-
-    #valuesDf['mean'] = npa[:,1]
-    index = 0
-    for f in feilds:
-        tdf[f] = npa[:,index]
-        index = index +1
-
-    tdf = drop_feilds_1df(tdf, [composite_feild])
-
-    return tdf
 
 def merge_csv_by_feild(train_df, test_df, testDf, base_df, feild_name ):
     train_df = pd.merge(train_df, base_df, how='left', on=[feild_name])
@@ -614,42 +858,27 @@ class IDConfigs:
         self.verify_data = False
 
 
-def generate_features(conf, df, subdf):
+def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     use_slope = False
     use_group_aggrigate = True
     use_product_features = True
-
     use_agency_features = False
+    use_sales_data = False
+
 
 
     #print "shapes train, test", df.shape, testDf.shape
-    df = df[df['Producto_ID'] > 0]
-    print "shapes train, test", df.shape
-    df['unit_prize'] = df['Venta_hoy']/df['Venta_uni_hoy']
-
-    training_set_size = int(0.7*df.shape[0])
-    test_set_size = df.shape[0] - training_set_size
-
-    y_all = df['Demanda_uni_equil'].values
-
-    if conf.target_as_log:
-        #then all values are done as logs
-        df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
-
-    train_df = df[:training_set_size]
-    test_df = df[-1*test_set_size:]
-
-    y_actual_train = y_all[:training_set_size]
-    y_actual_test = y_all[-1*test_set_size:]
 
     testDf = subdf
 
     if use_slope:
         train_df, test_df, testDf = addSlopes(train_df, test_df, testDf)
 
-    demand_val_mean = df['Demanda_uni_equil'].mean()
-    #demand_val_mean = df['Demanda_uni_equil'].median()
-    demand_val_stddev = df['Demanda_uni_equil'].std()
+    demand_val_mean = train_df['Demanda_uni_equil'].mean()
+    demand_val_stddev = train_df['Demanda_uni_equil'].std()
+
+    print "default mean", demand_val_mean
+
     #add mean and stddev by groups
 
     groups = ('Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID')
@@ -692,7 +921,7 @@ def generate_features(conf, df, subdf):
         product_data_df = read_productdata_file('product_data.csv')
         #remove  unused feilds
         #product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', 'weight','pieces'])
-        product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco'])
+        product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', "time_between_delivery"])
 
         train_df = pd.merge(train_df, product_data_df, how='left', on=['Producto_ID'])
         test_df = pd.merge(test_df, product_data_df, how='left', on=['Producto_ID'])
@@ -714,7 +943,11 @@ def generate_features(conf, df, subdf):
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'State_id', testDf, drop=False)
         train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['State_id'])
 
+    if use_sales_data:
+        train_df, test_df, testDf = add_time_bwt_delivery(train_df, test_df, testDf)
+        train_df, test_df, testDf = add_last_sale_and_week(train_df, test_df, testDf)
 
+    #train_df, test_df, testDf = add_five_grouped_stats(train_df, test_df, testDf)
 
     #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Dev_proxima')
     #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
@@ -738,7 +971,7 @@ def generate_features(conf, df, subdf):
 
 
 
-    #test_df_before_dropping_features = test_df
+    test_df_before_dropping_features = test_df
 
     #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID', 'Cliente_ID'])
 
@@ -757,12 +990,11 @@ def generate_features(conf, df, subdf):
     train_df, test_df = drop_column(train_df, test_df, 'Venta_hoy')
     train_df, test_df = drop_column(train_df, test_df, 'Dev_uni_proxima')
     train_df, test_df = drop_column(train_df, test_df, 'Dev_proxima')
-    train_df, test_df = drop_column(train_df, test_df, 'unit_prize')
 
 #    if conf.save_preprocessed_file:
 #        df.to_csv(preprocessed_file_name, index=False)
 
-    return train_df, test_df, testDf, y_actual_test
+    return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features
 
 
 def do_forecast(conf, train_df, test_df, y_actual_test):
@@ -801,9 +1033,22 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
     de_normalized_forecasts = []
 
-    #models = []
-    models = [RFRModel(conf), DLModel(conf), LRModel(conf)]
+    models = []
+    #models = [RFRModel(conf), DLModel(conf), LRModel(conf)]
+    #models = [LRModel(conf)]
+    # see http://scikit-learn.org/stable/modules/linear_model.html
+    models = [
+                #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
+                #LRModel(conf, model=linear_model.BayesianRidge()),
+                #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
+                #   ('linear', LinearRegression(fit_intercept=False))])),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
+                #LRModel(conf, model=linear_model.Ridge (alpha = .5))
+              ]
 
+    #tree model
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
     for md  in [0]:
@@ -812,13 +1057,19 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
         #xgb_params['min_child_weight'] = md[2]
         models.append(XGBoostModel(conf, xgb_params))
 
+    #linear model
+    #xgb_params = {"objective": "reg:linear", "booster":"gblinear", "max_depth":3, "nthread":4}
+    #models.append(XGBoostModel(conf, xgb_params))
+
 
     for m in models:
+        m_start = time.time()
         den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=forecasting_feilds)
+        print "model took ", (time.time() - m_start), "seconds"
         de_normalized_forecasts.append(den_forecasted_data)
 
     if len(de_normalized_forecasts) > 1:
-        avg_models(np.column_stack(de_normalized_forecasts), y_actual_test)
+        avg_models(models, np.column_stack(de_normalized_forecasts), y_actual_test)
 
 
 
@@ -888,13 +1139,17 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     #find best model
     best_model = None
     best_error = 100000
-    for m in models:
+    best_forecast = None
+    for i, m in enumerate(models):
         if m.rmsle < best_error:
             best_error = m.rmsle
             best_model = m
+            best_forecast = de_normalized_forecasts[i]
 
-    return best_model, parmsFromNormalization, parmsFromNormalization2D
-    #return model, parmsFromNormalization, parmsFromNormalization2D
+    print "Best Model has rmsle=", best_error
+
+    return best_model, parmsFromNormalization, parmsFromNormalization2D, best_forecast
+    #return model, parmsFromNormalization, parmsFromNormalization2D, best_forecast
 
 
 def calculate_accuracy(label, y_actual_test, y_forecast):
@@ -903,12 +1158,58 @@ def calculate_accuracy(label, y_actual_test, y_forecast):
     print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + label, error_ac, rmsep, mape, rmse, rmsle)
 
 
-def avg_models(forecasts, y_actual):
+def find_range(rmsle, forecast):
+    h = np.exp(rmsle)*(forecast+1) - 1
+    l = (forecast+1)/np.exp(rmsle) - 1
+    return l, h
+
+def avg_models(models, forecasts, y_actual):
     median_forecast = np.median(forecasts, axis=1)
     calculate_accuracy("median_forecast", y_actual, median_forecast)
 
     hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
     calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
+
+    min_forecast = np.min(forecasts, axis=1)
+    calculate_accuracy("min_forecast", y_actual, min_forecast)
+
+    rmsle_values = [m.rmsle for m in models]
+    #rmsle_values = [m for m in models]
+    print "rmsle values", rmsle_values
+    data = np.column_stack([forecasts, y_actual])
+    to_saveDf =  pd.DataFrame(data, columns=['f'+str(i) for i in range(len(models))] + ["actual"])
+    to_saveDf.to_csv('forecasts4ensamble.csv', index=False)
+
+
+
+    if len(models) >= 3:
+
+        print "toprmsle_valuesrmsle", rmsle_values
+        sorted_index = np.argsort(rmsle_values)
+        print "sorted_index", sorted_index
+        bestindexes = sorted_index[0:3]
+        print "top3indexes", bestindexes
+        top3forecasts = forecasts[:,bestindexes]
+
+        weighted_forecast = top3forecasts[:,0]*0.6+ top3forecasts[:,1]*0.25+ top3forecasts[:,2]*0.15
+        calculate_accuracy("weighted_forecast", y_actual, weighted_forecast)
+
+        weighted_forecast1 = top3forecasts[:,0]*0.5+ top3forecasts[:,1]*0.3+ top3forecasts[:,2]*0.2
+        calculate_accuracy("weighted_forecast1", y_actual, weighted_forecast1)
+        '''
+        top3rmsle =  rmsle_values[top3forecasts]
+
+
+        #top3rmsle = forecasts[:,top3index]
+        l1, h1 = find_range(top3rmsle[0], top3forecasts[0])
+        l2, h2 = find_range(top3rmsle[1], top3forecasts[1])
+
+        math_based_forecast = np.where(l2 < h1, (l2-h1)/2, np.where(l1 < h2, (l1-h2)/2,top3forecasts) )
+        calculate_accuracy("math_based_forecast", y_actual, weighted_forecast1)
+        #if l2 < h1:(h1+l2)/2
+        #if l1 < h2:(h2+l1)/2
+        #else top3forecasts[2]
+        '''
 
 
 def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D ):
@@ -944,6 +1245,8 @@ def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNorm
     to_saveDf.to_csv('submission'+str(conf.command)+ '.csv', index=False)
 
     print "Submission done for ", to_saveDf.shape[0], "values"
+
+    return kaggale_predicted
 
     #to_saveDf["groupedMeans"] = testDf["groupedMeans"]
     #to_saveDf["groupedStd"] = testDf["groupedStd"]
