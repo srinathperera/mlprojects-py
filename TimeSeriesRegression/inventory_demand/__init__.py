@@ -1069,7 +1069,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
         de_normalized_forecasts.append(den_forecasted_data)
 
     if len(de_normalized_forecasts) > 1:
-        avg_models(conf, models, np.column_stack(de_normalized_forecasts), y_actual_test)
+        avg_models(conf, models, np.column_stack(de_normalized_forecasts) , y_actual_test, test_df)
 
 
 
@@ -1163,7 +1163,7 @@ def find_range(rmsle, forecast):
     l = (forecast+1)/np.exp(rmsle) - 1
     return l, h
 
-def avg_models(conf, models, forecasts, y_actual, test=False):
+def avg_models(conf, models, forecasts, y_actual, test_df, test=False):
     median_forecast = np.median(forecasts, axis=1)
     calculate_accuracy("median_forecast", y_actual, median_forecast)
 
@@ -1173,10 +1173,18 @@ def avg_models(conf, models, forecasts, y_actual, test=False):
     min_forecast = np.min(forecasts, axis=1)
     calculate_accuracy("min_forecast", y_actual, min_forecast)
 
-    no_of_training_instances = round(len(y_actual)*0.3)
-    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, forecasts, y_actual)
-    model = RFRModel(conf)
-    model.fit(X_train, y_train, X_test, y_test, y_test, forecasting_feilds=[f+str(1) for f in range(len(models))])
+    #add few more features
+    X_all = np.column_stack([forecasts, median_forecast, hmean_forecast,
+                             test_df['clients_combined_Mean'], test_df['Producto_ID_Demanda_uni_equil_Mean']])
+
+    no_of_training_instances = round(len(y_actual)*0.5)
+    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
+
+    rfr = RandomForestRegressor(n_jobs=4)
+    rfr.fit(X_train, y_train)
+    print_feature_importance(rfr.feature_importances_, ["f"+str(f) for f in range(X_all.shape[1])])
+    rfr_forecast = rfr.predict(X_test)
+    calculate_accuracy("rfr_forecast", y_test, rfr_forecast)
 
     if test:
         rmsle_values = [m for m in models]
