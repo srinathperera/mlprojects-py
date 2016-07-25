@@ -19,6 +19,7 @@ from sklearn.linear_model import LinearRegression
 from inventory_demand import *
 from mltools import *
 #from mlpreprocessing import feather2df
+from InventoryDemandSimplePredictions import do_simple_models
 
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
@@ -117,7 +118,7 @@ y_actual_test = y_all[-1*test_set_size:]
 
 print "train", train_df['Semana'].unique(), train_df.shape,"test", test_df['Semana'].unique(), test_df.shape
 
-
+#do_simple_models(conf, train_df,test_df, testDf, y_actual_test)
 train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features = generate_features(conf, train_df,
                                                                                                test_df, testDf, y_actual_test)
 
