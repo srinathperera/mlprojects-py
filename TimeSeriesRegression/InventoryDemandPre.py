@@ -218,7 +218,7 @@ def merge_outputs():
 
 
 def merge_submissions(path="./"):
-    submission_files = [pd.read_csv(path+'submission'+str(i)+'.csv') for i in range(4)]
+    submission_files = [pd.read_csv(path+'en_submission'+str(i)+'.csv') for i in range(4)]
 
     tot = 0
     for df in submission_files:
@@ -227,7 +227,7 @@ def merge_submissions(path="./"):
     print "submission size", tot
 
     result = pd.concat(submission_files).sort_values(by=['id'])
-    result.to_csv('final.csv', index=False)
+    result.to_csv('en_final.csv', index=False)
     print "submission file of shape ", result.shape, " created"
 
 
