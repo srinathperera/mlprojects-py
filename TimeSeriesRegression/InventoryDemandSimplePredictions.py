@@ -72,7 +72,7 @@ def do_simple_models(conf, train_df, test_df, subdf, y_actual_test):
     train_df, test_df, testDf = add_five_grouped_stats(train_df, test_df, subdf)
 
     mean_forecast = test_df['mean_sales']
-    check_accuracy_from_model_output(conf, mean_forecast, y_actual_test, "mean_forecast")
+    calculate_accuracy("mean_forecast", y_actual_test, mean_forecast)
 
     median_forecast = test_df['median_sales']
-    check_accuracy_from_model_output(conf, mean_forecast, y_actual_test, "median_forecast")
+    calculate_accuracy("median_forecast", y_actual_test, median_forecast)

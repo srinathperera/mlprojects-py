@@ -217,8 +217,8 @@ def merge_outputs():
     print result.shape
 
 
-def merge_submissions():
-    submission_files = [pd.read_csv('submission'+str(i)+'.csv') for i in range(4)]
+def merge_submissions(path="./"):
+    submission_files = [pd.read_csv(path+'submission'+str(i)+'.csv') for i in range(4)]
 
     tot = 0
     for df in submission_files:

@@ -52,7 +52,6 @@ data_files = [
 
 
 
-y_actual = None
 if command == -2:
     df = read_train_file('data/train.csv')
     testDf = pd.read_csv('data/test.csv')
@@ -118,7 +117,9 @@ y_actual_test = y_all[-1*test_set_size:]
 
 print "train", train_df['Semana'].unique(), train_df.shape,"test", test_df['Semana'].unique(), test_df.shape
 
-#do_simple_models(conf, train_df,test_df, testDf, y_actual_test)
+#if test_run:
+#    do_simple_models(conf, train_df,test_df, testDf, y_actual_test)
+
 train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features = generate_features(conf, train_df,
                                                                                                test_df, testDf, y_actual_test)
 
@@ -127,36 +128,29 @@ print "after features bd", test_df_before_dropping_features['Semana'].unique(), 
 
 prep_time = time.time()
 
+#model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
+models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
 
-model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
+best_model_index = np.argmax([m.rmsle for m in models])
+best_model = models[best_model_index]
+print "Best Single Model has rmsle=", best_model.rmsle
+best_forecast = forecasts[best_model_index]
 
-
-if conf.save_predictions_with_data:
-    test_df_before_dropping_features['predictions'] = best_forecast
-    test_df_before_dropping_features['actual'] = y_actual_test
-    test_df_before_dropping_features.to_csv('forecast_with_data.csv', index=False)
-
-
-#model = None
-
-
-    #rmsle = None
-    #if target_as_log:
-    #    mean_rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMeans"]))
-    #    median_rmsle = calculate_rmsle(y_actual_test, retransfrom_from_log(test_df["groupedMedian"]))
-    #else:
-    #    mean_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMeans"])
-    #    median_rmsle = calculate_rmsle(y_actual_test, test_df["groupedMedian"])
-    #print "rmsle for mean prediction ", rmsle
+if len(forecasts) > 1:
+    ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
+    #avg models also save the submission
+    avg_models(conf, models, forecasts, y_actual_test, test_df, submission_forecasts=kaggale_predicted_list, submission_ids=ids, sub_df=testDf)
+else:
+    if conf.save_predictions_with_data:
+        test_df_before_dropping_features['predictions'] = best_forecast
+        test_df_before_dropping_features['actual'] = y_actual_test
+        test_df_before_dropping_features.to_csv('forecast_with_data.csv', index=False)
 
 if conf.generate_submission:
-    y_forecast_submission = create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D)
-
+    y_forecast_submission = create_submission(conf, best_model, testDf, parmsFromNormalization, parmsFromNormalization2D)
     if y_actual_2nd_verification is not None:
         rmsle = calculate_rmsle(y_actual_2nd_verification, y_forecast_submission)
         print "2nd Verification rmsle=", rmsle
-
-
 
 m_time = time.time()
 

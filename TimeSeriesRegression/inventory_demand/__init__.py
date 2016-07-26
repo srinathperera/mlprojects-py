@@ -159,16 +159,21 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
 
 def find_NA_rows_percent(df_check, label):
     all_rows = df_check.shape[0]
-    na_rows = df_check[df_check.isnull().any(axis=1)].shape[0]
-    na_percent = float(na_rows)/all_rows
-    if na_rows > 0:
+    na_rows = df_check[df_check.isnull().any(axis=1)]
+    na_rows_count = na_rows.shape[0]
+    na_percent = float(na_rows_count)/all_rows
+    if na_rows_count > 0:
         na_cols = df_check.isnull().sum(axis=0)
         column_names = list(df_check)
         na_colmuns = []
+        na_colmuns_actual = []
         for i in range(len(column_names)):
             if na_cols[i] > 0:
                 na_colmuns.append(column_names[i] + "=" + str(na_cols[i]))
-        print "NA in ", label, "count=", na_rows, "(", na_percent, ")", na_colmuns
+                na_colmuns_actual.append(column_names[i])
+        print "NA in ", label, "count=", na_rows_count, "(", na_percent, ")", na_colmuns
+        print na_rows[na_colmuns_actual].sample(10)
+        #print df_check.sample(10)
     return na_percent
 
 
@@ -188,12 +193,12 @@ def calcuate_hmean(group):
     non_zero_x = np.where(x > 0)
     if len(non_zero_x) > 0:
         #print non_zero_x
-        return scipy.stats.hmean(x[non_zero_x])
+        return min(scipy.stats.hmean(x[non_zero_x]), 100000)
     else:
         return 0
 
 
-def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=True, do_stddev=True):
+def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=True, do_stddev=True, do_advstats=False):
     groupData = bdf.groupby([feild_name])[agr_feild]
     meanData = groupData.mean()
     #meanData = groupData.apply(calcuate_hmean)
@@ -221,13 +226,22 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=Tr
         find_NA_rows_percent(bdf, "add stats for " + str(feild_name))
         valuesDf.fillna(default_stats.count, inplace=True)
 
+    if do_advstats:
+        pcerntile10 = groupData.quantile(0.1, interpolation='nearest')
+        valuesDf[feild_name+"_"+agr_feild+"_pcerntile10"] = np.where(np.isnan(pcerntile10), 0, pcerntile10)
+        pcerntile90 = groupData.quantile(0.9, interpolation='nearest')
+        valuesDf[feild_name+"_"+agr_feild+"_pcerntile90"] = np.where(np.isnan(pcerntile90), 0, pcerntile90)
 
+        kurtosis = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
+        valuesDf[feild_name+"_"+agr_feild+"_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
 
-    #valuesDf[feild_name+"_"+agr_feild+"_pcerntile10"] = min(groupData.quantile(q=0.10), 10000)
-    #valuesDf[feild_name+"_"+agr_feild+"_pcerntile90"] = min(groupData.quantile(q=0.90), 10000)
-    #valuesDf[feild_name+"_"+agr_feild+"_kurtosis"] = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
+        hmean = groupData.apply(calcuate_hmean)
+        valuesDf[feild_name+"_"+agr_feild+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
 
-    #valuesDf = valuesDf.fillna(0)
+        #entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
+        #valuesDf[feild_name+"_"+agr_feild+"_entropy"] =  np.where(np.isnan(entropy), 0, entropy)
+
+        find_NA_rows_percent(valuesDf, "adding more stats " + str(feild_name))
 
     return valuesDf
 
@@ -1038,14 +1052,15 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     #models = [LRModel(conf)]
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
+                RFRModel(conf),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
-                #LRModel(conf, model=linear_model.BayesianRidge()),
+                LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
                 #   ('linear', LinearRegression(fit_intercept=False))])),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
-                LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
-                LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
-                #LRModel(conf, model=linear_model.Ridge (alpha = .5))
+                #LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
+                #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
+                LRModel(conf, model=linear_model.Ridge (alpha = .5))
               ]
 
     #tree model
@@ -1068,8 +1083,8 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
         print "model took ", (time.time() - m_start), "seconds"
         de_normalized_forecasts.append(den_forecasted_data)
 
-    if len(de_normalized_forecasts) > 1:
-        avg_models(conf, models, np.column_stack(de_normalized_forecasts) , y_actual_test, test_df)
+    #if len(de_normalized_forecasts) > 1:
+    #    avg_models(conf, models, np.column_stack(de_normalized_forecasts) , y_actual_test, test_df)
 
 
 
@@ -1135,20 +1150,11 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
         print "Undo X data test test passed", \
             np.allclose(x_test_raw, undo_zeroMeanUnit2D(X_test, parmsFromNormalization2D), atol=0.01)
+    forecasts = np.column_stack(de_normalized_forecasts)
+    return models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D
 
-    #find best model
-    best_model = None
-    best_error = 100000
-    best_forecast = None
-    for i, m in enumerate(models):
-        if m.rmsle < best_error:
-            best_error = m.rmsle
-            best_model = m
-            best_forecast = de_normalized_forecasts[i]
 
-    print "Best Model has rmsle=", best_error
-
-    return best_model, parmsFromNormalization, parmsFromNormalization2D, best_forecast
+    #return best_model, parmsFromNormalization, parmsFromNormalization2D, best_forecast
     #return model, parmsFromNormalization, parmsFromNormalization2D, best_forecast
 
 
@@ -1156,6 +1162,7 @@ def calculate_accuracy(label, y_actual_test, y_forecast):
     error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_forecast, 10)
     rmsle = calculate_rmsle(y_actual_test, y_forecast)
     print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + label, error_ac, rmsep, mape, rmse, rmsle)
+    return rmsle
 
 
 def find_range(rmsle, forecast):
@@ -1163,28 +1170,67 @@ def find_range(rmsle, forecast):
     l = (forecast+1)/np.exp(rmsle) - 1
     return l, h
 
-def avg_models(conf, models, forecasts, y_actual, test_df, test=False):
+
+def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
     median_forecast = np.median(forecasts, axis=1)
     calculate_accuracy("median_forecast", y_actual, median_forecast)
 
-    hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
-    calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
+    #hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
+    #calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
 
     min_forecast = np.min(forecasts, axis=1)
     calculate_accuracy("min_forecast", y_actual, min_forecast)
 
     #add few more features
-    X_all = np.column_stack([forecasts, median_forecast, hmean_forecast,
+    X_all = np.column_stack([forecasts, median_forecast, test_df['Semana'],
                              test_df['clients_combined_Mean'], test_df['Producto_ID_Demanda_uni_equil_Mean']])
+
+    forecasting_feilds = ["f"+str(f) for f in range(X_all.shape[1])]
 
     no_of_training_instances = round(len(y_actual)*0.5)
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
 
+    candidate_ensambles = []
+    candidate_model_rmsle = []
+
     rfr = RandomForestRegressor(n_jobs=4)
     rfr.fit(X_train, y_train)
-    print_feature_importance(rfr.feature_importances_, ["f"+str(f) for f in range(X_all.shape[1])])
+    print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast = rfr.predict(X_test)
-    calculate_accuracy("rfr_forecast", y_test, rfr_forecast)
+    rmsle = calculate_accuracy("rfr_forecast", y_test, rfr_forecast)
+
+    candidate_model_rmsle.append(rmsle)
+    candidate_ensambles.append(rfr)
+
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
+    model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+                                                      xgb_params=xgb_params,num_rounds=20)
+    xgb_forecast = model.predict(X_test)
+    rmsle = calculate_accuracy("xgb_forecast", y_test, xgb_forecast)
+
+    candidate_model_rmsle.append(rmsle)
+    candidate_ensambles.append(model)
+
+    best_ensamble = candidate_ensambles[np.argmin(candidate_model_rmsle)]
+    print "Best Ensamble", type(best_ensamble)
+
+
+    if submission_forecasts is not None:
+        median_forecast = np.median(submission_forecasts, axis=1)
+        list = [submission_forecasts, median_forecast, sub_df['Semana'],
+                             sub_df['clients_combined_Mean'], sub_df['Producto_ID_Demanda_uni_equil_Mean']]
+        print "sizes", [ a.shape for a in list]
+        sub_x_all = np.column_stack(list)
+        ensamble_forecast = best_ensamble.predict(sub_x_all)
+
+        to_save = np.column_stack((submission_ids, ensamble_forecast))
+        to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+        to_saveDf = to_saveDf.fillna(0)
+        to_saveDf["id"] = to_saveDf["id"].astype(int)
+        submission_file = 'en_submission'+str(conf.command)+ '.csv'
+        to_saveDf.to_csv(submission_file, index=False)
+
+
 
     if test:
         rmsle_values = [m for m in models]
@@ -1196,7 +1242,7 @@ def avg_models(conf, models, forecasts, y_actual, test_df, test=False):
     to_saveDf.to_csv('forecasts4ensamble.csv', index=False)
 
 
-
+    '''
     if len(models) >= 3:
 
         print "toprmsle_valuesrmsle", rmsle_values
@@ -1211,7 +1257,6 @@ def avg_models(conf, models, forecasts, y_actual, test_df, test=False):
 
         weighted_forecast1 = top3forecasts[:,0]*0.5+ top3forecasts[:,1]*0.3+ top3forecasts[:,2]*0.2
         calculate_accuracy("weighted_forecast1", y_actual, weighted_forecast1)
-        '''
         top3rmsle =  rmsle_values[top3forecasts]
 
 
@@ -1224,7 +1269,31 @@ def avg_models(conf, models, forecasts, y_actual, test_df, test=False):
         #if l2 < h1:(h1+l2)/2
         #if l1 < h2:(h2+l1)/2
         #else top3forecasts[2]
+
         '''
+
+
+def create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D ):
+    ids = testDf['id']
+    temp = testDf.drop('id',1)
+    print "creating submission for ", len(ids), "values"
+
+    #pd.colnames(temp)[pd.colSums(is.na(temp)) > 0]
+    #print temp.describe()
+    #print df.isnull().any()
+    temp = temp.fillna(0)
+
+    print "forecasting values",  temp.shape
+
+    kaggale_test = apply_zeroMeanUnit2D(temp.values.copy(), parmsFromNormalization2D)
+
+    print "kaggale_test", kaggale_test.shape
+
+    kaggale_predicted_raw_list = [m.predict(kaggale_test) for m in models]
+    kaggale_predicted_list = [modeloutput2predictions(kpr, parmsFromNormalization=parmsFromNormalization)
+                              for kpr in kaggale_predicted_raw_list]
+    return ids, np.column_stack(kaggale_predicted_list)
+
 
 
 def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D ):
