@@ -36,6 +36,7 @@ save_preprocessed_file = False
 target_as_log = True
 preprocessed_file_name = "_data.csv"
 save_predictions_with_data = False
+verify_sub_data = False
 
 s_time = time.time()
 
@@ -79,6 +80,8 @@ if 'Demanda_uni_equil' in testDf:
     testDf = testDf[['Semana','Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID']]
     testDf['id'] = range(testDf.shape[0])
 
+
+
 r_time = time.time()
 
 print "read took %f" %(r_time-s_time)
@@ -113,6 +116,9 @@ y_actual_test = y_all[-1*test_set_size:]
 
 
 #train_df = train_df[train_df['Demanda_uni_equil'] > 0] # to remove
+if verify_sub_data:
+    testDf = train_df.copy()[['Semana','Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID']]
+    testDf['id'] = range(testDf.shape[0])
 
 
 print "train", train_df['Semana'].unique(), train_df.shape,"test", test_df['Semana'].unique(), test_df.shape
@@ -131,10 +137,21 @@ prep_time = time.time()
 #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
 models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
 
-best_model_index = np.argmax([m.rmsle for m in models])
+best_model_index = np.argmin([m.rmsle for m in models])
 best_model = models[best_model_index]
-print "Best Single Model has rmsle=", best_model.rmsle
+print "[IDF]Best Single Model has rmsle=", best_model.rmsle
 best_forecast = forecasts[best_model_index]
+
+
+if verify_sub_data:
+    print "train/sub shapes", train_df.shape, testDf.shape
+    print train_df.head(10)['clients_combined_Mean']
+    print testDf.head(10)['clients_combined_Mean']
+
+    for f in list(test_df):
+        if not np.allclose(train_df[f], testDf[f], equal_nan=True):
+            print "#### Does not match", f
+
 
 if len(forecasts) > 1:
     ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )

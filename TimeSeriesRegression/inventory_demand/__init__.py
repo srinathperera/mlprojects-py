@@ -126,7 +126,7 @@ def setdiff_counts_froms_dfs(df1, df2):
     ds1.difference(ds2)
 
 
-def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats):
+def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, use_close_products_missing=True):
     groupData = bdf.groupby(feild_names)[agr_feild]
     meanData = groupData.mean()
     stddevData = groupData.std()
@@ -143,11 +143,11 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     valuesDf[name+"_Count"] = countData.values
     valuesDf.fillna(default_stats.count, inplace=True)
 
-    if feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
+    if use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
         to_merge = pd.concat([testdf[['Ruta_SAK','Cliente_ID']], subdf[['Ruta_SAK','Cliente_ID']]])
         to_merge = to_merge.drop_duplicates()
         valuesDf = find_alt_for_missing(to_merge, valuesDf)
-        print "removing NA's"
+        print "Using close values for missing values"
 
 
     bdf = merge__multiple_feilds_stats_with_df(name, bdf, valuesDf, feild_names, default_stats)
@@ -594,14 +594,34 @@ class RFRModel:
         return self.model.predict(X_test)
 
 
+def create_xgboost_params(trialcount, maxdepth=[5], eta=[0.1], min_child_weight=[1],
+                          gamma=[0], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0]):
+    xg_configs =[]
+    for t in itertools.product(maxdepth, eta, min_child_weight, subsample, colsample_bytree, gamma, reg_alpha, reg_lambda, ):
+        xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":t[0], "eta":t[1], "min_child_weight":t[2],
+            "subsample":t[3], "nthread":4, "colsample_bytree":t[4], 'gamma':t[5],
+            "reg_alpha":t[6], "reg_lambda":t[7]}
+        xg_configs.append(xgb_params)
+
+    if trialcount <= 0:
+        return xg_configs
+    else:
+        count2remove = len(xg_configs) - trialcount
+        print "explore %2f of search space" %(float(trialcount)/len(xg_configs))
+        #indexes2remove = random.shuffle(range(len(all_dl_configs)))
+        random.shuffle(xg_configs)
+        return xg_configs[0:trialcount]
+
 
 class XGBoostModel:
     def __init__(self, conf, xgb_params):
         self.conf = conf
         self.xgb_params = xgb_params
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
-        model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-                                                      xgb_params=self.xgb_params,num_rounds=200)
+        #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+        #                                              xgb_params=self.xgb_params,num_rounds=200)
+        model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
+                                        use_sklean=False, xgb_params=self.xgb_params)
         self.model = model
         y_pred_final, rmsle = check_accuracy("XGBoost", self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
@@ -1052,25 +1072,40 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     #models = [LRModel(conf)]
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
-                RFRModel(conf),
+               # RFRModel(conf),
+                #LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
-                LRModel(conf, model=linear_model.BayesianRidge()),
+                #LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
+                #LRModel(conf, model=linear_model.Ridge (alpha = .5))
                 #   ('linear', LinearRegression(fit_intercept=False))])),
-                LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
                 #LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
                 #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
-                LRModel(conf, model=linear_model.Ridge (alpha = .5))
+
               ]
 
     #tree model
-    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+    do_parameter_search = False
+    if(not do_parameter_search):
+        xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
-    for md  in [0]:
+        xgb_params_list = [xgb_params]
+    else:
+        #xgb_params_list = create_xgboost_params(0, maxdepth=[3], eta=[0.1], min_child_weight=[5],
+        #                  gamma=[0], subsample=[0.5], colsample_bytree=[0.5],
+        #                  reg_alpha=[0.005, 0.01, 0.05], reg_lambda=[0.005, 0.01, 0.05])
+        xgb_params_list = create_xgboost_params(0, maxdepth=[3, 5], eta=[0.1, 0.05], min_child_weight=[5],
+                          gamma=[0], subsample=[0.5], colsample_bytree=[0.5],
+                          reg_alpha=[0], reg_lambda=[0])
+
+    #for md  in [0]:
+    for xgb_params in xgb_params_list:
         #xgb_params['max_depth'] = md[0]
         #xgb_params['subsample'] = md[1]
         #xgb_params['min_child_weight'] = md[2]
         models.append(XGBoostModel(conf, xgb_params))
+        #xgb_params['seed'] = 347
+        #models.append(XGBoostModel(conf, xgb_params))
 
     #linear model
     #xgb_params = {"objective": "reg:linear", "booster":"gblinear", "max_depth":3, "nthread":4}
@@ -1190,29 +1225,25 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     no_of_training_instances = round(len(y_actual)*0.5)
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
 
-    candidate_ensambles = []
-    candidate_model_rmsle = []
+    ensambles = []
 
     rfr = RandomForestRegressor(n_jobs=4)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast = rfr.predict(X_test)
     rmsle = calculate_accuracy("rfr_forecast", y_test, rfr_forecast)
-
-    candidate_model_rmsle.append(rmsle)
-    candidate_ensambles.append(rfr)
+    ensambles.append((rmsle, rfr, "rfr ensamble"))
 
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
     model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
                                                       xgb_params=xgb_params,num_rounds=20)
     xgb_forecast = model.predict(X_test)
     rmsle = calculate_accuracy("xgb_forecast", y_test, xgb_forecast)
+    ensambles.append((rmsle, model, "xgboost ensamble"))
 
-    candidate_model_rmsle.append(rmsle)
-    candidate_ensambles.append(model)
-
-    best_ensamble = candidate_ensambles[np.argmin(candidate_model_rmsle)]
-    print "Best Ensamble", type(best_ensamble)
+    best_ensamble_index = np.argmin([t[0] for t in ensambles])
+    best_ensamble = ensambles[best_ensamble_index][1]
+    print "[IDF]Best Ensamble", ensambles[best_ensamble_index][2], ensambles[best_ensamble_index][0]
 
 
     if submission_forecasts is not None:

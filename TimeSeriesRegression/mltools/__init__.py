@@ -158,6 +158,7 @@ def undo_zeroMeanUnit2D(data, parmsFromNormalization):
 
 
 def train_test_split(no_of_training_instances, X_all, y_all):
+    no_of_training_instances = int(no_of_training_instances)
     X_train = X_all[0:no_of_training_instances, :]
     X_test = X_all[no_of_training_instances:, :]
     y_train = y_all[0:no_of_training_instances]

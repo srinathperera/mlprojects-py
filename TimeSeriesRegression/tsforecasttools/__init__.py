@@ -170,9 +170,11 @@ def regression_with_xgboost_no_cv(x_train, y_train, X_test, Y_test, features=Non
     test_data = xgb.DMatrix(X_test, Y_test)
     evallist  = [(train_data,'train'), (test_data,'eval')]
 
-    if xgb_params == None:
+    if xgb_params is None:
         xgb_params = get_default_xgboost_params()
+        print "xgb_params not found"
 
+    print "XGBoost, using param", xgb_params
     gbdt = xgb.train(xgb_params, train_data, num_rounds, evallist, verbose_eval = True, early_stopping_rounds=5)
 
     isgbtree = xgb_params["booster"] == "gbtree"
@@ -198,7 +200,7 @@ def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use
     if not use_cv:
         num_rounds = 10
     else:
-        cvresult = xgb.cv(xgb_params, train_data, num_boost_round=10, nfold=5,
+        cvresult = xgb.cv(xgb_params, train_data, num_boost_round=30, nfold=5,
             metrics={'rmse'}, show_progress=True)
         print cvresult
         num_rounds = len(cvresult)
