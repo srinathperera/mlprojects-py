@@ -313,9 +313,9 @@ def print_submission_data(sub_df=None, sub_file=None, show=False, command=0):
     if(show):
         plt.show()
 
-error_df = pd.read_csv('forecast_with_data.csv')
-full_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand//trainitems5000_15000.csv')
-do_error_analysis(error_df, 0, full_df)
+#error_df = pd.read_csv('forecast_with_data.csv')
+#full_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand//trainitems5000_15000.csv')
+#do_error_analysis(error_df, 0, full_df)
 #print_submission_data('/Users/srinath/playground/data-science/BimboInventoryDemand/submission/temp/submission_final.csv')
 #print_submission_data('/Users/srinath/playground/data-science/BimboInventoryDemand/submission/final.csv', show=True)
 
