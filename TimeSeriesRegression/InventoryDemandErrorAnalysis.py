@@ -111,10 +111,19 @@ def show_errors_by_timeline(df):
     plt.show()
 
 
+#figure_id
+
+def show_raw_error_by_feature(df, feature_name, chartloc):
+    plt.subplot(chartloc)
+    plt.xlabel(feature_name , fontsize=18)
+    plt.ylabel('Error', fontsize=18)
+    x = df[feature_name] + 0.01*np.random.normal(size=df.shape[0])
+    plt.scatter(x, df['error'].values, alpha=0.5, color='b')
+    plt.scatter(x, df['error'], alpha=0.5, color='r')
 
 
 
-def show_error_by_feature(df, feature_name, chartloc):
+def show_error_by_feature(df, feature_name, chartloc, redo_x = True):
     group1 = df.groupby([feature_name])['error']
     errors_by_feature = g2df_sum_mean(group1).sort("mean")
 
@@ -124,8 +133,12 @@ def show_error_by_feature(df, feature_name, chartloc):
     #plt.yscale('log')
     #plt.xscale('log')
     #plt.scatter(errors_by_feature[feature_name].values, errors_by_feature['mean'].values, alpha=0.5)
-    plt.scatter(range(0, errors_by_feature.shape[0]), errors_by_feature['mean'].values, alpha=0.5, color='b')
-    plt.scatter(range(0, errors_by_feature.shape[0]), np.log(errors_by_feature['rank'].values), alpha=0.5, color='r')
+    if redo_x:
+        x = range(0, errors_by_feature.shape[0])
+    else:
+        x = errors_by_feature[feature_name]
+    plt.scatter(x, errors_by_feature['mean'].values, alpha=0.5, color='b')
+    plt.scatter(x, np.log(errors_by_feature['rank'].values), alpha=0.5, color='r')
 
     return errors_by_feature
 
@@ -235,8 +248,6 @@ def top_errors():
     show_errors_by_timeline(entries4products)
 
 
-## To Use
-
 
 def show_timelines_toperrors(errordf, full_df, top_errors_count=50, cmd=0):
     group1 = errordf.groupby(['Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID'])['error']
@@ -255,15 +266,18 @@ def show_timelines_toperrors(errordf, full_df, top_errors_count=50, cmd=0):
     merged_with_forecasts = pd.merge(errordf, top_error_groups, on=['Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID'])
     print merged_with_forecasts
 
-    plt.figure(1, figsize=(20,10))
+    plt.figure(2, figsize=(20,10))
 
     plt.subplot(321)
+    merged_with_raw['Semana'] = merged_with_raw['Semana'] + np.random.normal(size=merged_with_raw.shape[0])
+
     plt.xlabel("Demnad", fontsize=18)
     plt.ylabel('Semana', fontsize=18)
     #plt.scatter(merged_with_raw['Semana'], merged_with_raw['Demanda_uni_equil'], color='b', alpha=0.3)
     plt.plot(merged_with_raw['Semana'], merged_with_raw['Demanda_uni_equil'], color='b', alpha=0.6)
     plt.plot(merged_with_forecasts['Semana'], merged_with_forecasts['predictions'], color='r', alpha=0.3)
 
+    merged_with_forecasts['Semana'] = merged_with_forecasts['Semana'] + np.random.normal(size=merged_with_forecasts.shape[0])
     plt.subplot(322)
     plt.xlabel("Demnad", fontsize=18)
     plt.ylabel('Semana', fontsize=18)
@@ -272,17 +286,36 @@ def show_timelines_toperrors(errordf, full_df, top_errors_count=50, cmd=0):
     plt.tight_layout()
     plt.savefig('top_error_timeline-'+str(cmd)+'.png')
 
+def show_raw_error_by_features(df, cmd):
+    df['error'] = np.abs(np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1))
+
+    df = df.sample(100000)
+
+    plt.figure(3, figsize=(20,10))
+    show_raw_error_by_feature(df, 'Producto_ID', 321)
+    show_raw_error_by_feature(df, 'Agencia_ID', 322)
+    show_raw_error_by_feature(df, 'Cliente_ID', 323)
+    show_raw_error_by_feature(df, 'Canal_ID', 324)
+    show_raw_error_by_feature(df, 'Ruta_SAK', 325)
+
+    show_raw_error_by_feature(df, 'Semana', 326)
+
+    plt.tight_layout()
+    plt.savefig('error_raw_by_features-'+str(cmd)+'.png')
+
+
 
 def show_error_by_features(df, cmd):
     df['error'] = np.abs(np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1))
 
     plt.figure(1, figsize=(20,10))
-
     err_by_products = show_error_by_feature(df, 'Producto_ID', 321)
     show_error_by_feature(df, 'Agencia_ID', 322)
     show_error_by_feature(df, 'Cliente_ID', 323)
     show_error_by_feature(df, 'Canal_ID', 324)
     show_error_by_feature(df, 'Ruta_SAK', 325)
+
+    show_error_by_feature(df, 'Semana', 326, redo_x=False)
 
     plt.tight_layout()
     plt.savefig('error_by_features-'+str(cmd)+'.png')
@@ -291,7 +324,9 @@ def show_error_by_features(df, cmd):
 def do_error_analysis(df, cmd, full_df):
     df['error'] = np.abs(np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1))
     show_error_by_features(df, cmd)
-    show_timelines_toperrors(df, full_df, cmd=cmd)
+    show_raw_error_by_features(df, cmd)
+
+    #show_timelines_toperrors(df, full_df, cmd=cmd)
 
 
 def print_submission_data(sub_df=None, sub_file=None, show=False, command=0):
@@ -313,17 +348,18 @@ def print_submission_data(sub_df=None, sub_file=None, show=False, command=0):
     if(show):
         plt.show()
 
-#error_df = pd.read_csv('forecast_with_data.csv')
-#full_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand//trainitems5000_15000.csv')
-#do_error_analysis(error_df, 0, full_df)
-#print_submission_data('/Users/srinath/playground/data-science/BimboInventoryDemand/submission/temp/submission_final.csv')
+def test_error_analysis():
+    error_df = pd.read_csv('forecast_with_data.csv')
+    full_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand//trainitems5000_15000.csv')
+    do_error_analysis(error_df, 0, full_df)
+#print_submission_data(sub_file='/Users/srinath/playground/data-science/BimboInventoryDemand/submission/temp/en_submission_final.csv', show=True)
 #print_submission_data('/Users/srinath/playground/data-science/BimboInventoryDemand/submission/final.csv', show=True)
 
 #find_missing_data()
 
 
 
-
+#test_error_analysis()
 
 #show_error_by_features()
 #show_timelines_toperrors()

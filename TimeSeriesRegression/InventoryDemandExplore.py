@@ -168,4 +168,58 @@ def explore_product_stats():
     plt.tight_layout()
     plt.show()
 
-explore_returns_and_delivery_freq()
+def show_product_stats(df, feature_name, redo_x=True):
+    group1 = df.groupby([feature_name])['Demanda_uni_equil']
+
+    countData = group1.count()
+    valuesDf = countData.to_frame("count")
+    valuesDf.reset_index(inplace=True)
+    #valuesDf['sum'] = group1.sum()
+    #valuesDf['sum'] = group1.std()
+    #valuesDf['sum'] = group1.mean()
+
+
+
+
+    plt.subplot(321)
+    plt.xlabel(feature_name + " in sorted order by Mean", fontsize=18)
+    plt.ylabel('Count', fontsize=18)
+    if redo_x:
+        x = range(0, valuesDf.shape[0])
+    else:
+        x = valuesDf[feature_name]
+    plt.scatter(x, np.log(valuesDf['count']), alpha=0.5, color='b')
+
+    plt.subplot(322)
+    plt.xlabel(feature_name, fontsize=18)
+    plt.ylabel('Log Sum', fontsize=18)
+    plt.scatter(x, np.log(group1.sum()), alpha=0.5, color='r')
+
+    plt.subplot(323)
+    plt.xlabel(feature_name, fontsize=18)
+    plt.ylabel('Std', fontsize=18)
+    plt.scatter(x, np.log(group1.std()), alpha=0.5, color='r')
+
+    plt.subplot(324)
+    plt.xlabel(feature_name + " in sorted order by Mean", fontsize=18)
+    plt.ylabel('Mean/ Median', fontsize=18)
+    plt.scatter(x, np.log(group1.mean()), alpha=0.5, color='r')
+    plt.scatter(x, np.log(group1.median()), alpha=0.5, color='b')
+    plt.scatter(x, np.log(group1.quantile(0.1, interpolation='nearest')), alpha=0.5, color='g')
+    plt.scatter(x, np.log(group1.quantile(0.9, interpolation='nearest')), alpha=0.5, color='y')
+
+    plt.savefig('stats-'+feature_name+'.png')
+
+
+def show_feature_stats():
+    #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+
+    for f in list(df):
+        print "processing ", f
+        show_product_stats(df,f)
+
+show_feature_stats()
+
+#explore_returns_and_delivery_freq()
