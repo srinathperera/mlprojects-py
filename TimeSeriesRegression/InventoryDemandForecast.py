@@ -20,6 +20,7 @@ from inventory_demand import *
 from mltools import *
 #from mlpreprocessing import feather2df
 from InventoryDemandSimplePredictions import do_simple_models
+from InventoryDemandErrorAnalysis import do_error_analysis
 
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
@@ -157,11 +158,6 @@ if len(forecasts) > 1:
     ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
     #avg models also save the submission
     avg_models(conf, models, forecasts, y_actual_test, test_df, submission_forecasts=kaggale_predicted_list, submission_ids=ids, sub_df=testDf)
-else:
-    if conf.save_predictions_with_data:
-        test_df_before_dropping_features['predictions'] = best_forecast
-        test_df_before_dropping_features['actual'] = y_actual_test
-        test_df_before_dropping_features.to_csv('forecast_with_data.csv', index=False)
 
 if conf.generate_submission:
     y_forecast_submission = create_submission(conf, best_model, testDf, parmsFromNormalization, parmsFromNormalization2D)
@@ -170,6 +166,14 @@ if conf.generate_submission:
         print "2nd Verification rmsle=", rmsle
 
 m_time = time.time()
+
+
+if conf.save_predictions_with_data:
+    test_df_before_dropping_features['predictions'] = best_forecast
+    test_df_before_dropping_features['actual'] = y_actual_test
+    test_df_before_dropping_features.to_csv('prediction_with_data'+conf.command+'.csv', index=False)
+    do_error_analysis(test_df_before_dropping_features, conf.command, df)
+
 
 #print "top aggrigate count", len(slopeMap)
 print "total=%f, read=%fs, preporcess=%fs, model=%fs" \

@@ -24,6 +24,8 @@ from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import Pipeline
 
+from InventoryDemandErrorAnalysis import print_submission_data
+
 from mltools import *
 import scipy
 
@@ -845,17 +847,6 @@ def group_to_df(group, name):
     return valuesDf
 
 
-def group_to_df_sum_mean(group):
-    sum = group.sum()
-    mean = group.mean()
-    count = group.count()
-    valuesDf = sum.to_frame("sum")
-    valuesDf.reset_index(inplace=True)
-    valuesDf['mean'] = mean.values
-    valuesDf['count'] = count.values
-    valuesDf['rank'] = valuesDf['mean']*np.log(1+valuesDf['count'])
-
-    return valuesDf
 
 
 
@@ -885,9 +876,10 @@ class DefaultStats:
 def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     use_slope = False
     use_group_aggrigate = True
-    use_product_features = True
+    use_product_features = False
     use_agency_features = False
     use_sales_data = False
+    use_alt_missing = False
 
 
 
@@ -922,7 +914,8 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-                                                          'Demanda_uni_equil', "clients_combined", default_stats=default_demand_stats)
+                                                          'Demanda_uni_equil', "clients_combined", default_stats=default_demand_stats,
+                                                              use_close_products_missing=use_alt_missing)
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats, drop=False)
 
@@ -934,7 +927,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
 
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-            'Venta_hoy', "clients_combined_vh", default_stats=default_venta_hoy_stats)
+            'Venta_hoy', "clients_combined_vh", default_stats=default_venta_hoy_stats, use_close_products_missing=use_alt_missing)
 
 
 
@@ -1261,6 +1254,8 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
         submission_file = 'en_submission'+str(conf.command)+ '.csv'
         to_saveDf.to_csv(submission_file, index=False)
 
+        print "Best Ensamble Submission Stats"
+        print to_saveDf.describe()
 
 
     if test:
@@ -1357,7 +1352,11 @@ def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNorm
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
     to_saveDf = to_saveDf.fillna(0)
     to_saveDf["id"] = to_saveDf["id"].astype(int)
-    to_saveDf.to_csv('submission'+str(conf.command)+ '.csv', index=False)
+    submission_file = 'submission'+str(conf.command)+ '.csv'
+    to_saveDf.to_csv(submission_file, index=False)
+
+    print "Best Model Submission Stats"
+    print_submission_data(sub_df=to_saveDf, command=conf.command)
 
     print "Submission done for ", to_saveDf.shape[0], "values"
 
