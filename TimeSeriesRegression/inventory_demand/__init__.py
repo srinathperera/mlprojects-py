@@ -215,6 +215,10 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=Tr
     #valuesDf = drop_feilds_1df(valuesDf, [feild_name+"_"+agr_feild+"_Mean"])
     #meanData = groupData.median()
 
+    #valuesDf[feild_name+"_"+agr_feild+"_sum"] = groupData.sum()
+    #valuesDf.fillna(0, inplace=True)
+
+
     if do_stddev:
         stddevData = groupData.std()
         valuesDf[feild_name+"_"+agr_feild+"_StdDev"] = stddevData.values
@@ -876,7 +880,7 @@ class DefaultStats:
 def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     use_slope = False
     use_group_aggrigate = True
-    use_product_features = False
+    use_product_features = True
     use_agency_features = False
     use_sales_data = False
     use_alt_missing = False
