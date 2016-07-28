@@ -128,11 +128,13 @@ def setdiff_counts_froms_dfs(df1, df2):
     ds1.difference(ds2)
 
 
-def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, use_close_products_missing=True):
+def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, use_close_products_missing=True,
+                              do_advstats=False):
     groupData = bdf.groupby(feild_names)[agr_feild]
     meanData = groupData.mean()
     stddevData = groupData.std()
     countData = groupData.count()
+    sumData = groupData.count()
 
     #TODO check why data is NA
     valuesDf = meanData.to_frame(name+"_Mean")
@@ -144,6 +146,25 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     valuesDf.fillna(default_stats.stddev, inplace=True)
     valuesDf[name+"_Count"] = countData.values
     valuesDf.fillna(default_stats.count, inplace=True)
+    valuesDf[name+"_sum"] = sumData.values
+
+    if do_advstats:
+        pcerntile10 = groupData.quantile(0.1, interpolation='nearest')
+        valuesDf[name+"_pcerntile10"] = np.where(np.isnan(pcerntile10), 0, pcerntile10)
+        pcerntile90 = groupData.quantile(0.9, interpolation='nearest')
+        valuesDf[name + "_pcerntile90"] = np.where(np.isnan(pcerntile90), 0, pcerntile90)
+
+        kurtosis = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
+        valuesDf[name+"_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
+
+        hmean = groupData.apply(calcuate_hmean)
+        valuesDf[name+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
+
+        entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
+        valuesDf[name+"_entropy"] =  np.where(np.isnan(entropy), 0, entropy)
+
+        find_NA_rows_percent(valuesDf, "adding more stats " + str(name))
+
 
     if use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
         to_merge = pd.concat([testdf[['Ruta_SAK','Cliente_ID']], subdf[['Ruta_SAK','Cliente_ID']]])
@@ -259,8 +280,8 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=Tr
         hmean = groupData.apply(calcuate_hmean)
         valuesDf[feild_name+"_"+agr_feild+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
 
-        #entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
-        #valuesDf[feild_name+"_"+agr_feild+"_entropy"] =  np.where(np.isnan(entropy), 0, entropy)
+        entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
+        valuesDf[feild_name+"_"+agr_feild+"_entropy"] =  np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
 
         find_NA_rows_percent(valuesDf, "adding more stats " + str(feild_name))
 
@@ -914,6 +935,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     use_agency_features = False
     use_sales_data = False
     use_alt_missing = False
+    do_advstats = True
 
 
 
