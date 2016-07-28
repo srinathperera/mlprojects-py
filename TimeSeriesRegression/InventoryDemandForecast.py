@@ -20,7 +20,7 @@ from inventory_demand import *
 from mltools import *
 #from mlpreprocessing import feather2df
 from InventoryDemandSimplePredictions import do_simple_models
-from InventoryDemandErrorAnalysis import do_error_analysis
+#from InventoryDemandErrorAnalysis import do_error_analysis
 
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
@@ -172,7 +172,7 @@ if conf.save_predictions_with_data:
     test_df_before_dropping_features['predictions'] = best_forecast
     test_df_before_dropping_features['actual'] = y_actual_test
     test_df_before_dropping_features.to_csv('prediction_with_data'+conf.command+'.csv', index=False)
-    do_error_analysis(test_df_before_dropping_features, conf.command, df)
+    #do_error_analysis(test_df_before_dropping_features, conf.command, df)
 
 
 #print "top aggrigate count", len(slopeMap)
