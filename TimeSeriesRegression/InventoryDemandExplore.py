@@ -169,7 +169,8 @@ def explore_product_stats():
     plt.show()
 
 def show_product_stats(df, feature_name, redo_x=True):
-    group1 = df.groupby([feature_name])['Demanda_uni_equil']
+    group = df.groupby([feature_name])
+    group1 = group['Demanda_uni_equil']
 
     countData = group1.count()
     valuesDf = countData.to_frame("count")
@@ -179,8 +180,6 @@ def show_product_stats(df, feature_name, redo_x=True):
     #valuesDf['sum'] = group1.mean()
 
 
-
-
     plt.subplot(321)
     plt.xlabel(feature_name + " in sorted order by Mean", fontsize=18)
     plt.ylabel('Count', fontsize=18)
@@ -188,25 +187,45 @@ def show_product_stats(df, feature_name, redo_x=True):
         x = range(0, valuesDf.shape[0])
     else:
         x = valuesDf[feature_name]
-    plt.scatter(x, np.log(valuesDf['count']), alpha=0.5, color='b')
+    plt.scatter(x, valuesDf['count'], alpha=0.5, color='b')
 
     plt.subplot(322)
-    plt.xlabel(feature_name, fontsize=18)
-    plt.ylabel('Log Sum', fontsize=18)
-    plt.scatter(x, np.log(group1.sum()), alpha=0.5, color='r')
+    plt.xlabel(feature_name + "Index", fontsize=18)
+    plt.ylabel('Sum', fontsize=18)
+    plt.scatter(x, group1.sum(), alpha=0.5, color='r')
 
     plt.subplot(323)
-    plt.xlabel(feature_name, fontsize=18)
+    plt.xlabel(feature_name + "Index", fontsize=18)
     plt.ylabel('Std', fontsize=18)
-    plt.scatter(x, np.log(group1.std()), alpha=0.5, color='r')
+    plt.scatter(x, group1.std(), alpha=0.5, color='r')
 
     plt.subplot(324)
-    plt.xlabel(feature_name + " in sorted order by Mean", fontsize=18)
-    plt.ylabel('Mean/ Median', fontsize=18)
-    plt.scatter(x, np.log(group1.mean()), alpha=0.5, color='r')
-    plt.scatter(x, np.log(group1.median()), alpha=0.5, color='b')
-    plt.scatter(x, np.log(group1.quantile(0.1, interpolation='nearest')), alpha=0.5, color='g')
-    plt.scatter(x, np.log(group1.quantile(0.9, interpolation='nearest')), alpha=0.5, color='y')
+    plt.xlabel(feature_name + "Index", fontsize=18)
+    plt.ylabel('Mean, Median, Percentiles', fontsize=18)
+    plt.scatter(x, group1.mean(), alpha=0.5, color='r')
+    plt.scatter(x, group1.median(), alpha=0.5, color='b')
+    plt.scatter(x, group1.quantile(0.1, interpolation='nearest'), alpha=0.5, color='g')
+    plt.scatter(x, group1.quantile(0.9, interpolation='nearest'), alpha=0.5, color='y')
+
+    group2 = group['Venta_hoy']
+    plt.subplot(325)
+    plt.xlabel(feature_name + "Index", fontsize=18)
+    plt.ylabel('Mean, Median, Percentiles', fontsize=18)
+    plt.scatter(x, group2.mean(), alpha=0.5, color='r')
+    plt.scatter(x, group2.median(), alpha=0.5, color='b')
+    plt.scatter(x, group2.quantile(0.1, interpolation='nearest'), alpha=0.5, color='g')
+    plt.scatter(x, group2.quantile(0.9, interpolation='nearest'), alpha=0.5, color='y')
+
+
+    group3 = group['Dev_proxima']
+    plt.subplot(326)
+    plt.xlabel(feature_name + "Index", fontsize=18)
+    plt.ylabel('Mean, Median, Percentiles', fontsize=18)
+    plt.scatter(x, group3.mean(), alpha=0.5, color='r')
+    plt.scatter(x, group3.median(), alpha=0.5, color='b')
+    plt.scatter(x, group3.quantile(0.1, interpolation='nearest'), alpha=0.5, color='g')
+    plt.scatter(x, group3.quantile(0.9, interpolation='nearest'), alpha=0.5, color='y')
+
 
     plt.savefig('stats-'+feature_name+'.png')
 
@@ -216,7 +235,7 @@ def show_feature_stats():
 
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
 
-    for f in list(df):
+    for f in ['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']:
         print "processing ", f
         show_product_stats(df,f)
 

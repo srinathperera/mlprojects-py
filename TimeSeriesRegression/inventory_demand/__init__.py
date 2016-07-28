@@ -624,10 +624,10 @@ class XGBoostModel:
         self.conf = conf
         self.xgb_params = xgb_params
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
-        #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-        #                                              xgb_params=self.xgb_params,num_rounds=200)
-        model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
-                                        use_sklean=False, xgb_params=self.xgb_params)
+        model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+                                                      xgb_params=self.xgb_params,num_rounds=200)
+        #model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
+        #                                use_sklean=False, xgb_params=self.xgb_params)
         self.model = model
         y_pred_final, rmsle = check_accuracy("XGBoost", self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)

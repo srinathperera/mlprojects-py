@@ -17,6 +17,7 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 
 
 from inventory_demand import *
+from data_explore import *
 
 
 np.set_printoptions(precision=1, suppress=True)
@@ -73,6 +74,12 @@ def analyze_error():
     plt.scatter(groupe2d.index.values, groupe2d.values, alpha=0.5)
 
 
+def show_scatterplot(x,y, x_title, y_title, subplotnum):
+    plt.subplot(subplotnum)
+    plt.xlabel(x_title, fontsize=18)
+    plt.ylabel(y_title, fontsize=18)
+    plt.scatter(x, y, alpha=0.5, s=5)
+
 def show_timeline(plotid, x, y1, y2):
     plt.subplot(plotid)
     plt.scatter(x, y1, color='b')
@@ -114,22 +121,27 @@ def show_errors_by_timeline(df):
 #figure_id
 
 def show_raw_error_by_feature(df, feature_name, chartloc):
+    start  = time.time()
     plt.subplot(chartloc)
     plt.xlabel(feature_name , fontsize=18)
     plt.ylabel('Error', fontsize=18)
     x = df[feature_name] + 0.01*np.random.normal(size=df.shape[0])
     plt.scatter(x, df['error'].values, alpha=0.5, color='b')
     plt.scatter(x, df['error'], alpha=0.5, color='r')
+    print "show_raw_by_feature", feature_name, "took", (time.time() - start), "s"
+
 
 
 
 def show_error_by_feature(df, feature_name, chartloc, redo_x = True):
+    start  = time.time()
     group1 = df.groupby([feature_name])['error']
     errors_by_feature = g2df_sum_mean(group1).sort("mean")
 
-    plt.subplot(chartloc)
-    plt.xlabel(feature_name + " in sorted order by Mean", fontsize=18)
-    plt.ylabel('Mean Error/Rank', fontsize=18)
+
+    #plt.subplot(chartloc)
+    #plt.xlabel(feature_name + " in sorted order by Mean", fontsize=18)
+    #plt.ylabel('Mean Error/Rank', fontsize=18)
     #plt.yscale('log')
     #plt.xscale('log')
     #plt.scatter(errors_by_feature[feature_name].values, errors_by_feature['mean'].values, alpha=0.5)
@@ -137,8 +149,14 @@ def show_error_by_feature(df, feature_name, chartloc, redo_x = True):
         x = range(0, errors_by_feature.shape[0])
     else:
         x = errors_by_feature[feature_name]
-    plt.scatter(x, errors_by_feature['mean'].values, alpha=0.5, color='b')
-    plt.scatter(x, np.log(errors_by_feature['rank'].values), alpha=0.5, color='r')
+
+    data = [(x, errors_by_feature['mean'].values), (x, np.log(errors_by_feature['rank'].values))]
+    draw_scatterplot(data, "Mean Error, Rank vs. "+ feature_name, chartloc, c =['b', 'r'])
+
+    #plt.scatter(x, errors_by_feature['mean'].values, alpha=0.5, color='b', s=5)
+    #plt.scatter(x, np.log(errors_by_feature['rank'].values), alpha=0.5, color='r', s=5)
+
+    print "show_error_by_feature", feature_name, "took", (time.time() - start), "s"
 
     return errors_by_feature
 
@@ -287,11 +305,8 @@ def show_timelines_toperrors(errordf, full_df, top_errors_count=50, cmd=0):
     plt.savefig('top_error_timeline-'+str(cmd)+'.png')
 
 def show_raw_error_by_features(df, cmd):
-    df['error'] = np.abs(np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1))
-
-    df = df.sample(100000)
-
-    plt.figure(3, figsize=(20,10))
+    create_fig()
+    df = df.sample(min(100000, df.shape[0]))
     show_raw_error_by_feature(df, 'Producto_ID', 321)
     show_raw_error_by_feature(df, 'Agencia_ID', 322)
     show_raw_error_by_feature(df, 'Cliente_ID', 323)
@@ -306,26 +321,33 @@ def show_raw_error_by_features(df, cmd):
 
 
 def show_error_by_features(df, cmd):
-    df['error'] = np.abs(np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1))
+    create_fig()
+    err_by_products = show_error_by_feature(df, 'Producto_ID', 331)
+    show_error_by_feature(df, 'Agencia_ID', 332)
+    show_error_by_feature(df, 'Cliente_ID', 333)
+    show_error_by_feature(df, 'Canal_ID', 334)
+    show_error_by_feature(df, 'Ruta_SAK', 335)
 
-    plt.figure(1, figsize=(20,10))
-    err_by_products = show_error_by_feature(df, 'Producto_ID', 321)
-    show_error_by_feature(df, 'Agencia_ID', 322)
-    show_error_by_feature(df, 'Cliente_ID', 323)
-    show_error_by_feature(df, 'Canal_ID', 324)
-    show_error_by_feature(df, 'Ruta_SAK', 325)
+    show_error_by_feature(df, 'Semana', 336, redo_x=False)
 
-    show_error_by_feature(df, 'Semana', 326, redo_x=False)
+    #show_scatterplot(df['actual'],df['error'], 'actual', 'error', 337)
+    #show_scatterplot(df['predictions'],df['error'], 'predictions', 'error', 338)
+
+    plt.subplot(337)
+    plt.xlabel("demand_value", fontsize=18)
+    plt.ylabel("error", fontsize=18)
+    plt.scatter(df['actual'], df['error'], alpha=0.5, s=5, c='b')
+    plt.scatter(df['predictions'], df['error'], alpha=0.5, s=5, c='r')
+
 
     plt.tight_layout()
     plt.savefig('error_by_features-'+str(cmd)+'.png')
 
 
 def do_error_analysis(df, cmd, full_df):
-    df['error'] = np.abs(np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1))
+    df['error'] = np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1)
     show_error_by_features(df, cmd)
-    show_raw_error_by_features(df, cmd)
-
+    #show_raw_error_by_features(df, cmd)
     #show_timelines_toperrors(df, full_df, cmd=cmd)
 
 
@@ -351,16 +373,28 @@ def print_submission_data(sub_df=None, sub_file=None, show=False, command=0):
 def test_error_analysis():
     error_df = pd.read_csv('forecast_with_data.csv')
     full_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand//trainitems5000_15000.csv')
+    error_df = error_df.sample(10000)
     do_error_analysis(error_df, 0, full_df)
+    #error_df = error_df.head(10000)
+
 #print_submission_data(sub_file='/Users/srinath/playground/data-science/BimboInventoryDemand/submission/temp/en_submission_final.csv', show=True)
 #print_submission_data('/Users/srinath/playground/data-science/BimboInventoryDemand/submission/final.csv', show=True)
 
 #find_missing_data()
 
+def test_scatter_plot():
+    create_fig()
+    count = 99
+    data1 = (np.random.rand(count,1), np.random.rand(count,1))
+    data2 = (np.random.rand(count,1), np.random.rand(count,1))
+    draw_scatterplot([data1, data2], "X vs. Y", 311, c=['b', 'r'])
+    plt.tight_layout()
+    plt.savefig('test.png')
 
 
-#test_error_analysis()
+test_error_analysis()
 
 #show_error_by_features()
 #show_timelines_toperrors()
 
+#test_scatter_plot()
