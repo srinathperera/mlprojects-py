@@ -629,7 +629,7 @@ class XGBoostModel:
         #model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
         #                                use_sklean=False, xgb_params=self.xgb_params)
         self.model = model
-        y_pred_final, rmsle = check_accuracy("XGBoost", self.model, X_test, self.conf.parmsFromNormalization,
+        y_pred_final, rmsle = check_accuracy("XGBoost_nocv", self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
         self.rmsle =  rmsle
         return y_pred_final
