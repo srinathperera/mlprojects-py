@@ -138,10 +138,11 @@ prep_time = time.time()
 #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
 models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
 
+
 best_model_index = np.argmin([m.rmsle for m in models])
 best_model = models[best_model_index]
 print "[IDF]Best Single Model has rmsle=", best_model.rmsle
-best_forecast = forecasts[best_model_index]
+best_forecast = forecasts[:,best_model_index]
 
 
 if verify_sub_data:
@@ -169,9 +170,10 @@ m_time = time.time()
 
 
 if conf.save_predictions_with_data:
+    print "Sizes", test_df_before_dropping_features.shape, best_forecast.shape
     test_df_before_dropping_features['predictions'] = best_forecast
     test_df_before_dropping_features['actual'] = y_actual_test
-    test_df_before_dropping_features.to_csv('prediction_with_data'+conf.command+'.csv', index=False)
+    test_df_before_dropping_features.to_csv('prediction_with_data'+str(conf.command)+'.csv', index=False)
     #do_error_analysis(test_df_before_dropping_features, conf.command, df)
 
 

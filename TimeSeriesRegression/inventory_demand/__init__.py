@@ -174,7 +174,7 @@ def find_NA_rows_percent(df_check, label):
                 na_colmuns.append(column_names[i] + "=" + str(na_cols[i]))
                 na_colmuns_actual.append(column_names[i])
         print "NA in ", label, "count=", na_rows_count, "(", na_percent, ")", na_colmuns
-        print na_rows[na_colmuns_actual].sample(10)
+        #print na_rows[na_colmuns_actual].sample(10)
         #print df_check.sample(10)
     return na_percent
 
@@ -939,7 +939,8 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
                                                             agr_feild='Dev_proxima', do_count=True, do_stddev=True,
                                                             default_stats=default_dev_proxima_stats)
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False, agr_feild='Dev_proxima')
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats,
+                                                            drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False, agr_feild='Dev_proxima')
@@ -1069,14 +1070,14 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     #models = [LRModel(conf)]
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
-               # RFRModel(conf),
-                #LRModel(conf, model=linear_model.BayesianRidge()),
-                #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
-                #LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
+                RFRModel(conf),
+                LRModel(conf, model=linear_model.BayesianRidge()),
+                LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
                 #LRModel(conf, model=linear_model.Ridge (alpha = .5))
                 #   ('linear', LinearRegression(fit_intercept=False))])),
-                #LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
                 #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
 
               ]
@@ -1182,7 +1183,12 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
         print "Undo X data test test passed", \
             np.allclose(x_test_raw, undo_zeroMeanUnit2D(X_test, parmsFromNormalization2D), atol=0.01)
-    forecasts = np.column_stack(de_normalized_forecasts)
+
+    if len(de_normalized_forecasts) == 1:
+        forecasts = [de_normalized_forecasts]
+    else:
+        forecasts = np.column_stack(de_normalized_forecasts)
+
     return models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D
 
 
