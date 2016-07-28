@@ -392,7 +392,7 @@ def test_scatter_plot():
     plt.savefig('test.png')
 
 
-test_error_analysis()
+#test_error_analysis()
 
 #show_error_by_features()
 #show_timelines_toperrors()
