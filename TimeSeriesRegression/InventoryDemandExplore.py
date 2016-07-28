@@ -190,82 +190,98 @@ def show_product_stats(df, feature_name, redo_x=True):
         x = range(0, valuesDf.shape[0])
     else:
         x = valuesDf[feature_name]
-    plt.scatter(x, valuesDf['count'], alpha=0.5, color='b')
+    plt.scatter(x, valuesDf['count'], alpha=0.3, color='b')
 
     plt.subplot(332)
     plt.xlabel(feature_name + "Index", fontsize=18)
     plt.ylabel('Sum', fontsize=18)
-    plt.scatter(x, group1.sum(), alpha=0.5, color='r')
+    plt.scatter(x, group1.sum(), alpha=0.3, color='r')
 
     plt.subplot(333)
     plt.xlabel(feature_name + "Index", fontsize=18)
     plt.ylabel('Std', fontsize=18)
-    plt.scatter(x, group1.std(), alpha=0.5, color='r')
+    plt.scatter(x, group1.std(), alpha=0.3, color='r')
 
     plt.subplot(334)
-    plt.xlabel(feature_name + "Index", fontsize=18)
-    plt.ylabel('Demanda_uni_equil, Percentiles', fontsize=18)
+    #plt.xlabel(feature_name + "Index", fontsize=18)
+    #plt.ylabel('Demanda_uni_equil, Percentiles', fontsize=18)
     #plt.scatter(x, group1.mean(), alpha=0.5, color='r')
     #plt.scatter(x, group1.median(), alpha=0.5, color='b')
-    plt.scatter(x, group1.quantile(0.1, interpolation='nearest'), alpha=0.5, color='g')
-    plt.scatter(x, group1.quantile(0.9, interpolation='nearest'), alpha=0.5, color='y')
+    #plt.scatter(x, group1.quantile(0.1, interpolation='nearest'), alpha=0.3, color='r')
+    #plt.scatter(x, group1.quantile(0.9, interpolation='nearest'), alpha=0.3, color='b')
+    draw_error_bars(334, x, group1.mean(), group1.quantile(0.1, interpolation='nearest'),
+                    group1.quantile(0.9, interpolation='nearest'), feature_name, y_label='Venta_hoy, Percentiles')
+
 
     group2 = group['Venta_hoy']
-    plt.subplot(335)
-    plt.xlabel(feature_name + "Index", fontsize=18)
-    plt.ylabel('Venta_hoy Percentiles', fontsize=18)
+    #plt.subplot(335)
+    #plt.xlabel(feature_name + "Index", fontsize=18)
+    #plt.ylabel('Venta_hoy Percentiles', fontsize=18)
     #plt.scatter(x, group2.mean(), alpha=0.5, color='r')
     #plt.scatter(x, group2.median(), alpha=0.5, color='b')
-    plt.scatter(x, group2.quantile(0.1, interpolation='nearest'), alpha=0.5, color='g')
-    plt.scatter(x, group2.quantile(0.9, interpolation='nearest'), alpha=0.5, color='y')
+    #plt.scatter(x, group2.quantile(0.1, interpolation='nearest'), alpha=0.3, color='r')
+    #plt.scatter(x, group2.quantile(0.9, interpolation='nearest'), alpha=0.3, color='b')
+
+    draw_error_bars(335, x, group2.mean(), group2.quantile(0.1, interpolation='nearest'),
+                    group2.quantile(0.9, interpolation='nearest'), feature_name, y_label='Venta_hoy, Percentiles', do_log=False)
+
 
 
     group3 = group['Dev_proxima']
-    plt.subplot(336)
-    plt.xlabel(feature_name + "Index", fontsize=18)
-    plt.ylabel('Dev_proxima, Percentiles', fontsize=18)
+    #plt.subplot(336)
+    #plt.xlabel(feature_name + "Index", fontsize=18)
+    #plt.ylabel('Dev_proxima, Percentiles', fontsize=18)
     #plt.scatter(x, group3.mean(), alpha=0.5, color='r')
     #plt.scatter(x, group3.median(), alpha=0.5, color='b')
-    plt.scatter(x, group3.quantile(0.1, interpolation='nearest'), alpha=0.5, color='g')
-    plt.scatter(x, group3.quantile(0.9, interpolation='nearest'), alpha=0.5, color='y')
+    #plt.scatter(x, group3.quantile(0.1, interpolation='nearest'), alpha=0.3, color='r')
+    #plt.scatter(x, group3.quantile(0.9, interpolation='nearest'), alpha=0.3, color='b')
+
+    draw_error_bars(336, x, group3.mean(), group3.quantile(0.1, interpolation='nearest'),
+                    group3.quantile(0.9, interpolation='nearest'), feature_name, y_label='Dev_proxima, Percentiles', do_log=False)
+
 
 
     group3 = group['Venta_uni_hoy']
-    plt.subplot(337)
+    ax = plt.subplot(337)
     plt.xlabel(feature_name + "Index", fontsize=18)
     plt.ylabel('Venta_uni_hoy, Percentiles', fontsize=18)
+    ax.set_yscale('log')
+
+    plt.errorbar(x, group3.mean(), yerr=[group3.quantile(0.1, interpolation='nearest'), group3.quantile(0.9, interpolation='nearest')],
+                 ms=5, mew=2, fmt='--o')
     #plt.scatter(x, group3.mean(), alpha=0.5, color='r')
     #plt.scatter(x, group3.median(), alpha=0.5, color='b')
-    plt.scatter(x, group3.quantile(0.1, interpolation='nearest'), alpha=0.5, color='g')
-    plt.scatter(x, group3.quantile(0.9, interpolation='nearest'), alpha=0.5, color='y')
+    #plt.scatter(x, group3.quantile(0.1, interpolation='nearest'), alpha=0.3, color='r')
+    #plt.scatter(x, group3.quantile(0.9, interpolation='nearest'), alpha=0.3, color='b')
     plt.savefig('stats-'+feature_name+'.png')
 
 
     group3 = group['Dev_uni_proxima']
-    plt.subplot(338)
-    plt.xlabel(feature_name + "Index", fontsize=18)
-    plt.ylabel('Dev_uni_proxima, Percentiles', fontsize=18)
+    draw_error_bars(338, x, group3.mean(), group3.quantile(0.1, interpolation='nearest'),
+                    group3.quantile(0.9, interpolation='nearest'), feature_name, y_label='Dev_uni_proxima, Percentiles',
+                    do_log=False)
+
+    #plt.subplot(338)
+    #plt.xlabel(feature_name + "Index", fontsize=18)
+    #plt.ylabel('Dev_uni_proxima, Percentiles', fontsize=18)
     #plt.scatter(x, group3.mean(), alpha=0.5, color='r')
     #plt.scatter(x, group3.median(), alpha=0.5, color='b')
-    plt.scatter(x, group3.quantile(0.1, interpolation='nearest'), alpha=0.5, color='g')
-    plt.scatter(x, group3.quantile(0.9, interpolation='nearest'), alpha=0.5, color='y')
-    plt.savefig('stats-'+feature_name+'.png')
-
-
+    #plt.scatter(x, group3.quantile(0.1, interpolation='nearest'), alpha=0.3, color='r')
+    #plt.scatter(x, group3.quantile(0.9, interpolation='nearest'), alpha=0.3, color='b')
     plt.savefig('stats-'+feature_name+'.png')
 
     print feature_name, "took", (time.time() - start), "s"
 
 
 def show_feature_stats():
-    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+    #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
 
-    #df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+    df = df.sample(1000000)
     for f in ['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']:
         print "processing ", f
         show_product_stats(df,f)
 
-show_feature_stats()
+#show_feature_stats()
 
 #explore_returns_and_delivery_freq()
