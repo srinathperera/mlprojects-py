@@ -176,6 +176,18 @@ def find_NA_rows_percent(df_check, label):
         print "NA in ", label, "count=", na_rows_count, "(", na_percent, ")", na_colmuns
         #print na_rows[na_colmuns_actual].sample(10)
         #print df_check.sample(10)
+
+    for f in list(df_check):
+        X = df_check[f]
+        if (X.dtype.char in np.typecodes['AllFloat'] and not np.isfinite(X.sum())
+            and not np.isfinite(X).all()):
+            #raise ValueError("feild" + f + "Input contains NaN, infinity"
+            #             " or a value too large for %r." % X.dtype)
+            error = "feild " + f + " contains " + "np.inf=" + str(np.where(np.isnan(X))) \
+                    + "is.inf=" + str(np.where(np.isinf(X))) + "np.max=" + str(np.max(abs(X)))
+            print error
+            raise ValueError(error)
+
     return na_percent
 
 
@@ -187,6 +199,9 @@ def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, defaul
     merged[name+"_Mean"].fillna(default_stats.mean, inplace=True)
     merged[name+"_StdDev"].fillna(default_stats.stddev, inplace=True)
     merged[name+"_Count"].fillna(default_stats.count, inplace=True)
+
+    #replace rest with zero
+    merged.fillna(0, inplace=True)
 
     return merged
 
@@ -215,7 +230,7 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=Tr
     #valuesDf = drop_feilds_1df(valuesDf, [feild_name+"_"+agr_feild+"_Mean"])
     #meanData = groupData.median()
 
-    #valuesDf[feild_name+"_"+agr_feild+"_sum"] = groupData.sum()
+    valuesDf[feild_name+"_"+agr_feild+"_sum"] = groupData.sum()
     #valuesDf.fillna(0, inplace=True)
 
 
@@ -249,6 +264,7 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=Tr
 
         find_NA_rows_percent(valuesDf, "adding more stats " + str(feild_name))
 
+    find_NA_rows_percent(bdf, "calculate stats for " + str(feild_name))
     return valuesDf
 
 
@@ -259,6 +275,8 @@ def merge_stats_with_df(bdf, stat_df, feild_name, default_mean=None, default_std
         merged[feild_name+"_"+agr_feild+"_Mean"].fillna(default_mean, inplace=True)
     if default_stddev is not None:
         merged[feild_name+"_"+agr_feild++"_StdDev"].fillna(default_stddev, inplace=True)
+
+    merged.fillna(0, inplace=True)
     return merged
 
 
@@ -271,8 +289,14 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=[feild_name])
     test_df_m = pd.merge(test_df, valuesDf, how='left', on=[feild_name])
 
+
+
     find_NA_rows_percent(train_df_m, "Add Stats by " +feild_name + " traindf")
     find_NA_rows_percent(test_df_m, "Add Stats by " +feild_name + " testdf")
+
+    train_df_m.fillna(0, inplace=True)
+    test_df_m.fillna(0, inplace=True)
+
 
     if drop:
         train_df_m = train_df_m.drop(feild_name,1)
@@ -280,7 +304,6 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
 
     if testDf is not None:
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
-        find_NA_rows_percent(testDf, "Add Stats by " +feild_name + " subdf")
         testDf[feild_name+"_"+agr_feild+"_Mean"].fillna(default_stats.mean, inplace=True)
         if do_stddev:
             testDf[feild_name+"_"+agr_feild+"_StdDev"].fillna(default_stats.stddev, inplace=True)
@@ -288,6 +311,11 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
             testDf[feild_name+"_"+agr_feild+"_Count"].fillna(default_stats.count, inplace=True)
         if drop:
             testDf = testDf.drop(feild_name,1)
+        testDf.fillna(0, inplace=True)
+        find_NA_rows_percent(testDf, "Add Stats by " +feild_name + " subdf")
+
+
+
     print "took %f (%f, %f), size %s %f" %(time.time()-start, calculate_ts- start,
                                            time.time() - calculate_ts, feild_name, valuesDf.shape[0])
 
@@ -862,13 +890,15 @@ def merge_csv_by_feild(train_df, test_df, testDf, base_df, feild_name ):
 
 
 class IDConfigs:
-    def __init__(self, target_as_log, normalize, save_predictions_with_data, generate_submission):
+    def __init__(self, target_as_log, normalize, save_predictions_with_data, generate_submission, log_target_only=True):
         self.target_as_log = target_as_log
         self.normalize = normalize
         self.save_predictions_with_data = save_predictions_with_data
         self.generate_submission = generate_submission
         self.parmsFromNormalization = None
         self.verify_data = False
+        self.log_target_only = log_target_only
+
 
 class DefaultStats:
     def __init__(self, mean, count, stddev):
@@ -1033,8 +1063,15 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     if train_df.shape[1] != test_df.shape[1]:
         print "train and test does not match " + list(train_df) + " " + list(test_df)
 
-    y_train_row = train_df['Demanda_uni_equil'].values
-    y_test_row = test_df['Demanda_uni_equil'].values
+    if conf.target_as_log and conf.log_target_only:
+        y_train_row = transfrom_to_log(train_df['Demanda_uni_equil'].values)
+        y_test_row = transfrom_to_log(test_df['Demanda_uni_equil'].values)
+    else:
+        y_train_row = train_df['Demanda_uni_equil'].values
+        y_test_row = test_df['Demanda_uni_equil'].values
+
+    find_NA_rows_percent(train_df, "train_df before forecast")
+    find_NA_rows_percent(test_df, "test before forecast")
 
     train_df, test_df = drop_column(train_df, test_df, 'Demanda_uni_equil')
 
@@ -1046,11 +1083,13 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
     X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(train_df.values.copy())
     x_test_raw = test_df.values.copy()
+
+    print "Before normalize x-text"
+    check4nan(x_test_raw)
     X_test = apply_zeroMeanUnit2D(x_test_raw, parmsFromNormalization2D)
-
+    print "After normalize x-text"
+    check4nan(X_test)
     conf.parmsFromNormalization = parmsFromNormalization
-
-
 
     if X_train.shape[1] != X_test.shape[1]:
         print " columns not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
@@ -1061,7 +1100,14 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     #print_xy_sample(X_train, y_train)
     #print_xy_sample(X_test, y_test)
 
+    print "X_train"
     check4nan(X_train)
+    print "X_test"
+    check4nan(X_test)
+    print "y_train"
+    check4nan(y_train)
+    print "y_test"
+    check4nan(y_test)
 
     de_normalized_forecasts = []
 
@@ -1072,7 +1118,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     models = [
                 RFRModel(conf),
                 LRModel(conf, model=linear_model.BayesianRidge()),
-                LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
+                #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
                 #LRModel(conf, model=linear_model.Ridge (alpha = .5))

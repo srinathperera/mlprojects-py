@@ -88,6 +88,7 @@ r_time = time.time()
 print "read took %f" %(r_time-s_time)
 
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
+conf.log_target_only = False
 conf.command = command
 
 
@@ -105,7 +106,7 @@ test_set_size = df.shape[0] - training_set_size
 
 y_all = df['Demanda_uni_equil'].values
 
-if conf.target_as_log:
+if conf.target_as_log and not conf.log_target_only:
     #then all values are done as logs
     df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
 
