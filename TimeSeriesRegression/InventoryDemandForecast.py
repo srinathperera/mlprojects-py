@@ -31,7 +31,7 @@ if len(sys.argv) > 1:
     command = int(sys.argv[1])
 
 
-test_run = True
+test_run = False
 use_preprocessed_file = False
 save_preprocessed_file = False
 target_as_log = True
