@@ -145,6 +145,14 @@ best_model = models[best_model_index]
 print "[IDF]Best Single Model has rmsle=", best_model.rmsle
 best_forecast = forecasts[:,best_model_index]
 
+#save submission based on best model
+if conf.generate_submission:
+    y_forecast_submission = create_submission(conf, best_model, testDf, parmsFromNormalization, parmsFromNormalization2D)
+    if y_actual_2nd_verification is not None:
+        rmsle = calculate_rmsle(y_actual_2nd_verification, y_forecast_submission)
+        print "2nd Verification rmsle=", rmsle
+
+
 
 if verify_sub_data:
     print "train/sub shapes", train_df.shape, testDf.shape
@@ -155,17 +163,12 @@ if verify_sub_data:
         if not np.allclose(train_df[f], testDf[f], equal_nan=True):
             print "#### Does not match", f
 
-
+#create and save submission based on ensamble
 if len(forecasts) > 1:
     ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
     #avg models also save the submission
     avg_models(conf, models, forecasts, y_actual_test, test_df, submission_forecasts=kaggale_predicted_list, submission_ids=ids, sub_df=testDf)
 
-if conf.generate_submission:
-    y_forecast_submission = create_submission(conf, best_model, testDf, parmsFromNormalization, parmsFromNormalization2D)
-    if y_actual_2nd_verification is not None:
-        rmsle = calculate_rmsle(y_actual_2nd_verification, y_forecast_submission)
-        print "2nd Verification rmsle=", rmsle
 
 m_time = time.time()
 

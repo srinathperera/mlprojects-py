@@ -161,7 +161,7 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
         valuesDf[name+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
 
         entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
-        valuesDf[name+"_entropy"] =  np.where(np.isnan(entropy), 0, entropy)
+        valuesDf[name+"_entropy"] = np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
 
         find_NA_rows_percent(valuesDf, "adding more stats " + str(name))
 
@@ -1291,6 +1291,9 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     X_all = np.column_stack([forecasts, median_forecast, test_df['Semana'],
                              test_df['clients_combined_Mean'], test_df['Producto_ID_Demanda_uni_equil_Mean']])
 
+    #removing NaN and inf if there is any
+    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(), 10000, X_all))
+
     forecasting_feilds = ["f"+str(f) for f in range(X_all.shape[1])]
 
     no_of_training_instances = round(len(y_actual)*0.5)
@@ -1433,10 +1436,10 @@ def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNorm
     submission_file = 'submission'+str(conf.command)+ '.csv'
     to_saveDf.to_csv(submission_file, index=False)
 
-    print "Best Model Submission Stats"
-    print_submission_data(sub_df=to_saveDf, command=conf.command)
+    #print "Best Model Submission Stats"
+    #print_submission_data(sub_df=to_saveDf, command=conf.command)
 
-    print "Submission done for ", to_saveDf.shape[0], "values"
+    print "Submission done for ", to_saveDf.shape[0], "file", submission_file
 
     return kaggale_predicted
 
