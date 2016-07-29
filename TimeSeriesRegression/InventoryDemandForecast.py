@@ -19,8 +19,6 @@ from sklearn.linear_model import LinearRegression
 from inventory_demand import *
 from mltools import *
 #from mlpreprocessing import feather2df
-from InventoryDemandSimplePredictions import do_simple_models
-#from InventoryDemandErrorAnalysis import do_error_analysis
 
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
@@ -30,7 +28,7 @@ command = -2
 if len(sys.argv) > 1:
     command = int(sys.argv[1])
 if len(sys.argv) > 2:
-    test_run = int(sys.argv[1]) == 1
+    test_run = (int(sys.argv[2]) == 1)
 else:
     test_run = False
 
@@ -51,8 +49,9 @@ data_files = [
     ["trainitems30000_35000.csv", 30000, 35000, "test_30000_35000.csv"], #559M
     #["trainitems30000_35000.csv", 30000, 35000, "trainitems5_10_35_40_45_50k.csv"], #559M # to remove ** pass #1 as #2 test
     ["trainitems40000_45000.csv", 40000, 45000, "test_40000_45000.csv"], #640M
-    ["trainitems5000_15000.csv", -1, -1, "test_40000_45000.csv"],
-    ["train-rsample-10k.csv", -1, -1, "test_40000_45000.csv"]
+    ["trainitems5000_15000.csv", -1, -1, "test0_100.csv"],
+    ["train-rsample-10m.csv", -1, -1, "test0_100.csv"],
+    ["train-rsample-500k.csv", -1, -1, "test0_100.csv"],
 ]
 
 

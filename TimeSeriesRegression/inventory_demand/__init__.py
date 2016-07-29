@@ -24,8 +24,6 @@ from sklearn import linear_model
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import Pipeline
 
-from InventoryDemandErrorAnalysis import print_submission_data
-
 from mltools import *
 import scipy
 
@@ -110,11 +108,9 @@ def find_alt_for_missing(to_merge, seen_with_stats):
     merged_withstats.rename(columns = {'Cliente_ID_p':'Cliente_ID'}, inplace=True)
 
     #make sure no NA's in the list
-    find_NA_rows_percent(merged_withstats, "after find_alt_for_missing()")
     print "find replacement done", seen_with_stats.shape, "->", merged_withstats.shape, " feilds", list(merged_withstats)
 
     #make sure all values are contained
-
     missing_ids_count = setdiff_counts_froms_dfs(to_merge, merged_withstats[['Ruta_SAK','Cliente_ID']])
     if missing_ids_count > 0:
         raise "missing from target ", missing_ids_count
@@ -134,60 +130,71 @@ def setdiff_counts_froms_dfs(df1, df2):
 
 
 def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, fops):
+    start = time.time()
     groupData = bdf.groupby(feild_names)[agr_feild]
     meanData = groupData.mean()
-    stddevData = groupData.std()
-    countData = groupData.count()
-    sumData = groupData.count()
+
 
     #TODO check why data is NA
     valuesDf = meanData.to_frame(name+"_Mean")
-    find_NA_rows_percent(bdf, "stats for " + str(feild_names))
-
     valuesDf.fillna(default_stats.mean, inplace=True)
     valuesDf.reset_index(inplace=True)
     if fops.stddev:
+        stddevData = groupData.std()
         valuesDf[name+"_StdDev"] = stddevData.values
         valuesDf.fillna(default_stats.stddev, inplace=True)
     if fops.count:
+        countData = groupData.count()
         valuesDf[name+"_Count"] = countData.values
         valuesDf.fillna(default_stats.count, inplace=True)
     if fops.sum:
+        sumData = groupData.sum()
         valuesDf[name+"_sum"] = sumData.values
-
+    start2_start = time.time()
+    print "join_multiple_feild_stats: base stats took", (start2_start - start)
+    print "start complex stat", (time.time() - start)
     if fops.p10:
         pcerntile10 = groupData.quantile(0.1, interpolation='nearest')
         valuesDf[name+"_pcerntile10"] = np.where(np.isnan(pcerntile10), 0, pcerntile10)
+    print "took p10", (time.time() - start)
     if fops.p90:
         pcerntile90 = groupData.quantile(0.9, interpolation='nearest')
         valuesDf[name + "_pcerntile90"] = np.where(np.isnan(pcerntile90), 0, pcerntile90)
+    print "took p90", (time.time() - start)
     if fops.kurtosis:
         kurtosis = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
         valuesDf[name+"_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
+    print "took kurtosis", (time.time() - start)
     if fops.hmean:
         hmean = groupData.apply(calcuate_hmean)
         valuesDf[name+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
+    print "took hmean", (time.time() - start)
     if fops.entropy:
         entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
         valuesDf[name+"_entropy"] = np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
-
-        find_NA_rows_percent(valuesDf, "adding more stats " + str(name))
-
+    print "took entropy", (time.time() - start)
     if fops.use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
         to_merge = pd.concat([testdf[['Ruta_SAK','Cliente_ID']], subdf[['Ruta_SAK','Cliente_ID']]])
         to_merge = to_merge.drop_duplicates()
         valuesDf = find_alt_for_missing(to_merge, valuesDf)
         print "Using close values for missing values"
 
-
+    merge_start = time.time()
+    print "join_multiple_feild_stats: complex stats took", (merge_start - start2_start)
     bdf = merge__multiple_feilds_stats_with_df(name, bdf, valuesDf, feild_names, default_stats)
     testdf = merge__multiple_feilds_stats_with_df(name, testdf, valuesDf, feild_names, default_stats)
     subdf = merge__multiple_feilds_stats_with_df(name, subdf, valuesDf, feild_names, default_stats)
+    print "join_multiple_feild_stats: merge took", (time.time() - merge_start)
+
+    print "join_multiple_feild_stats", str(feild_names), " took ", (time.time() - start), "s"
+
+
 
     return bdf, testdf, subdf
 
 
 def find_NA_rows_percent(df_check, label):
+    start = time.time()
     all_rows = df_check.shape[0]
     na_rows = df_check[df_check.isnull().any(axis=1)]
     na_rows_count = na_rows.shape[0]
@@ -215,20 +222,17 @@ def find_NA_rows_percent(df_check, label):
                     + "is.inf=" + str(np.where(np.isinf(X))) + "np.max=" + str(np.max(abs(X)))
             print error
             raise ValueError(error)
-
+    print "find_NA_rows_percent took", (time.time() - start), "s"
     return na_percent
 
 
 def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, default_stats):
-    find_NA_rows_percent(bdf, "before add stat " + str(feild_names))
     merged = pd.merge(bdf, stat_df, how='left', on=feild_names)
-    find_NA_rows_percent(bdf, "after add stat " + str(feild_names))
     merged = fillna_if_feildexists(merged, name+"_Mean", default_stats.mean)
     merged = fillna_if_feildexists(merged, name+"_StdDev", default_stats.stddev)
     merged = fillna_if_feildexists(merged, name+"_Count", default_stats.count)
     #replace rest with zero
     merged.fillna(0, inplace=True)
-
     return merged
 
 def calcuate_hmean(group):
@@ -244,35 +248,20 @@ def calcuate_hmean(group):
 def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, fops):
     groupData = bdf.groupby([feild_name])[agr_feild]
     meanData = groupData.mean()
-    #meanData = groupData.apply(calcuate_hmean)
     valuesDf = meanData.to_frame(feild_name+"_"+agr_feild+"_Mean")
     valuesDf.reset_index(inplace=True)
 
-    find_NA_rows_percent(bdf, "add stats for " + str(feild_name))
-    valuesDf.fillna(default_stats.mean, inplace=True)
-
-
-    #valuesDf[feild_name+"_"+agr_feild+"_hMean"] =
-    #valuesDf = drop_feilds_1df(valuesDf, [feild_name+"_"+agr_feild+"_Mean"])
-    #meanData = groupData.median()
-
     if fops.sum:
         valuesDf[feild_name+"_"+agr_feild+"_sum"] = groupData.sum()
-    #valuesDf.fillna(0, inplace=True)
 
     if fops.stddev:
         stddevData = groupData.std()
         valuesDf[feild_name+"_"+agr_feild+"_StdDev"] = stddevData.values
-
-        find_NA_rows_percent(bdf, "add stats for " + str(feild_name))
         valuesDf.fillna(default_stats.stddev, inplace=True)
     if fops.count:
         countData = groupData.count()
         valuesDf[feild_name+"_"+agr_feild+"_Count"] = countData.values
-
-        find_NA_rows_percent(bdf, "add stats for " + str(feild_name))
         valuesDf.fillna(default_stats.count, inplace=True)
-
     if fops.p10:
         pcerntile10 = groupData.quantile(0.1, interpolation='nearest')
         valuesDf[feild_name+"_"+agr_feild+"_pcerntile10"] = np.where(np.isnan(pcerntile10), 0, pcerntile10)
@@ -289,7 +278,7 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, fops):
         entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
         valuesDf[feild_name+"_"+agr_feild+"_entropy"] =  np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
 
-    find_NA_rows_percent(bdf, "calculate stats for " + str(feild_name))
+    valuesDf.fillna(default_stats.mean, inplace=True)
     return valuesDf
 
 
@@ -314,11 +303,6 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=[feild_name])
     test_df_m = pd.merge(test_df, valuesDf, how='left', on=[feild_name])
 
-
-
-    find_NA_rows_percent(train_df_m, "Add Stats by " +feild_name + " traindf")
-    find_NA_rows_percent(test_df_m, "Add Stats by " +feild_name + " testdf")
-
     train_df_m.fillna(0, inplace=True)
     test_df_m.fillna(0, inplace=True)
 
@@ -337,13 +321,9 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
         if drop:
             testDf = testDf.drop(feild_name,1)
         testDf.fillna(0, inplace=True)
-        find_NA_rows_percent(testDf, "Add Stats by " +feild_name + " subdf")
 
-
-
-    print "took %f (%f, %f), size %s %f" %(time.time()-start, calculate_ts- start,
+    print "addFeildStatsAsFeatures() "+ feild_name+ " took %f (%f, %f), size %s %f" %(time.time()-start, calculate_ts- start,
                                            time.time() - calculate_ts, feild_name, valuesDf.shape[0])
-
     return train_df_m, test_df_m, testDf
 
 
@@ -935,18 +915,22 @@ class DefaultStats:
 class FeatureOps:
     def __init__(self, count=False, stddev=False, sum=False, p10=False, p90=False,kurtosis=False,
                  hmean=False, entropy=False):
-        self.sum = sum
-        self.count = count
-        self.stddev = stddev
-        self.p10 =p10
-        self.p90 = p90
-        self.kurtosis = kurtosis
+        #self.sum = sum
+        self.sum = True
+        self.count = True
+        self.stddev = True
+        #follow two are too expensive
+        self.p10 =False
+        self.p90 = False
+        #self.kurtosis = kurtosis
+        self.kurtosis = False
         self.hmean = hmean
         self.entropy=entropy
         self.use_close_products_missing=False
 
 
 def generate_features(conf, train_df, test_df, subdf, y_actual_test):
+    start = time.time()
     use_slope = False
     use_group_aggrigate = True
     use_product_features = True
@@ -1095,13 +1079,12 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     train_df, test_df = drop_column(train_df, test_df, 'Dev_uni_proxima')
     train_df, test_df = drop_column(train_df, test_df, 'Dev_proxima')
 
-#    if conf.save_preprocessed_file:
-#        df.to_csv(preprocessed_file_name, index=False)
-
+    print "generate_features took ", (time.time() - start), "s"
     return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features
 
 
 def do_forecast(conf, train_df, test_df, y_actual_test):
+    start = time.time()
     if train_df.shape[1] != test_df.shape[1]:
         print "train and test does not match " + list(train_df) + " " + list(test_df)
 
@@ -1159,7 +1142,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
                 RFRModel(conf),
-                LRModel(conf, model=linear_model.BayesianRidge()),
+                #LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
@@ -1276,7 +1259,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
         forecasts = [de_normalized_forecasts]
     else:
         forecasts = np.column_stack(de_normalized_forecasts)
-
+    print "do_forecast took ", (time.time() - start), "s"
     return models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D
 
 
@@ -1298,6 +1281,7 @@ def find_range(rmsle, forecast):
 
 
 def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
+    start = time.time()
     median_forecast = np.median(forecasts, axis=1)
     calculate_accuracy("median_forecast", y_actual, median_forecast)
 
@@ -1313,6 +1297,10 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
 
     #removing NaN and inf if there is any
     X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
+    print "X_all"
+    check4nan(X_all)
+    print "Y_all"
+    check4nan(y_actual)
 
     forecasting_feilds = ["f"+str(f) for f in range(X_all.shape[1])]
 
@@ -1368,7 +1356,7 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     to_saveDf =  pd.DataFrame(data, columns=['f'+str(i) for i in range(len(models))] + ["actual"])
     to_saveDf.to_csv('forecasts4ensamble.csv', index=False)
 
-
+    print "avg_models took ", (time.time() - start), "s"
     '''
     if len(models) >= 3:
 
@@ -1424,6 +1412,7 @@ def create_per_model_submission(conf, models, testDf, parmsFromNormalization, pa
 
 
 def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D ):
+    start = time.time()
     ids = testDf['id']
     temp = testDf.drop('id',1)
     print "creating submission for ", len(ids), "values"
@@ -1460,6 +1449,8 @@ def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNorm
     #print_submission_data(sub_df=to_saveDf, command=conf.command)
 
     print "Submission done for ", to_saveDf.shape[0], "file", submission_file
+
+    print "create_submission took ", (time.time() - start), "s"
 
     return kaggale_predicted
 

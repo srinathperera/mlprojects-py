@@ -663,8 +663,8 @@ def test_ensambles():
 
 def create_random_file():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-    subset_df = df.sample(10000000)
-    subset_df.to_csv("train-rsample-10k.csv", index=False)
+    subset_df = df.sample(500000)
+    subset_df.to_csv("train-rsample-500k.csv", index=False)
 
 create_random_file()
 
