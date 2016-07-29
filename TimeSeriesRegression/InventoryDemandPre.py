@@ -666,7 +666,48 @@ def create_random_file():
     subset_df = df.sample(500000)
     subset_df.to_csv("train-rsample-500k.csv", index=False)
 
-create_random_file()
+
+def parse_feature_importance():
+    file = open('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/out.txt','r')
+    data =  file.read()
+
+    data = data.replace('\n','')
+    data = re.sub(r'\[=+\].*?s', '', data)
+    #28. feature 27 =Producto_ID_Dev_proxima_StdDev (0.002047)
+
+    p1 = re.compile('[0-9]+.*?feature.*?=([A-z0-9_]+)\s+\(([0-9.]+)\)')
+    p2 = re.compile('[0-9]+\s+([A-z0-9_]+)\s+([0-9.]+)')
+
+    dict = {}
+    for match in p1.finditer(data):
+        f = match.group(1)
+        score = match.group(2)
+        list = dict.get(f, [])
+        list.append(float(score))
+        dict[f] = list
+
+        #print f,"=",score
+    for match in p2.finditer(data):
+        f = match.group(1)
+        score = match.group(2)
+        list = dict.get(f, [])
+        list.append(float(score))
+        dict[f] = list
+
+    df_data = []
+    for t in dict.items():
+        print t
+        df_data.append([t[0], np.sum(t[1])])
+
+    print df_data
+
+    feature_importance_df =  pd.DataFrame(np.row_stack(df_data), columns=["f","score"])
+    feature_importance_df = feature_importance_df.sort_values(by=['score'], ascending=False)
+    print feature_importance_df
+
+
+parse_feature_importance()
+#create_random_file()
 
 #find_similar_products()
 

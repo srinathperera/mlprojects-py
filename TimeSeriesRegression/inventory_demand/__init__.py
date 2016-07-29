@@ -916,14 +916,14 @@ class FeatureOps:
     def __init__(self, count=False, stddev=False, sum=False, p10=False, p90=False,kurtosis=False,
                  hmean=False, entropy=False):
         #self.sum = sum
-        self.sum = True
+        self.sum = sum
         self.count = True
         self.stddev = True
         #follow two are too expensive
         self.p10 =False
         self.p90 = False
         #self.kurtosis = kurtosis
-        self.kurtosis = False
+        self.kurtosis = True
         self.hmean = hmean
         self.entropy=entropy
         self.use_close_products_missing=False
@@ -974,7 +974,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
                 'Demanda_uni_equil', "clients_combined", default_demand_stats,
-                                                              FeatureOps(kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
+                                                              FeatureOps(sum= True, kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
                                                             FeatureOps(stddev=True, p90=True, hmean=True,p10=True, kurtosis=True))
@@ -987,7 +987,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
 
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-            'Venta_hoy', "clients_combined_vh", default_venta_hoy_stats, FeatureOps(hmean=True, p90=True, stddev=True))
+            'Venta_hoy', "clients_combined_vh", default_venta_hoy_stats, FeatureOps(sum=True, hmean=True, p90=True, stddev=True))
 
 
 
@@ -995,8 +995,8 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
                                                             agr_feild='Dev_proxima', default_stats=default_dev_proxima_stats,
                                                             fops=FeatureOps(hmean=True))
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats,
-                                                            drop=False, agr_feild='Dev_proxima', fops=FeatureOps())
+        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats,
+        #                                                    drop=False, agr_feild='Dev_proxima', fops=FeatureOps())
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False, agr_feild='Dev_proxima')
