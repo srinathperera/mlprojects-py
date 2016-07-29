@@ -32,7 +32,7 @@ if len(sys.argv) > 1:
 if len(sys.argv) > 2:
     test_run = int(sys.argv[1]) == 1
 else:
-    test_run = True
+    test_run = False
 
 use_preprocessed_file = False
 save_preprocessed_file = False
