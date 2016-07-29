@@ -145,12 +145,17 @@ def preprocess2DtoZeroMeanUnit(data):
     data = data/normalized_std
 
     sqrtmx = sqrt(np.mean([x*x for x in data]))
-    sqrtmx = sqrtmx if sqrtmx != 0 else 1
+    sqrtmx = sqrtmx if sqrtmx > 1 else 1
+    parmsFromNormalization = ParmsFromNormalization(mean=mean,std=normalized_std,sqrtx2=sqrtmx)
+    print "2D, mean, std, sqrtx2", np.min(parmsFromNormalization.mean), np.min(parmsFromNormalization.std), \
+        np.min(parmsFromNormalization.sqrtx2)
 
-    return data/sqrtmx, ParmsFromNormalization(mean=mean,std=std,sqrtx2=sqrtmx)
+    return data/sqrtmx, parmsFromNormalization
 
 def apply_zeroMeanUnit2D(data, parmsFromNormalization):
-    return (data - parmsFromNormalization.mean)/(parmsFromNormalization.std*parmsFromNormalization.sqrtx2)
+    print "2D, mean, std, sqrtx2", np.min(parmsFromNormalization.mean), np.min(parmsFromNormalization.std), \
+        np.min(parmsFromNormalization.sqrtx2)
+    return (data - parmsFromNormalization.mean)/parmsFromNormalization.std*parmsFromNormalization.sqrtx2
 
 
 def undo_zeroMeanUnit2D(data, parmsFromNormalization):

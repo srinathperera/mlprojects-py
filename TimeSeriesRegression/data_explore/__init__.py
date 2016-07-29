@@ -9,6 +9,8 @@ def create_fig():
 
 create_fig.fig_number = 0
 
+def draw_scatterplot_one(x,y , x_title, subplotnum, y_title=None, c=None):
+    draw_scatterplot([(x,y)], x_title, subplotnum, y_title=y_title, c=c)
 
 def draw_scatterplot(data_sets, x_title, subplotnum, y_title=None, c=None):
     plt.subplot(subplotnum)
@@ -20,6 +22,15 @@ def draw_scatterplot(data_sets, x_title, subplotnum, y_title=None, c=None):
     for i, d in enumerate(data_sets):
         point_size = 30 if len(d[0]) < 100 else 8
         if c is None:
-            plt.scatter(d[0], d[1], alpha=0.5, s=point_size)
+            plt.scatter(d[0], d[1], alpha=0.3, s=point_size)
         else:
-            plt.scatter(d[0], d[1], alpha=0.5, s=point_size, c=c[i])
+            plt.scatter(d[0], d[1], alpha=0.3, s=point_size, c=c[i])
+def draw_error_bars(pltnum, x, mean, ulimit, llimit, x_label, y_label=None, do_log=True):
+    ax = plt.subplot(pltnum)
+    plt.xlabel(x_label, fontsize=18)
+    if y_label is not None:
+        plt.ylabel(y_label, fontsize=18)
+    if do_log:
+        ax.set_yscale('log')
+    plt.errorbar(x, mean, yerr=[llimit, ulimit],
+                 ms=5, mew=2, fmt='--o')
