@@ -58,6 +58,11 @@ def read_productdata_file(file_name):
     return train
 
 
+def fillna_if_feildexists(df, feild_name, replacement):
+    if feild_name in df:
+        df[feild_name].fillna(replacement, inplace=True)
+    return df
+
 def find_alt_for_missing(to_merge, seen_with_stats):
     print "feilds 0", list(to_merge), list(seen_with_stats)
     seen_without_stat = seen_with_stats[['Ruta_SAK', 'Cliente_ID']]
@@ -128,8 +133,7 @@ def setdiff_counts_froms_dfs(df1, df2):
     ds1.difference(ds2)
 
 
-def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, use_close_products_missing=True,
-                              do_advstats=False):
+def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, fops):
     groupData = bdf.groupby(feild_names)[agr_feild]
     meanData = groupData.mean()
     stddevData = groupData.std()
@@ -142,31 +146,34 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
 
     valuesDf.fillna(default_stats.mean, inplace=True)
     valuesDf.reset_index(inplace=True)
-    valuesDf[name+"_StdDev"] = stddevData.values
-    valuesDf.fillna(default_stats.stddev, inplace=True)
-    valuesDf[name+"_Count"] = countData.values
-    valuesDf.fillna(default_stats.count, inplace=True)
-    valuesDf[name+"_sum"] = sumData.values
+    if fops.stddev:
+        valuesDf[name+"_StdDev"] = stddevData.values
+        valuesDf.fillna(default_stats.stddev, inplace=True)
+    if fops.count:
+        valuesDf[name+"_Count"] = countData.values
+        valuesDf.fillna(default_stats.count, inplace=True)
+    if fops.sum:
+        valuesDf[name+"_sum"] = sumData.values
 
-    if do_advstats:
+    if fops.p10:
         pcerntile10 = groupData.quantile(0.1, interpolation='nearest')
         valuesDf[name+"_pcerntile10"] = np.where(np.isnan(pcerntile10), 0, pcerntile10)
+    if fops.p90:
         pcerntile90 = groupData.quantile(0.9, interpolation='nearest')
         valuesDf[name + "_pcerntile90"] = np.where(np.isnan(pcerntile90), 0, pcerntile90)
-
+    if fops.kurtosis:
         kurtosis = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
         valuesDf[name+"_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
-
+    if fops.hmean:
         hmean = groupData.apply(calcuate_hmean)
         valuesDf[name+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
-
+    if fops.entropy:
         entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
         valuesDf[name+"_entropy"] = np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
 
         find_NA_rows_percent(valuesDf, "adding more stats " + str(name))
 
-
-    if use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
+    if fops.use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
         to_merge = pd.concat([testdf[['Ruta_SAK','Cliente_ID']], subdf[['Ruta_SAK','Cliente_ID']]])
         to_merge = to_merge.drop_duplicates()
         valuesDf = find_alt_for_missing(to_merge, valuesDf)
@@ -212,15 +219,13 @@ def find_NA_rows_percent(df_check, label):
     return na_percent
 
 
-def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, default_stats,
-                                         agr_feild='Demanda_uni_equil'):
+def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, default_stats):
     find_NA_rows_percent(bdf, "before add stat " + str(feild_names))
     merged = pd.merge(bdf, stat_df, how='left', on=feild_names)
     find_NA_rows_percent(bdf, "after add stat " + str(feild_names))
-    merged[name+"_Mean"].fillna(default_stats.mean, inplace=True)
-    merged[name+"_StdDev"].fillna(default_stats.stddev, inplace=True)
-    merged[name+"_Count"].fillna(default_stats.count, inplace=True)
-
+    merged = fillna_if_feildexists(merged, name+"_Mean", default_stats.mean)
+    merged = fillna_if_feildexists(merged, name+"_StdDev", default_stats.stddev)
+    merged = fillna_if_feildexists(merged, name+"_Count", default_stats.count)
     #replace rest with zero
     merged.fillna(0, inplace=True)
 
@@ -236,7 +241,7 @@ def calcuate_hmean(group):
         return 0
 
 
-def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=True, do_stddev=True, do_advstats=False):
+def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, fops):
     groupData = bdf.groupby([feild_name])[agr_feild]
     meanData = groupData.mean()
     #meanData = groupData.apply(calcuate_hmean)
@@ -251,39 +256,38 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, do_count=Tr
     #valuesDf = drop_feilds_1df(valuesDf, [feild_name+"_"+agr_feild+"_Mean"])
     #meanData = groupData.median()
 
-    valuesDf[feild_name+"_"+agr_feild+"_sum"] = groupData.sum()
+    if fops.sum:
+        valuesDf[feild_name+"_"+agr_feild+"_sum"] = groupData.sum()
     #valuesDf.fillna(0, inplace=True)
 
-
-    if do_stddev:
+    if fops.stddev:
         stddevData = groupData.std()
         valuesDf[feild_name+"_"+agr_feild+"_StdDev"] = stddevData.values
 
         find_NA_rows_percent(bdf, "add stats for " + str(feild_name))
         valuesDf.fillna(default_stats.stddev, inplace=True)
-    if do_count:
+    if fops.count:
         countData = groupData.count()
         valuesDf[feild_name+"_"+agr_feild+"_Count"] = countData.values
 
         find_NA_rows_percent(bdf, "add stats for " + str(feild_name))
         valuesDf.fillna(default_stats.count, inplace=True)
 
-    if do_advstats:
+    if fops.p10:
         pcerntile10 = groupData.quantile(0.1, interpolation='nearest')
         valuesDf[feild_name+"_"+agr_feild+"_pcerntile10"] = np.where(np.isnan(pcerntile10), 0, pcerntile10)
+    if fops.p90:
         pcerntile90 = groupData.quantile(0.9, interpolation='nearest')
         valuesDf[feild_name+"_"+agr_feild+"_pcerntile90"] = np.where(np.isnan(pcerntile90), 0, pcerntile90)
-
+    if fops.kurtosis:
         kurtosis = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
         valuesDf[feild_name+"_"+agr_feild+"_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
-
+    if fops.hmean:
         hmean = groupData.apply(calcuate_hmean)
         valuesDf[feild_name+"_"+agr_feild+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
-
+    if fops.entropy:
         entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
         valuesDf[feild_name+"_"+agr_feild+"_entropy"] =  np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
-
-        find_NA_rows_percent(valuesDf, "adding more stats " + str(feild_name))
 
     find_NA_rows_percent(bdf, "calculate stats for " + str(feild_name))
     return valuesDf
@@ -301,10 +305,10 @@ def merge_stats_with_df(bdf, stat_df, feild_name, default_mean=None, default_std
     return merged
 
 
-def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats, drop=False,
-                            agr_feild='Demanda_uni_equil', do_count=True, do_stddev=True):
+def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats,fops, drop=False,
+                            agr_feild='Demanda_uni_equil'):
     start = time.time()
-    valuesDf = calculate_feild_stats(train_df, feild_name, agr_feild, default_stats=default_stats, do_count=do_count, do_stddev=do_stddev)
+    valuesDf = calculate_feild_stats(train_df, feild_name, agr_feild, default_stats, fops)
 
     calculate_ts = time.time()
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=[feild_name])
@@ -326,9 +330,9 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
     if testDf is not None:
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
         testDf[feild_name+"_"+agr_feild+"_Mean"].fillna(default_stats.mean, inplace=True)
-        if do_stddev:
+        if fops.stddev:
             testDf[feild_name+"_"+agr_feild+"_StdDev"].fillna(default_stats.stddev, inplace=True)
-        if do_count:
+        if fops.count:
             testDf[feild_name+"_"+agr_feild+"_Count"].fillna(default_stats.count, inplace=True)
         if drop:
             testDf = testDf.drop(feild_name,1)
@@ -928,6 +932,20 @@ class DefaultStats:
         self.stddev = stddev
 
 
+class FeatureOps:
+    def __init__(self, count=False, stddev=False, sum=False, p10=False, p90=False,kurtosis=False,
+                 hmean=False, entropy=False):
+        self.sum = sum
+        self.count = count
+        self.stddev = stddev
+        self.p10 =p10
+        self.p90 = p90
+        self.kurtosis = kurtosis
+        self.hmean = hmean
+        self.entropy=entropy
+        self.use_close_products_missing=False
+
+
 def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     use_slope = False
     use_group_aggrigate = True
@@ -965,34 +983,36 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     #                                test_df,t[0], testDf, drop=False, agr_feild=t[1])
 
     if use_group_aggrigate:
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats, drop=False)
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats,
+                                                            FeatureOps(hmean=True, stddev=True, kurtosis=True))
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-                                                          'Demanda_uni_equil', "clients_combined", default_stats=default_demand_stats,
-                                                              use_close_products_missing=use_alt_missing)
+                'Demanda_uni_equil', "clients_combined", default_demand_stats,
+                                                              FeatureOps(kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats, drop=False)
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
+                                                            FeatureOps(stddev=True, p90=True, hmean=True,p10=True, kurtosis=True))
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy',
-                                                            default_stats=default_venta_hoy_stats)
+                                                            default_stats=default_venta_hoy_stats, fops=FeatureOps())
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False, agr_feild='Venta_hoy')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Venta_hoy')
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Venta_hoy')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
 
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-            'Venta_hoy', "clients_combined_vh", default_stats=default_venta_hoy_stats, use_close_products_missing=use_alt_missing)
+            'Venta_hoy', "clients_combined_vh", default_venta_hoy_stats, FeatureOps(hmean=True, p90=True, stddev=True))
 
 
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
-                                                            agr_feild='Dev_proxima', do_count=True, do_stddev=True,
-                                                            default_stats=default_dev_proxima_stats)
+                                                            agr_feild='Dev_proxima', default_stats=default_dev_proxima_stats,
+                                                            fops=FeatureOps(hmean=True))
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats,
-                                                            drop=False, agr_feild='Dev_proxima')
+                                                            drop=False, agr_feild='Dev_proxima', fops=FeatureOps())
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Dev_proxima')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False, agr_feild='Dev_proxima')
@@ -1013,18 +1033,18 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['brand_id'])
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'product_word', testDf, drop=False,
-            default_stats=default_demand_stats)
+            default_stats=default_demand_stats, fops=FeatureOps(entropy=True, count=True, hmean=True, sum=True))
         train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['product_word'])
 
     if use_agency_features:
         agency_data_df = read_productdata_file('agency_data.csv')
         train_df, test_df, testDf =  merge_csv_by_feild(train_df, test_df, testDf, agency_data_df, 'Agencia_ID')
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Town_id', testDf, drop=False)
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Town_id', testDf, drop=False, fops=FeatureOps())
         train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Town_id'])
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'State_id', testDf, drop=False,
-                                                            default_stats=default_demand_stats)
+                                                            default_stats=default_demand_stats, fops=FeatureOps())
         train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['State_id'])
 
     if use_sales_data:
@@ -1292,7 +1312,7 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
                              test_df['clients_combined_Mean'], test_df['Producto_ID_Demanda_uni_equil_Mean']])
 
     #removing NaN and inf if there is any
-    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(), 10000, X_all))
+    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
 
     forecasting_feilds = ["f"+str(f) for f in range(X_all.shape[1])]
 

@@ -661,6 +661,12 @@ def test_ensambles():
 
     print 'hello'
 
+def create_random_file():
+    df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
+    subset_df = df.sample(10000000)
+    subset_df.to_csv("train-rsample-10k.csv", index=False)
+
+create_random_file()
 
 #find_similar_products()
 
@@ -743,4 +749,4 @@ def test_ensambles():
 #product_raw_stats()
 
 #test_ensambles()
-merge_submissions()
+#merge_submissions()
