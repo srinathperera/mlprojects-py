@@ -55,15 +55,17 @@ data_files = [
     ["train-rsample-15m.csv", -1, -1, "test.csv"]
 ]
 
-
+ensamble_train_file = 'train-rsample-3m.csv'
 
 if command == -2:
     df = read_train_file('data/train.csv')
     testDf = pd.read_csv('data/test.csv')
+    ensamble_train_file = 'data/' + ensamble_train_file
 elif command == -1:
     df = read_train_file('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
     testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
     testDf = testDf[(testDf['Producto_ID'] <= 300)]
+    ensamble_train_file = '/Users/srinath/playground/data-science/BimboInventoryDemand/' + ensamble_train_file
 else:
     dir = None
     if test_run:
@@ -75,6 +77,8 @@ else:
     testDf = pd.read_csv(dir +data_files[command][3])
     print "using ", dir + data_files[command][0], " and ", dir +data_files[command][3]
     print "testDf read", testDf.shape
+
+    ensamble_train_file = dir + ensamble_train_file
 
 
 y_actual_2nd_verification = None
@@ -99,12 +103,15 @@ conf.command = command
 
 df = df[df['Producto_ID'] > 0]
 
+df = df.sample(frac=1)
+
+
 #df['unit_prize'] = df['Venta_hoy']/df['Venta_uni_hoy']
 
 find_NA_rows_percent(df, "data set stats")
 
 
-training_set_size = int(0.7*df.shape[0])
+training_set_size = int(0.6*df.shape[0])
 test_set_size = df.shape[0] - training_set_size
 
 y_all = df['Demanda_uni_equil'].values
@@ -176,7 +183,6 @@ if forecasts.shape[1] > 1:
 
 
 m_time = time.time()
-
 
 if conf.save_predictions_with_data:
     print "Sizes", test_df_before_dropping_features.shape, best_forecast.shape

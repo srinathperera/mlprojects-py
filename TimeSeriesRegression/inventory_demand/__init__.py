@@ -974,12 +974,6 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     use_product_features = True
     use_agency_features = False
     use_sales_data = False
-    use_alt_missing = False
-    do_advstats = True
-
-
-
-    #print "shapes train, test", df.shape, testDf.shape
 
     testDf = subdf
 
@@ -1135,7 +1129,7 @@ def get_models4ensamble(conf):
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
                 #DLModel(conf),
-                #RFRModel(conf),
+                RFRModel(conf, RandomForestRegressor(oob_score=True, n_estimators=100, n_jobs=4)),
                 #LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
@@ -1172,7 +1166,7 @@ def get_models4xgboost_tunning(conf):
         maxdepth = 10
         min_child_weight = 5
         xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
-            gamma=[0.1, 0.3, 0.5], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
+            gamma=[0.5, 0.3, 0.1], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
     elif case == 3:
         #Tune subsample and colsample_bytree
         eta = 0.1
@@ -1264,6 +1258,8 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     models = get_models4ensamble(conf)
     #models = get_models4xgboost_tunning(conf)
     #models = get_models4rfr_tunning(conf)
+
+    print "trying ", len(models), " Models"
     for m in models:
         m_start = time.time()
         den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=forecasting_feilds)
@@ -1394,12 +1390,13 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
 
     forecasting_feilds = ["f"+str(f) for f in range(X_all.shape[1])]
 
-    no_of_training_instances = round(len(y_actual)*0.5)
+    #we use 10% to train the ensamble and 30% for evalaution
+    no_of_training_instances = round(len(y_actual)*0.25)
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
 
     ensambles = []
 
-    rfr = RandomForestRegressor(n_jobs=4)
+    rfr = RandomForestRegressor(n_jobs=4, oob_score=True)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast = rfr.predict(X_test)

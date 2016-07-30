@@ -663,8 +663,8 @@ def test_ensambles():
 
 def create_random_file():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-    subset_df = df.sample(9000000)
-    subset_df.to_csv("train-rsample-9m.csv", index=False)
+    subset_df = df.sample(3000000)
+    subset_df.to_csv("train-rsample-3m.csv", index=False)
 
 
 def parse_feature_importance():
