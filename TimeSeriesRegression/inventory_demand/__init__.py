@@ -1161,19 +1161,19 @@ def get_models4xgboost_tunning(conf):
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":5, "eta":0.1, "min_child_weight":1,
             "subsample":0.8, "nthread":4, "colsample_bytree":0.8, "num_parallel_tree":1, 'gamma':0}
         xgb_params_list = [xgb_params]
-    elif case == 2:
+    elif case == 1:
         eta = 0.1
         #tune maxdepth and min child weight #eta decide before
         xgb_params_list = create_xgboost_params(0, maxdepth=[3, 5, 8, 10], eta=[eta], min_child_weight=[1, 3, 5],
             gamma=[0], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
-    elif case == 3:
+    elif case == 2:
         #tune gamma
         eta = 0.1
         maxdepth = 3
         min_child_weight = 5
         xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
             gamma=[0.1, 0.3, 0.5], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
-    elif case == 4:
+    elif case == 3:
         #Tune subsample and colsample_bytree
         eta = 0.1
         maxdepth = 3
@@ -1182,7 +1182,8 @@ def get_models4xgboost_tunning(conf):
         xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
             gamma=[gamma], subsample=[0.6, 0.8, 1.0], colsample_bytree=[0.6, 0.8, 1.0], reg_alpha=[0], reg_lambda=[0])
 
-
+    else:
+        raise ValueError("Unknown case "+ str(case))
 
     #xgb_params_list = create_xgboost_params(0, maxdepth=[3, 5], eta=[0.1, 0.05], min_child_weight=[5],
     #                      gamma=[0], subsample=[0.5], colsample_bytree=[0.5],
@@ -1384,6 +1385,13 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     print "Y_all"
     check4nan(y_actual)
 
+    y_actual_saved = y_actual
+
+    target_as_log = True
+    if target_as_log:
+        y_actual = transfrom_to_log(y_actual)
+
+
     forecasting_feilds = ["f"+str(f) for f in range(X_all.shape[1])]
 
     no_of_training_instances = round(len(y_actual)*0.5)
@@ -1395,14 +1403,14 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast = rfr.predict(X_test)
-    rmsle = calculate_accuracy("rfr_forecast", y_test, rfr_forecast)
+    rmsle = calculate_accuracy("rfr_forecast", retransfrom_from_log(y_test), retransfrom_from_log(rfr_forecast))
     ensambles.append((rmsle, rfr, "rfr ensamble"))
 
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
     model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
                                                       xgb_params=xgb_params,num_rounds=20)
     xgb_forecast = model.predict(X_test)
-    rmsle = calculate_accuracy("xgb_forecast", y_test, xgb_forecast)
+    rmsle = calculate_accuracy("xgb_forecast", retransfrom_from_log(y_test), retransfrom_from_log(xgb_forecast))
     ensambles.append((rmsle, model, "xgboost ensamble"))
 
     best_ensamble_index = np.argmin([t[0] for t in ensambles])
