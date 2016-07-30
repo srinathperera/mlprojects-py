@@ -615,22 +615,55 @@ def add_last_sale_and_week(train_df, test_df, testDf):
 
 
 class RFRModel:
-    def __init__(self, conf):
+    def __init__(self, conf, model=None):
         self.conf = conf
+        if model is None:
+            self.model = RandomForestRegressor(n_jobs=4)
+        else:
+            self.model = model
+
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
-        self.model = RandomForestRegressor(n_jobs=4)
+        start = time.time()
         self.model.fit(X_train, y_train)
         print_feature_importance(self.model.feature_importances_, forecasting_feilds)
-
         #save model
         #joblib.dump(rfr, 'model.pkl')
-        y_pred_final, rmsle = check_accuracy("RFR", self.model, X_test, self.conf.parmsFromNormalization,
+        y_pred_final, rmsle = check_accuracy("RFR "+ str(self.model), self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
         self.rmsle =  rmsle
+        print "RFR model took", (time.time() - start), "s"
         return y_pred_final
 
     def predict(self, X_test):
         return self.model.predict(X_test)
+
+
+'''
+http://www.analyticsvidhya.com/blog/2015/06/tuning-random-forest-model/
+
+max_features: - These are the maximum number of features Random Forest is allowed to try in individual tree. ncreasing
+max_features generally improves the performance of the model as at each node now we have a higher number of options
+to be considered. However, this is not necessarily true as this decreases the diversity of individual tree which is the
+USP of random forest. But, for sure, you decrease the speed of algorithm by increasing the max_features. Hence,
+you need to strike the right balance and choose the optimal max_features.
+n_estimators :This is the number of trees you want to build before taking the maximum voting or averages of predictions.
+Higher number of trees give you better performance but makes your code slower.
+min_sample_leaf : If you have built a decision tree before, you can appreciate the importance of minimum sample leaf size.
+Leaf is the end node of a decision tree. A smaller leaf makes the model more prone to capturing noise in train data.
+oob_score : This is a random forest cross validation method. It is very similar to leave one out validation technique,
+however, this is so much faster. This method simply tags every observation used in different tress. And then it finds
+out a maximum vote score for every observation based on only trees which did not use this particular observation to train itself.
+'''
+
+def create_rfr_params(n_estimator=[200], oob_score=[False], max_features=["auto"],
+                          min_samples_leaf=[50]):
+    rfr_models =[]
+    for t in itertools.product(n_estimator, oob_score, max_features, min_samples_leaf):
+        rfr = RandomForestRegressor(n_jobs=4, n_estimators=t[0], oob_score=t[1], max_features=t[2],
+                                    min_samples_leaf=t[3])
+        rfr_models.append(rfr)
+    return rfr_models
+
 
 
 def create_xgboost_params(trialcount, maxdepth=[5], eta=[0.1], min_child_weight=[1],
@@ -657,6 +690,7 @@ class XGBoostModel:
         self.conf = conf
         self.xgb_params = xgb_params
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        start = time.time()
         model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
                                                       xgb_params=self.xgb_params,num_rounds=200)
         #model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
@@ -665,6 +699,7 @@ class XGBoostModel:
         y_pred_final, rmsle = check_accuracy("XGBoost_nocv", self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
         self.rmsle =  rmsle
+        print "Xgboost model took", (time.time() - start), "s"
         return y_pred_final
 
     def predict(self, X_test):
@@ -679,11 +714,13 @@ class LRModel:
             self.model = model
 
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        start = time.time()
         self.model.fit(X_train, y_train)
 
         y_pred_final, rmsle = check_accuracy("LR"+str(self.model), self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
         self.rmsle =  rmsle
+        print "LR model took", (time.time() - start), "s"
         return y_pred_final
 
     def predict(self, X_test):
@@ -696,15 +733,17 @@ class DLModel:
         self.conf = conf
         self.dlconf = dlconf
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        start = time.time()
         if self.dlconf == None:
             self.dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
                 epoch_count=10, optimizer=Adam(lr=0.0001), regularization=0.2)
         model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, self.dlconf)
         self.model = model
 
-        y_pred_final, rmsle = check_accuracy("LR", self.model, X_test, self.conf.parmsFromNormalization,
+        y_pred_final, rmsle = check_accuracy("DL", self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
         self.rmsle =  rmsle
+        print "DL", (time.time() - start), "s"
         return y_pred_final
 
     def predict(self, X_test):
@@ -1081,6 +1120,84 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     print "generate_features took ", (time.time() - start), "s"
     return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features
 
+def get_models4ensamble(conf):
+    models = []
+    #models = [RFRModel(conf), DLModel(conf), LRModel(conf)]
+    #models = [LRModel(conf)]
+    # see http://scikit-learn.org/stable/modules/linear_model.html
+    models = [
+                RFRModel(conf),
+                #LRModel(conf, model=linear_model.BayesianRidge()),
+                #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
+                #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
+                #LRModel(conf, model=linear_model.Ridge (alpha = .5))
+                #   ('linear', LinearRegression(fit_intercept=False))])),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
+                #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
+
+              ]
+
+    #tree model
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+    models.append(XGBoostModel(conf, xgb_params))
+    return models
+
+
+def get_models4xgboost_tunning(conf):
+    #http://www.voidcn.com/blog/mmc2015/article/p-5751771.html
+    case = 0
+
+    if case == 0:
+        xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":5, "eta":0.1, "min_child_weight":1,
+            "subsample":0.8, "nthread":4, "colsample_bytree":0.8, "num_parallel_tree":1, 'gamma':0}
+        xgb_params_list = [xgb_params]
+    elif case == 2:
+        eta = 0.1
+        #tune maxdepth and min child weight #eta decide before
+        xgb_params_list = create_xgboost_params(0, maxdepth=[3, 5, 8, 10], eta=[eta], min_child_weight=[1, 3, 5],
+            gamma=[0], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
+    elif case == 3:
+        #tune gamma
+        eta = 0.1
+        maxdepth = 3
+        min_child_weight = 5
+        xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
+            gamma=[0.1, 0.3, 0.5], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
+    elif case == 4:
+        #Tune subsample and colsample_bytree
+        eta = 0.1
+        maxdepth = 3
+        min_child_weight = 5
+        gamma = 0.1
+        xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
+            gamma=[gamma], subsample=[0.6, 0.8, 1.0], colsample_bytree=[0.6, 0.8, 1.0], reg_alpha=[0], reg_lambda=[0])
+
+
+
+    #xgb_params_list = create_xgboost_params(0, maxdepth=[3, 5], eta=[0.1, 0.05], min_child_weight=[5],
+    #                      gamma=[0], subsample=[0.5], colsample_bytree=[0.5],
+    #                      reg_alpha=[0], reg_lambda=[0])
+
+
+    models = []
+    for xgb_params in xgb_params_list:
+        #xgb_params['max_depth'] = md[0]
+        #xgb_params['subsample'] = md[1]
+        #xgb_params['min_child_weight'] = md[2]
+        models.append(XGBoostModel(conf, xgb_params))
+        #xgb_params['seed'] = 347
+        #models.append(XGBoostModel(conf, xgb_params))
+
+    return models
+
+
+def get_models4rfr_tunning(conf):
+    configs = create_rfr_params(n_estimator=[100,200, 300, 500], oob_score=[True, False], min_samples_leaf=[50, 100, 200])
+    models = [RFRModel(conf, rfr) for rfr in configs]
+    return models;
+
 
 def do_forecast(conf, train_df, test_df, y_actual_test):
     start = time.time()
@@ -1135,51 +1252,9 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
     de_normalized_forecasts = []
 
-    models = []
-    #models = [RFRModel(conf), DLModel(conf), LRModel(conf)]
-    #models = [LRModel(conf)]
-    # see http://scikit-learn.org/stable/modules/linear_model.html
-    models = [
-                RFRModel(conf),
-                #LRModel(conf, model=linear_model.BayesianRidge()),
-                #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
-                LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
-                #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
-                #LRModel(conf, model=linear_model.Ridge (alpha = .5))
-                #   ('linear', LinearRegression(fit_intercept=False))])),
-                LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
-                #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
-
-              ]
-
-    #tree model
-    do_parameter_search = False
-    if(not do_parameter_search):
-        xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
-            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
-        xgb_params_list = [xgb_params]
-    else:
-        #xgb_params_list = create_xgboost_params(0, maxdepth=[3], eta=[0.1], min_child_weight=[5],
-        #                  gamma=[0], subsample=[0.5], colsample_bytree=[0.5],
-        #                  reg_alpha=[0.005, 0.01, 0.05], reg_lambda=[0.005, 0.01, 0.05])
-        xgb_params_list = create_xgboost_params(0, maxdepth=[3, 5], eta=[0.1, 0.05], min_child_weight=[5],
-                          gamma=[0], subsample=[0.5], colsample_bytree=[0.5],
-                          reg_alpha=[0], reg_lambda=[0])
-
-    #for md  in [0]:
-    for xgb_params in xgb_params_list:
-        #xgb_params['max_depth'] = md[0]
-        #xgb_params['subsample'] = md[1]
-        #xgb_params['min_child_weight'] = md[2]
-        models.append(XGBoostModel(conf, xgb_params))
-        #xgb_params['seed'] = 347
-        #models.append(XGBoostModel(conf, xgb_params))
-
-    #linear model
-    #xgb_params = {"objective": "reg:linear", "booster":"gblinear", "max_depth":3, "nthread":4}
-    #models.append(XGBoostModel(conf, xgb_params))
-
-
+    #models = get_models4ensamble(conf)
+    #models = get_models4xgboost_tunning(conf)
+    models = get_models4rfr_tunning(conf)
     for m in models:
         m_start = time.time()
         den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=forecasting_feilds)

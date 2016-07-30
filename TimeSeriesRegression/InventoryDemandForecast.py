@@ -52,6 +52,7 @@ data_files = [
     ["trainitems5000_15000.csv", -1, -1, "test0_100.csv"],
     ["train-rsample-10m.csv", -1, -1, "test0_100.csv"],
     ["train-rsample-500k.csv", -1, -1, "test0_100.csv"],
+    ["train-rsample-15m.csv", -1, -1, "test.csv"]
 ]
 
 
