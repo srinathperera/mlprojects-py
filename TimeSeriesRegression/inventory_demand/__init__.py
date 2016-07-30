@@ -1120,6 +1120,14 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     print "generate_features took ", (time.time() - start), "s"
     return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features
 
+def get_models4xgboost_only(conf):
+    models = []
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+    models.append(XGBoostModel(conf, xgb_params))
+    return models
+
+
 def get_models4ensamble(conf):
     models = []
     #models = [RFRModel(conf), DLModel(conf), LRModel(conf)]
@@ -1251,10 +1259,10 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     check4nan(y_test)
 
     de_normalized_forecasts = []
-
+    models = get_models4xgboost_only(conf)
     #models = get_models4ensamble(conf)
     #models = get_models4xgboost_tunning(conf)
-    models = get_models4rfr_tunning(conf)
+    #models = get_models4rfr_tunning(conf)
     for m in models:
         m_start = time.time()
         den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=forecasting_feilds)
