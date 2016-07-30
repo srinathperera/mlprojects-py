@@ -913,17 +913,16 @@ class DefaultStats:
 
 
 class FeatureOps:
-    def __init__(self, count=False, stddev=False, sum=False, p10=False, p90=False,kurtosis=False,
+    def __init__(self, count=False, stddev=False, sum=False, p10=False, p90=False, kurtosis=False,
                  hmean=False, entropy=False):
         #self.sum = sum
         self.sum = sum
-        self.count = True
-        self.stddev = True
+        self.count = count
+        self.stddev = stddev
         #follow two are too expensive
         self.p10 =False
         self.p90 = False
-        #self.kurtosis = kurtosis
-        self.kurtosis = True
+        self.kurtosis = kurtosis
         self.hmean = hmean
         self.entropy=entropy
         self.use_close_products_missing=False
@@ -968,7 +967,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
 
     if use_group_aggrigate:
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats,
-                                                            FeatureOps(hmean=True, stddev=True, kurtosis=True))
+                                                            FeatureOps(hmean=True, stddev=True, count=True))
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
@@ -977,10 +976,10 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
                                                               FeatureOps(sum= True, kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
-                                                            FeatureOps(stddev=True, p90=True, hmean=True,p10=True, kurtosis=True))
+                                                            FeatureOps(stddev=True, p90=True, hmean=True,p10=True, count=True))
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy',
-                                                            default_stats=default_venta_hoy_stats, fops=FeatureOps())
+                                                            default_stats=default_venta_hoy_stats, fops=FeatureOps(stddev=True, count=True))
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False, agr_feild='Venta_hoy')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Venta_hoy')
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Venta_hoy')
@@ -993,7 +992,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
                                                             agr_feild='Dev_proxima', default_stats=default_dev_proxima_stats,
-                                                            fops=FeatureOps(hmean=True))
+                                                            fops=FeatureOps(count=True))
 
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats,
         #                                                    drop=False, agr_feild='Dev_proxima', fops=FeatureOps())
@@ -1017,7 +1016,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['brand_id'])
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'product_word', testDf, drop=False,
-            default_stats=default_demand_stats, fops=FeatureOps(entropy=True, count=True, hmean=True, sum=True))
+            default_stats=default_demand_stats, fops=FeatureOps(hmean=True))
         train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['product_word'])
 
     if use_agency_features:

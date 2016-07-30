@@ -682,26 +682,31 @@ def parse_feature_importance():
     for match in p1.finditer(data):
         f = match.group(1)
         score = match.group(2)
-        list = dict.get(f, [])
-        list.append(float(score))
-        dict[f] = list
+        if len(f) > 2:
+            list = dict.get(f, [])
+            list.append(float(score))
+            dict[f] = list
 
         #print f,"=",score
     for match in p2.finditer(data):
         f = match.group(1)
         score = match.group(2)
-        list = dict.get(f, [])
-        list.append(float(score))
-        dict[f] = list
+        if len(f) > 2:
+            list = dict.get(f, [])
+            list.append(float(score))
+            dict[f] = list
 
     df_data = []
-    for t in dict.items():
-        print t
-        df_data.append([t[0], np.sum(t[1])])
+    #for t in dict.items():
+    for (k,v) in dict.items():
+        #print t
+        #df_data.append([t[0], np.sum(t[1])])
+        df_data.append([k, np.sum(v)])
 
     print df_data
 
     feature_importance_df =  pd.DataFrame(np.row_stack(df_data), columns=["f","score"])
+    feature_importance_df.index = range(0, feature_importance_df.shape[0])
     feature_importance_df = feature_importance_df.sort_values(by=['score'], ascending=False)
     print feature_importance_df
 
