@@ -663,7 +663,7 @@ def test_ensambles():
 
 def create_random_file():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-    subset_df = df.sample(500000)
+    subset_df = df.sample(15000000)
     subset_df.to_csv("train-rsample-500k.csv", index=False)
 
 
@@ -711,8 +711,8 @@ def parse_feature_importance():
     print feature_importance_df
 
 
-parse_feature_importance()
-#create_random_file()
+#parse_feature_importance()
+create_random_file()
 
 #find_similar_products()
 
