@@ -696,7 +696,7 @@ class XGBoostModel:
         #model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
         #                                use_sklean=False, xgb_params=self.xgb_params)
         self.model = model
-        y_pred_final, rmsle = check_accuracy("XGBoost_nocv", self.model, X_test, self.conf.parmsFromNormalization,
+        y_pred_final, rmsle = check_accuracy("XGBoost_nocv "+ str(self.xgb_params), self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
         self.rmsle =  rmsle
         print "Xgboost model took", (time.time() - start), "s"
@@ -964,7 +964,7 @@ class FeatureOps:
         self.kurtosis = kurtosis
         self.hmean = hmean
         self.entropy=entropy
-        self.use_close_products_missing=False
+        self.use_close_products_missing=True
 
 
 def generate_features(conf, train_df, test_df, subdf, y_actual_test):
@@ -1134,7 +1134,8 @@ def get_models4ensamble(conf):
     #models = [LRModel(conf)]
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
-                RFRModel(conf),
+                #DLModel(conf),
+                #RFRModel(conf),
                 #LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
@@ -1143,7 +1144,6 @@ def get_models4ensamble(conf):
                 #   ('linear', LinearRegression(fit_intercept=False))])),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
                 #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
-
               ]
 
     #tree model
@@ -1155,7 +1155,7 @@ def get_models4ensamble(conf):
 
 def get_models4xgboost_tunning(conf):
     #http://www.voidcn.com/blog/mmc2015/article/p-5751771.html
-    case = 1
+    case = 2
 
     if case == 0:
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":5, "eta":0.1, "min_child_weight":1,
@@ -1169,7 +1169,7 @@ def get_models4xgboost_tunning(conf):
     elif case == 2:
         #tune gamma
         eta = 0.1
-        maxdepth = 3
+        maxdepth = 10
         min_child_weight = 5
         xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
             gamma=[0.1, 0.3, 0.5], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
@@ -1261,8 +1261,8 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
     de_normalized_forecasts = []
     #models = get_models4xgboost_only(conf)
-    #models = get_models4ensamble(conf)
-    models = get_models4xgboost_tunning(conf)
+    models = get_models4ensamble(conf)
+    #models = get_models4xgboost_tunning(conf)
     #models = get_models4rfr_tunning(conf)
     for m in models:
         m_start = time.time()
