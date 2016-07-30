@@ -146,6 +146,8 @@ models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = d
 best_model_index = np.argmin([m.rmsle for m in models])
 best_model = models[best_model_index]
 print "[IDF]Best Single Model has rmsle=", best_model.rmsle
+
+print best_model_index,
 best_forecast = forecasts[:,best_model_index]
 
 #save submission based on best model
@@ -167,7 +169,7 @@ if verify_sub_data:
             print "#### Does not match", f
 
 #create and save submission based on ensamble
-if len(forecasts) > 1:
+if forecasts.shape[1] > 1:
     ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
     #avg models also save the submission
     avg_models(conf, models, forecasts, y_actual_test, test_df, submission_forecasts=kaggale_predicted_list, submission_ids=ids, sub_df=testDf)

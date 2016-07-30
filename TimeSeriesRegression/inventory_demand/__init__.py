@@ -1338,7 +1338,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
             np.allclose(x_test_raw, undo_zeroMeanUnit2D(X_test, parmsFromNormalization2D), atol=0.01)
 
     if len(de_normalized_forecasts) == 1:
-        forecasts = [de_normalized_forecasts]
+        forecasts = np.column_stack(de_normalized_forecasts)
     else:
         forecasts = np.column_stack(de_normalized_forecasts)
     print "do_forecast took ", (time.time() - start), "s"
