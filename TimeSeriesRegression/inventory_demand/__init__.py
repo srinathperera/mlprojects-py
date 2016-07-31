@@ -964,7 +964,7 @@ class FeatureOps:
         self.kurtosis = kurtosis
         self.hmean = hmean
         self.entropy=entropy
-        self.use_close_products_missing=True
+        self.use_close_products_missing=False
 
 
 def generate_features(conf, train_df, test_df, subdf, y_actual_test):
