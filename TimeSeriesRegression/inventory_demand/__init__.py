@@ -1129,7 +1129,7 @@ def get_models4ensamble(conf):
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
                 #DLModel(conf),
-                RFRModel(conf, RandomForestRegressor(oob_score=True, n_estimators=100, n_jobs=4)),
+                #RFRModel(conf, RandomForestRegressor(oob_score=True, n_estimators=100, n_jobs=4)),
                 #LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
