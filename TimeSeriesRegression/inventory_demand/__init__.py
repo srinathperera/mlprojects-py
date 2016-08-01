@@ -1149,7 +1149,7 @@ def get_models4ensamble(conf):
 
 def get_models4xgboost_tunning(conf):
     #http://www.voidcn.com/blog/mmc2015/article/p-5751771.html
-    case = 2
+    case = 3
 
     if case == 0:
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":5, "eta":0.1, "min_child_weight":1,
@@ -1170,7 +1170,7 @@ def get_models4xgboost_tunning(conf):
     elif case == 3:
         #Tune subsample and colsample_bytree
         eta = 0.1
-        maxdepth = 3
+        maxdepth = 10
         min_child_weight = 5
         gamma = 0.1
         xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
@@ -1371,8 +1371,17 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     calculate_accuracy("min_forecast", y_actual, min_forecast)
 
     #add few more features
-    X_all = np.column_stack([forecasts, median_forecast, test_df['Semana'],
+    use_features = False
+    if use_features:
+        X_all = np.column_stack([forecasts, median_forecast, test_df['Semana'],
                              test_df['clients_combined_Mean'], test_df['Producto_ID_Demanda_uni_equil_Mean']])
+
+        forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])] \
+                             + ["Semana", "clients_combined_Mean", 'Producto_ID_Demanda_uni_equil_Mean']
+    else:
+        X_all = forecasts
+        forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])]
+
 
     #removing NaN and inf if there is any
     X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
@@ -1388,11 +1397,11 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
         y_actual = transfrom_to_log(y_actual)
 
 
-    forecasting_feilds = ["f"+str(f) for f in range(X_all.shape[1])]
 
-    #we use 10% to train the ensamble and 30% for evalaution
-    no_of_training_instances = round(len(y_actual)*0.25)
+    #we use 10% full data to train the ensamble and 30% for evalaution
+    no_of_training_instances = int(round(len(y_actual)*0.25))
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
+    y_actual_test = y_actual_saved[no_of_training_instances:]
 
     ensambles = []
 
@@ -1400,14 +1409,14 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast = rfr.predict(X_test)
-    rmsle = calculate_accuracy("rfr_forecast", retransfrom_from_log(y_test), retransfrom_from_log(rfr_forecast))
+    rmsle = calculate_accuracy("rfr_forecast", y_actual_test, retransfrom_from_log(rfr_forecast))
     ensambles.append((rmsle, rfr, "rfr ensamble"))
 
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
     model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
                                                       xgb_params=xgb_params,num_rounds=20)
     xgb_forecast = model.predict(X_test)
-    rmsle = calculate_accuracy("xgb_forecast", retransfrom_from_log(y_test), retransfrom_from_log(xgb_forecast))
+    rmsle = calculate_accuracy("xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
     ensambles.append((rmsle, model, "xgboost ensamble"))
 
     best_ensamble_index = np.argmin([t[0] for t in ensambles])
@@ -1417,10 +1426,14 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
 
     if submission_forecasts is not None:
         median_forecast = np.median(submission_forecasts, axis=1)
-        list = [submission_forecasts, median_forecast, sub_df['Semana'],
+        if use_features:
+            list = [submission_forecasts, median_forecast, sub_df['Semana'],
                              sub_df['clients_combined_Mean'], sub_df['Producto_ID_Demanda_uni_equil_Mean']]
-        print "sizes", [ a.shape for a in list]
-        sub_x_all = np.column_stack(list)
+            print "sizes", [ a.shape for a in list]
+            sub_x_all = np.column_stack(list)
+        else:
+            sub_x_all = submission_forecasts
+
         ensamble_forecast = best_ensamble.predict(sub_x_all)
 
         to_save = np.column_stack((submission_ids, ensamble_forecast))
