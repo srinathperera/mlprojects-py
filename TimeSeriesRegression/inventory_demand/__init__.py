@@ -689,7 +689,7 @@ class XGBoostModel:
     def __init__(self, conf, xgb_params, use_cv=False):
         self.conf = conf
         self.xgb_params = xgb_params
-        self.use_cv = False
+        self.use_cv = use_cv
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
         start = time.time()
         if self.use_cv:
