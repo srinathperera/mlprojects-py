@@ -686,15 +686,18 @@ def create_xgboost_params(trialcount, maxdepth=[5], eta=[0.1], min_child_weight=
 
 
 class XGBoostModel:
-    def __init__(self, conf, xgb_params):
+    def __init__(self, conf, xgb_params, use_cv=False):
         self.conf = conf
         self.xgb_params = xgb_params
+        self.use_cv = False
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
         start = time.time()
-        model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-                                                      xgb_params=self.xgb_params,num_rounds=200)
-        #model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
-        #                                use_sklean=False, xgb_params=self.xgb_params)
+        if self.use_cv:
+            model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
+                use_sklean=False, xgb_params=self.xgb_params)
+        else:
+            model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+                xgb_params=self.xgb_params,num_rounds=200)
         self.model = model
         y_pred_final, rmsle = check_accuracy("XGBoost_nocv "+ str(self.xgb_params), self.model, X_test, self.conf.parmsFromNormalization,
                                       self.conf.target_as_log, y_actual, self.conf.command)
@@ -1189,7 +1192,7 @@ def get_models4xgboost_tunning(conf):
         #xgb_params['max_depth'] = md[0]
         #xgb_params['subsample'] = md[1]
         #xgb_params['min_child_weight'] = md[2]
-        models.append(XGBoostModel(conf, xgb_params))
+        models.append(XGBoostModel(conf, xgb_params, use_cv=True))
         #xgb_params['seed'] = 347
         #models.append(XGBoostModel(conf, xgb_params))
 
@@ -1254,10 +1257,14 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
     check4nan(y_test)
 
     de_normalized_forecasts = []
-    #models = get_models4xgboost_only(conf)
-    models = get_models4ensamble(conf)
-    #models = get_models4xgboost_tunning(conf)
-    #models = get_models4rfr_tunning(conf)
+
+    tune_paramers = True
+    if tune_paramers:
+        models = get_models4xgboost_tunning(conf)
+        #models = get_models4rfr_tunning(conf)
+    else:
+        #models = get_models4xgboost_only(conf)
+        models = get_models4ensamble(conf)
 
     print "trying ", len(models), " Models"
     for m in models:
