@@ -1132,7 +1132,7 @@ def get_models4ensamble(conf):
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
                 #DLModel(conf),
-                #RFRModel(conf, RandomForestRegressor(oob_score=True, n_estimators=100, n_jobs=4)),
+                RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
                 #LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
@@ -1258,7 +1258,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
     de_normalized_forecasts = []
 
-    tune_paramers = True
+    tune_paramers = False
     if tune_paramers:
         models = get_models4xgboost_tunning(conf)
         #models = get_models4rfr_tunning(conf)
@@ -1368,14 +1368,24 @@ def find_range(rmsle, forecast):
 
 def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
     start = time.time()
+
+    #first we will save all individual model results for reuse
+    data = np.column_stack([forecasts, y_actual])
+    to_saveDf =  pd.DataFrame(data, columns=['f'+str(i) for i in range(len(models))] + ["actual"])
+    to_saveDf.to_csv('individual_forecasts'+ str(conf.command) + '.csv', index=False)
+
+
     median_forecast = np.median(forecasts, axis=1)
     calculate_accuracy("median_forecast", y_actual, median_forecast)
 
-    #hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
-    #calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
+    hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
+    calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
 
-    min_forecast = np.min(forecasts, axis=1)
+    min_forecast = np.mean(forecasts, axis=1)
     calculate_accuracy("min_forecast", y_actual, min_forecast)
+
+
+
 
     #add few more features
     use_features = False
@@ -1412,7 +1422,7 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
 
     ensambles = []
 
-    rfr = RandomForestRegressor(n_jobs=4, oob_score=True)
+    rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast = rfr.predict(X_test)
@@ -1420,11 +1430,22 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     ensambles.append((rmsle, rfr, "rfr ensamble"))
 
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
-    model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-                                                      xgb_params=xgb_params,num_rounds=20)
+    model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
+                            use_sklean=False, xgb_params=xgb_params)
+    #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+    #                                                  xgb_params=xgb_params,num_rounds=20)
     xgb_forecast = model.predict(X_test)
     rmsle = calculate_accuracy("xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
     ensambles.append((rmsle, model, "xgboost ensamble"))
+
+
+    lr_model =linear_model.Lasso(alpha = 0.2)
+    lr_model.fit(X_train, y_train)
+    lr_forecast = lr_model.predict(X_test)
+    rmsle = calculate_accuracy("lr_forecast", y_actual_test, retransfrom_from_log(lr_forecast))
+    ensambles.append((rmsle, lr_model, "rfr ensamble"))
+
+
 
     best_ensamble_index = np.argmin([t[0] for t in ensambles])
     best_ensamble = ensambles[best_ensamble_index][1]
@@ -1459,9 +1480,7 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     else:
         rmsle_values = [m.rmsle for m in models]
     print "rmsle values", rmsle_values
-    data = np.column_stack([forecasts, y_actual])
-    to_saveDf =  pd.DataFrame(data, columns=['f'+str(i) for i in range(len(models))] + ["actual"])
-    to_saveDf.to_csv('forecasts4ensamble.csv', index=False)
+
 
     print "avg_models took ", (time.time() - start), "s"
     '''
