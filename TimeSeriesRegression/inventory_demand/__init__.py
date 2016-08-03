@@ -1402,10 +1402,14 @@ def find_range(rmsle, forecast):
     return l, h
 
 def cal_rmsle(a,b):
-    return np.abs(np.log(a +1) - np.log(b+1))
+    val = np.abs(np.log(a+1) - np.log(b+1))
+    return val
+
+def is_forecast_improved(org, new, actual):
+    return cal_rmsle(org, actual) - cal_rmsle(new, actual) > 0
 
 
-def vote_based_forecast(forecasts, best_model_index):
+def vote_based_forecast(forecasts, best_model_index, y_actual=None):
     limit = 0.1
     best_forecast = forecasts[:, best_model_index]
 
@@ -1416,26 +1420,58 @@ def vote_based_forecast(forecasts, best_model_index):
     replaced = 0
     averaged = 0
 
+    same_c = 0
+    replaced_c = 0
+    averaged_c = 0
+
+    data_train = []
+
     for i in range(forecasts.shape[0]):
         f_row = forecasts[i,]
         min_diff_to_best = np.min([cal_rmsle(best_forecast[i], f) for f in f_row])
+        comb = list(itertools.combinations(f_row,2))
+        avg_error = scipy.stats.hmean([cal_rmsle(x,y) for (x,y) in comb])
+
         if min_diff_to_best < limit:
             final_forecast[i] = best_forecast[i]
             same = same +1
+            if y_actual is not None:
+                same_c = same_c + 1 if is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]) else 0
         else:
-            comb = list(itertools.combinations(f_row,2))
-            match_count = 0
-            for (x,y) in comb:
-                if cal_rmsle(x,y) < limit:
-                    match_count = match_count + 1
-            if match_count/ len(comb) > 0.66:
+            if avg_error < limit:
                 final_forecast[i] = np.median(f_row)
                 replaced = replaced +1
+                if y_actual is not None and is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]):
+                    replaced_c = replaced_c + 1
+                #print best_forecast[i], '->', final_forecast[i], y_actual[i], cal_rmsle(final_forecast[i], y_actual[i])
             else:
-                final_forecast[i] = (best_forecast[i] + scipy.stats.hmean(f_row))/2
-                averaged = averaged +1
+                final_forecast[i] = 0.6*best_forecast[i] + 0.4*scipy.stats.hmean(f_row)
+                averaged = averaged + 1 if is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]) else 0
+                if y_actual is not None and is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]):
+                    averaged_c = averaged_c + 1 if cal_rmsle(final_forecast[i], y_actual[i]) < 0.1 else 0
+        data_train.append([min_diff_to_best, avg_error, scipy.stats.hmean(f_row), np.median(f_row), np.std(f_row)])
 
     print "same, replaced, averaged", same, replaced, averaged
+    print "same_c, replaced_c, averaged_c", same_c, replaced_c, averaged_c
+
+
+    X_all = np.column_stack([np.row_stack(data_train), best_forecast])
+    target_as_log = True
+    if target_as_log:
+        y_actual = transfrom_to_log(y_actual)
+
+    #we use 10% full data to train the ensamble and 30% for evalaution
+    no_of_training_instances = int(round(len(y_actual)*0.25))
+    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
+    y_actual_test = y_actual[no_of_training_instances:]
+
+    lr_model =linear_model.Lasso(alpha = 0.2)
+    lr_model.fit(X_train, y_train)
+    lr_forecast = lr_model.predict(X_test)
+    lr_forcast_revered = retransfrom_from_log(lr_forecast)
+    print "shapes", y_actual_test.shape, lr_forcast_revered.shape
+    calculate_accuracy("lr_forecast", y_actual_test, lr_forcast_revered)
+
     return final_forecast
 
     #ff = np.when(np.abs(best_model_index - best_forecast) < limit, best_forecast,
@@ -1463,7 +1499,7 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     print "rmsle values", rmsle_values
 
     vf_start = time.time()
-    vote_forecast = vote_based_forecast(forecasts, best_forecast_index)
+    vote_forecast = vote_based_forecast(forecasts, best_forecast_index, y_actual)
     calculate_accuracy("vote_forecast", y_actual, vote_forecast)
     print "vf tooks", (time.time() - vf_start)
 
@@ -1473,8 +1509,8 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     median_forecast = np.median(forecasts, axis=1)
     calculate_accuracy("median_forecast", y_actual, median_forecast)
 
-    hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
-    calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
+    #hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
+    #calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
 
     min_forecast = np.mean(forecasts, axis=1)
     calculate_accuracy("min_forecast", y_actual, min_forecast)

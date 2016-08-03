@@ -716,14 +716,14 @@ def test_voting_ensamble():
 
     df = pd.read_csv('individual_forecasts6-test.csv')
 
-    y_actual = df['actual']
+    y_actual = df['actual'].values.copy()
     df = drop_feilds_1df(df, ['actual'])
 
 
     vf_start = time.time()
     forecasts = df.values
     best_forecast_index = 0
-    vote_forecast = vote_based_forecast(forecasts, best_forecast_index)
+    vote_forecast = vote_based_forecast(forecasts, best_forecast_index, y_actual)
     calculate_accuracy("vote_forecast", y_actual, vote_forecast)
     print "vf tooks", (time.time() - vf_start)
 
