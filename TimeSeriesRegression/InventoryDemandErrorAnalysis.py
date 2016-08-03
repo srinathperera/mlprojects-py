@@ -343,12 +343,27 @@ def show_error_by_features(df, cmd):
     plt.tight_layout()
     plt.savefig('error_by_features-'+str(cmd)+'.png')
 
+def show_error_distribution(errors):
+    plt.hist(errors, 50, normed=1, facecolor='green', alpha=0.75)
+    plt.xlabel('Error')
+    plt.ylabel('Frequency')
+    plt.title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
+    plt.tight_layout()
+    plt.savefig('error_dist.png')
+
+
+
+
+
+
 
 def do_error_analysis(df, cmd, full_df):
     df['error'] = np.log(df['actual'].values +1) - np.log(df['predictions'].values + 1)
+    print df.describe()
+    show_error_distribution(df['error'])
     show_error_by_features(df, cmd)
-    #show_raw_error_by_features(df, cmd)
-    #show_timelines_toperrors(df, full_df, cmd=cmd)
+    show_raw_error_by_features(df, cmd)
+    show_timelines_toperrors(df, full_df, cmd=cmd)
 
 
 def print_submission_data(sub_df=None, sub_file=None, show=False, command=0):
@@ -371,8 +386,8 @@ def print_submission_data(sub_df=None, sub_file=None, show=False, command=0):
         plt.show()
 
 def test_error_analysis():
-    error_df = pd.read_csv('forecast_with_data.csv')
-    full_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand//trainitems5000_15000.csv')
+    error_df = pd.read_csv('prediction_with_data5.csv')
+    full_df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train-rsample-10m.csv')
     error_df = error_df.sample(10000)
     do_error_analysis(error_df, 0, full_df)
     #error_df = error_df.head(10000)
@@ -392,7 +407,7 @@ def test_scatter_plot():
     plt.savefig('test.png')
 
 
-#test_error_analysis()
+test_error_analysis()
 
 #show_error_by_features()
 #show_timelines_toperrors()

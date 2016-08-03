@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
@@ -135,6 +136,8 @@ if verify_sub_data:
 
 print "train", train_df['Semana'].unique(), train_df.shape,"test", test_df['Semana'].unique(), test_df.shape
 
+print_mem_usage("before features")
+objgraph.show_growth()
 #if test_run:
 #    do_simple_models(conf, train_df,test_df, testDf, y_actual_test)
 
@@ -146,9 +149,20 @@ print "after features bd", test_df_before_dropping_features['Semana'].unique(), 
 
 prep_time = time.time()
 
+if test_run:
+    print train_df.describe()
+
+print_mem_usage("before forecast")
+print "Memory: train, test, sub",  object_size(train_df), object_size(test_df), object_size(testDf)
+objgraph.show_most_common_types()
+
+objgraph.show_growth()
+
+
 #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
 models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
 
+print_mem_usage("after forecast")
 
 best_model_index = np.argmin([m.rmsle for m in models])
 best_model = models[best_model_index]
@@ -163,8 +177,6 @@ if conf.generate_submission:
     if y_actual_2nd_verification is not None:
         rmsle = calculate_rmsle(y_actual_2nd_verification, y_forecast_submission)
         print "2nd Verification rmsle=", rmsle
-
-
 
 if verify_sub_data:
     print "train/sub shapes", train_df.shape, testDf.shape
@@ -195,4 +207,5 @@ if conf.save_predictions_with_data:
 #print "top aggrigate count", len(slopeMap)
 print "total=%f, read=%fs, preporcess=%fs, model=%fs" \
       %(m_time-s_time, (r_time-s_time), (prep_time-r_time), (m_time-prep_time))
+
 

@@ -23,9 +23,10 @@ from inventory_demand import *
 
 def five_group_stats(group):
     sales = np.array(group['Demanda_uni_equil'].values)
-    #samana = group['Semana'].values
-    #max_index = np.argmax(samana)
-    return np.mean(sales), len(sales), np.std(sales), np.median(sales)
+    samana = group['Semana'].values
+    max_index = np.argmax(samana)
+    returns = group['Dev_proxima'].mean()
+    return np.mean(sales), len(sales), np.std(sales), np.median(sales), sales[max_index], samana[max_index], returns
 
 
 def add_five_grouped_stats(train_df, test_df, testDf):
@@ -38,7 +39,8 @@ def add_five_grouped_stats(train_df, test_df, testDf):
     slope_data_df = grouped.apply(five_group_stats)
     sales_data_df = slope_data_df.to_frame("sales_data")
     sales_data_df.reset_index(inplace=True)
-    valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["mean_sales", "sales_count", "sales_stddev", "median_sales"])
+    valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["mean_sales", "sales_count", "sales_stddev",
+                                                                           "median_sales", "last_sale", "last_sale_week", "returns"])
     #valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["sales_count"])
 
     #now we merge the data
@@ -76,3 +78,33 @@ def do_simple_models(conf, train_df, test_df, subdf, y_actual_test):
 
     median_forecast = test_df['median_sales']
     calculate_accuracy("median_forecast", y_actual_test, median_forecast)
+
+
+    # do linear regression
+
+
+
+def test_simple_model():
+    conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
+    df = read_train_file("data/trainitems5_10_35_40_45_50k.csv")
+    subdf = pd.read_csv('data/test0_100.csv')
+
+    training_set_size = int(0.6*df.shape[0])
+    test_set_size = df.shape[0] - training_set_size
+
+    y_all = df['Demanda_uni_equil'].values
+
+    if conf.target_as_log and not conf.log_target_only:
+    #then all values are done as logs
+        df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
+
+    train_df = df[:training_set_size]
+    test_df = df[-1*test_set_size:]
+
+    y_actual_train = y_all[:training_set_size]
+    y_actual_test = y_all[-1*test_set_size:]
+
+    do_simple_models(conf, train_df, test_df, subdf, y_actual_test)
+
+
+test_simple_model()

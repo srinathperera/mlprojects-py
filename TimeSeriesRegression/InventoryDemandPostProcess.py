@@ -18,8 +18,6 @@ from sklearn.linear_model import LinearRegression
 
 from inventory_demand import *
 from mltools import *
-#from mlpreprocessing import feather2df
-from InventoryDemandSimplePredictions import do_simple_models
 
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'

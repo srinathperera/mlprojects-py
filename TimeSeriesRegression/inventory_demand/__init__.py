@@ -27,6 +27,22 @@ from sklearn.pipeline import Pipeline
 from mltools import *
 import scipy
 
+import resource
+
+from pympler import asizeof
+import objgraph
+
+
+def print_mem_usage(point=""):
+    usage=resource.getrusage(resource.RUSAGE_SELF)
+    print '''%s: usertime=%s systime=%s mem=%s gb
+           '''%(point,usage[0],usage[1],
+                (float(usage[2]*resource.getpagesize()))/1024*1024*1024 )
+
+def object_size(obj):
+    return asizeof.asizeof(obj)/1024*1024
+
+
 def read_train_file(file_name):
     #extended memory  https://xgboost.readthedocs.io/en/latest//how_to/external_memory.html
     train = pd.read_csv(file_name,
@@ -132,6 +148,7 @@ def setdiff_counts_froms_dfs(df1, df2):
 def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, fops):
     start = time.time()
     groupData = bdf.groupby(feild_names)[agr_feild]
+
     meanData = groupData.mean()
 
 
@@ -139,12 +156,14 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     valuesDf = meanData.to_frame(name+"_Mean")
     valuesDf.fillna(default_stats.mean, inplace=True)
     valuesDf.reset_index(inplace=True)
+
+    stddevData = groupData.std()
     if fops.stddev:
-        stddevData = groupData.std()
         valuesDf[name+"_StdDev"] = stddevData.values
         valuesDf.fillna(default_stats.stddev, inplace=True)
+
+    countData = groupData.count()
     if fops.count:
-        countData = groupData.count()
         valuesDf[name+"_Count"] = countData.values
         valuesDf.fillna(default_stats.count, inplace=True)
     if fops.sum:
@@ -172,12 +191,17 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     if fops.entropy:
         entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
         valuesDf[name+"_entropy"] = np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
+
+    valuesDf[name+"ci"] = stats.norm.interval(0.90, loc=meanData, scale=stddevData/np.sqrt(countData))[1]
+    #valuesDf = calculate_group_stats(groupData, name, default_stats, fops)
     print "took entropy", (time.time() - start)
     if fops.use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
         to_merge = pd.concat([testdf[['Ruta_SAK','Cliente_ID']], subdf[['Ruta_SAK','Cliente_ID']]])
         to_merge = to_merge.drop_duplicates()
         valuesDf = find_alt_for_missing(to_merge, valuesDf)
         print "Using close values for missing values"
+
+
 
     merge_start = time.time()
     print "join_multiple_feild_stats: complex stats took", (merge_start - start2_start)
@@ -244,42 +268,52 @@ def calcuate_hmean(group):
     else:
         return 0
 
-
-def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, fops):
-    groupData = bdf.groupby([feild_name])[agr_feild]
-    meanData = groupData.mean()
-    valuesDf = meanData.to_frame(feild_name+"_"+agr_feild+"_Mean")
+def calculate_group_stats(grouped_data, name, default_stats, fops):
+    meanData = grouped_data.mean()
+    valuesDf = meanData.to_frame(name +"_Mean")
     valuesDf.reset_index(inplace=True)
 
     if fops.sum:
-        valuesDf[feild_name+"_"+agr_feild+"_sum"] = groupData.sum()
+        valuesDf[name +"_sum"] = grouped_data.sum()
 
-    if fops.stddev:
-        stddevData = groupData.std()
-        valuesDf[feild_name+"_"+agr_feild+"_StdDev"] = stddevData.values
+    stddevData = grouped_data.std()
+    if fops.stddev or fops.count:
+        valuesDf[ name +"_StdDev"] = stddevData.values
         valuesDf.fillna(default_stats.stddev, inplace=True)
+
+    if fops.ci or fops.count:
+        countData = grouped_data.count()
     if fops.count:
-        countData = groupData.count()
-        valuesDf[feild_name+"_"+agr_feild+"_Count"] = countData.values
+        valuesDf[name + "_Count"] = countData.values
         valuesDf.fillna(default_stats.count, inplace=True)
+    if fops.ci:
+        valuesDf[name + "_ci"] = stats.norm.interval(0.90, loc=meanData, scale=stddevData/np.sqrt(countData))[1]
+
+
     if fops.p10:
-        pcerntile10 = groupData.quantile(0.1, interpolation='nearest')
-        valuesDf[feild_name+"_"+agr_feild+"_pcerntile10"] = np.where(np.isnan(pcerntile10), 0, pcerntile10)
+        pcerntile10 = grouped_data.quantile(0.1, interpolation='nearest')
+        valuesDf[name + "_pcerntile10"] = np.where(np.isnan(pcerntile10), 0, pcerntile10)
     if fops.p90:
-        pcerntile90 = groupData.quantile(0.9, interpolation='nearest')
-        valuesDf[feild_name+"_"+agr_feild+"_pcerntile90"] = np.where(np.isnan(pcerntile90), 0, pcerntile90)
+        pcerntile90 = grouped_data.quantile(0.9, interpolation='nearest')
+        valuesDf[name + "_pcerntile90"] = np.where(np.isnan(pcerntile90), 0, pcerntile90)
     if fops.kurtosis:
-        kurtosis = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
-        valuesDf[feild_name+"_"+agr_feild+"_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
+        kurtosis = grouped_data.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
+        valuesDf[name + "_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
     if fops.hmean:
-        hmean = groupData.apply(calcuate_hmean)
-        valuesDf[feild_name+"_"+agr_feild+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
+        hmean = grouped_data.apply(calcuate_hmean)
+        valuesDf[name + "_hMean"] = np.where(np.isnan(hmean), 0, hmean)
     if fops.entropy:
-        entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
-        valuesDf[feild_name+"_"+agr_feild+"_entropy"] =  np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
+        entropy = grouped_data.apply(lambda x: min(scipy.stats.entropy(x), 10000))
+        valuesDf[name +"_entropy"] =  np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
 
     valuesDf.fillna(default_stats.mean, inplace=True)
     return valuesDf
+
+
+
+def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, fops):
+    groupData = bdf.groupby([feild_name])[agr_feild]
+    return calculate_group_stats(groupData, feild_name+"_"+agr_feild, default_stats, fops)
 
 
 def merge_stats_with_df(bdf, stat_df, feild_name, default_mean=None, default_stddev=None, agr_feild='Demanda_uni_equil'):
@@ -767,6 +801,7 @@ def drop_column(df1, df2, feild_name):
 
 
 def transfrom_to_log(data):
+    print "convert to log"
     return np.log(data + 1)
 
 def retransfrom_from_log(data):
@@ -956,7 +991,7 @@ class DefaultStats:
 
 class FeatureOps:
     def __init__(self, count=False, stddev=False, sum=False, p10=False, p90=False, kurtosis=False,
-                 hmean=False, entropy=False):
+                 hmean=False, entropy=False, ci=True):
         #self.sum = sum
         self.sum = sum
         self.count = count
@@ -968,6 +1003,7 @@ class FeatureOps:
         self.hmean = hmean
         self.entropy=entropy
         self.use_close_products_missing=False
+        self.ci = ci
 
 
 def generate_features(conf, train_df, test_df, subdf, y_actual_test):
@@ -1365,6 +1401,49 @@ def find_range(rmsle, forecast):
     l = (forecast+1)/np.exp(rmsle) - 1
     return l, h
 
+def cal_rmsle(a,b):
+    return np.abs(np.log(a +1) - np.log(b+1))
+
+
+def vote_based_forecast(forecasts, best_model_index):
+    limit = 0.1
+    best_forecast = forecasts[:, best_model_index]
+
+    forecasts = np.sort(np.delete(forecasts, best_model_index, axis=1), axis=1)
+
+    final_forecast = np.zeros((forecasts.shape[0],))
+    same = 0
+    replaced = 0
+    averaged = 0
+
+    for i in range(forecasts.shape[0]):
+        f_row = forecasts[i,]
+        min_diff_to_best = np.min([cal_rmsle(best_forecast[i], f) for f in f_row])
+        if min_diff_to_best < limit:
+            final_forecast[i] = best_forecast[i]
+            same = same +1
+        else:
+            comb = list(itertools.combinations(f_row,2))
+            match_count = 0
+            for (x,y) in comb:
+                if cal_rmsle(x,y) < limit:
+                    match_count = match_count + 1
+            if match_count/ len(comb) > 0.66:
+                final_forecast[i] = np.median(f_row)
+                replaced = replaced +1
+            else:
+                final_forecast[i] = (best_forecast[i] + scipy.stats.hmean(f_row))/2
+                averaged = averaged +1
+
+    print "same, replaced, averaged", same, replaced, averaged
+    return final_forecast
+
+    #ff = np.when(np.abs(best_model_index - best_forecast) < limit, best_forecast,
+    #)
+
+
+
+
 
 def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
     start = time.time()
@@ -1373,6 +1452,22 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
     data = np.column_stack([forecasts, y_actual])
     to_saveDf =  pd.DataFrame(data, columns=['f'+str(i) for i in range(len(models))] + ["actual"])
     to_saveDf.to_csv('individual_forecasts'+ str(conf.command) + '.csv', index=False)
+
+    if test:
+        rmsle_values = [m for m in models]
+    else:
+        rmsle_values = [m.rmsle for m in models]
+
+    best_forecast_index = np.argmin(rmsle_values)
+
+    print "rmsle values", rmsle_values
+
+    vf_start = time.time()
+    vote_forecast = vote_based_forecast(forecasts, best_forecast_index)
+    calculate_accuracy("vote_forecast", y_actual, vote_forecast)
+    print "vf tooks", (time.time() - vf_start)
+
+
 
 
     median_forecast = np.median(forecasts, axis=1)
@@ -1475,11 +1570,6 @@ def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=
         print to_saveDf.describe()
 
 
-    if test:
-        rmsle_values = [m for m in models]
-    else:
-        rmsle_values = [m.rmsle for m in models]
-    print "rmsle values", rmsle_values
 
 
     print "avg_models took ", (time.time() - start), "s"
