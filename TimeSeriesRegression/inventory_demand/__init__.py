@@ -31,6 +31,8 @@ import resource
 
 from pympler import asizeof
 import objgraph
+import os
+import pickle
 
 
 def print_mem_usage(point=""):
@@ -76,6 +78,45 @@ def fillna_if_feildexists(df, feild_name, replacement):
     if feild_name in df:
         df[feild_name].fillna(replacement, inplace=True)
     return df
+
+
+'''
+We can switch to XGboost files later if needed
+http://xgboost.readthedocs.io/en/latest/python/python_intro.html
+'''
+
+def save_file(model_type, command, df, name, metadata=None):
+    if not os.path.exists(model_type):
+        os.makedirs(model_type)
+
+    submission_file = model_type+ '/' + name+str(command)+ '.csv'
+    df.to_csv(submission_file, index=False)
+
+    if metadata is not None:
+        metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
+        file = open(metadata_file, 'wb')
+        pickle.dump(metadata, file)
+
+
+def load_file(model_type, command, name):
+    if not os.path.exists(model_type):
+        os.makedirs(model_type)
+
+    submission_file = model_type+ '/' + name+str(command)+ '.csv'
+    return  pd.read_csv(submission_file)
+
+
+def load_file_with_metadata(model_type, command, name):
+    load_df = load_file(model_type, command, name)
+
+    metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
+    file = open(metadata_file, 'wb')
+    metadata = pickle.load(file)
+    return load_df, metadata
+
+
+
+
 
 def find_alt_for_missing(to_merge, seen_with_stats):
     print "feilds 0", list(to_merge), list(seen_with_stats)
@@ -651,6 +692,7 @@ def add_last_sale_and_week(train_df, test_df, testDf):
 class RFRModel:
     def __init__(self, conf, model=None):
         self.conf = conf
+        self.name = "RFR"
         if model is None:
             self.model = RandomForestRegressor(n_jobs=4)
         else:
@@ -722,6 +764,7 @@ def create_xgboost_params(trialcount, maxdepth=[5], eta=[0.1], min_child_weight=
 class XGBoostModel:
     def __init__(self, conf, xgb_params, use_cv=False):
         self.conf = conf
+        self.name = "XGB"
         self.xgb_params = xgb_params
         self.use_cv = use_cv
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
@@ -745,6 +788,7 @@ class XGBoostModel:
 class LRModel:
     def __init__(self, conf, model=None):
         self.conf = conf
+        self.name = "LR"
         if model is None:
             self.model = LinearRegression(normalize=False)
         else:
@@ -769,6 +813,7 @@ class DLModel:
     def __init__(self, conf, dlconf=None):
         self.conf = conf
         self.dlconf = dlconf
+        self.name = "DL"
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
         start = time.time()
         if self.dlconf == None:
@@ -972,7 +1017,7 @@ def merge_csv_by_feild(train_df, test_df, testDf, base_df, feild_name ):
 
 
 class IDConfigs:
-    def __init__(self, target_as_log, normalize, save_predictions_with_data, generate_submission, log_target_only=True):
+    def __init__(self, target_as_log, normalize, save_predictions_with_data, generate_submission, log_target_only=True, analysis_type='base'):
         self.target_as_log = target_as_log
         self.normalize = normalize
         self.save_predictions_with_data = save_predictions_with_data
@@ -980,6 +1025,7 @@ class IDConfigs:
         self.parmsFromNormalization = None
         self.verify_data = False
         self.log_target_only = log_target_only
+        self.analysis_type = analysis_type
 
 
 class DefaultStats:
@@ -1401,243 +1447,6 @@ def find_range(rmsle, forecast):
     l = (forecast+1)/np.exp(rmsle) - 1
     return l, h
 
-def cal_rmsle(a,b):
-    val = np.abs(np.log(a+1) - np.log(b+1))
-    return val
-
-def is_forecast_improved(org, new, actual):
-    return cal_rmsle(org, actual) - cal_rmsle(new, actual) > 0
-
-
-def vote_based_forecast(forecasts, best_model_index, y_actual=None):
-    limit = 0.1
-    best_forecast = forecasts[:, best_model_index]
-
-    forecasts = np.sort(np.delete(forecasts, best_model_index, axis=1), axis=1)
-
-    final_forecast = np.zeros((forecasts.shape[0],))
-    same = 0
-    replaced = 0
-    averaged = 0
-
-    same_c = 0
-    replaced_c = 0
-    averaged_c = 0
-
-    data_train = []
-
-    for i in range(forecasts.shape[0]):
-        f_row = forecasts[i,]
-        min_diff_to_best = np.min([cal_rmsle(best_forecast[i], f) for f in f_row])
-        comb = list(itertools.combinations(f_row,2))
-        avg_error = scipy.stats.hmean([cal_rmsle(x,y) for (x,y) in comb])
-
-        if min_diff_to_best < limit:
-            final_forecast[i] = best_forecast[i]
-            same = same +1
-            if y_actual is not None:
-                same_c = same_c + 1 if is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]) else 0
-        else:
-            if avg_error < limit:
-                final_forecast[i] = np.median(f_row)
-                replaced = replaced +1
-                if y_actual is not None and is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]):
-                    replaced_c = replaced_c + 1
-                #print best_forecast[i], '->', final_forecast[i], y_actual[i], cal_rmsle(final_forecast[i], y_actual[i])
-            else:
-                final_forecast[i] = 0.6*best_forecast[i] + 0.4*scipy.stats.hmean(f_row)
-                averaged = averaged + 1 if is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]) else 0
-                if y_actual is not None and is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]):
-                    averaged_c = averaged_c + 1 if cal_rmsle(final_forecast[i], y_actual[i]) < 0.1 else 0
-        data_train.append([min_diff_to_best, avg_error, scipy.stats.hmean(f_row), np.median(f_row), np.std(f_row)])
-
-    print "same, replaced, averaged", same, replaced, averaged
-    print "same_c, replaced_c, averaged_c", same_c, replaced_c, averaged_c
-
-
-    X_all = np.column_stack([np.row_stack(data_train), best_forecast])
-    target_as_log = True
-    if target_as_log:
-        y_actual = transfrom_to_log(y_actual)
-
-    #we use 10% full data to train the ensamble and 30% for evalaution
-    no_of_training_instances = int(round(len(y_actual)*0.25))
-    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
-    y_actual_test = y_actual[no_of_training_instances:]
-
-    lr_model =linear_model.Lasso(alpha = 0.2)
-    lr_model.fit(X_train, y_train)
-    lr_forecast = lr_model.predict(X_test)
-    lr_forcast_revered = retransfrom_from_log(lr_forecast)
-    print "shapes", y_actual_test.shape, lr_forcast_revered.shape
-    calculate_accuracy("lr_forecast", y_actual_test, lr_forcast_revered)
-
-    return final_forecast
-
-    #ff = np.when(np.abs(best_model_index - best_forecast) < limit, best_forecast,
-    #)
-
-
-
-
-
-def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
-    start = time.time()
-
-    #first we will save all individual model results for reuse
-    data = np.column_stack([forecasts, y_actual])
-    to_saveDf =  pd.DataFrame(data, columns=['f'+str(i) for i in range(len(models))] + ["actual"])
-    to_saveDf.to_csv('individual_forecasts'+ str(conf.command) + '.csv', index=False)
-
-    if test:
-        rmsle_values = [m for m in models]
-    else:
-        rmsle_values = [m.rmsle for m in models]
-
-    best_forecast_index = np.argmin(rmsle_values)
-
-    print "rmsle values", rmsle_values
-
-    vf_start = time.time()
-    vote_forecast = vote_based_forecast(forecasts, best_forecast_index, y_actual)
-    calculate_accuracy("vote_forecast", y_actual, vote_forecast)
-    print "vf tooks", (time.time() - vf_start)
-
-
-
-
-    median_forecast = np.median(forecasts, axis=1)
-    calculate_accuracy("median_forecast", y_actual, median_forecast)
-
-    #hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
-    #calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
-
-    min_forecast = np.mean(forecasts, axis=1)
-    calculate_accuracy("min_forecast", y_actual, min_forecast)
-
-
-
-
-    #add few more features
-    use_features = False
-    if use_features:
-        X_all = np.column_stack([forecasts, median_forecast, test_df['Semana'],
-                             test_df['clients_combined_Mean'], test_df['Producto_ID_Demanda_uni_equil_Mean']])
-
-        forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])] \
-                             + ["Semana", "clients_combined_Mean", 'Producto_ID_Demanda_uni_equil_Mean']
-    else:
-        X_all = forecasts
-        forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])]
-
-
-    #removing NaN and inf if there is any
-    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
-    print "X_all"
-    check4nan(X_all)
-    print "Y_all"
-    check4nan(y_actual)
-
-    y_actual_saved = y_actual
-
-    target_as_log = True
-    if target_as_log:
-        y_actual = transfrom_to_log(y_actual)
-
-
-
-    #we use 10% full data to train the ensamble and 30% for evalaution
-    no_of_training_instances = int(round(len(y_actual)*0.25))
-    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
-    y_actual_test = y_actual_saved[no_of_training_instances:]
-
-    ensambles = []
-
-    rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
-    rfr.fit(X_train, y_train)
-    print_feature_importance(rfr.feature_importances_, forecasting_feilds)
-    rfr_forecast = rfr.predict(X_test)
-    rmsle = calculate_accuracy("rfr_forecast", y_actual_test, retransfrom_from_log(rfr_forecast))
-    ensambles.append((rmsle, rfr, "rfr ensamble"))
-
-    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
-    model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
-                            use_sklean=False, xgb_params=xgb_params)
-    #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-    #                                                  xgb_params=xgb_params,num_rounds=20)
-    xgb_forecast = model.predict(X_test)
-    rmsle = calculate_accuracy("xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
-    ensambles.append((rmsle, model, "xgboost ensamble"))
-
-
-    lr_model =linear_model.Lasso(alpha = 0.2)
-    lr_model.fit(X_train, y_train)
-    lr_forecast = lr_model.predict(X_test)
-    rmsle = calculate_accuracy("lr_forecast", y_actual_test, retransfrom_from_log(lr_forecast))
-    ensambles.append((rmsle, lr_model, "rfr ensamble"))
-
-
-
-    best_ensamble_index = np.argmin([t[0] for t in ensambles])
-    best_ensamble = ensambles[best_ensamble_index][1]
-    print "[IDF]Best Ensamble", ensambles[best_ensamble_index][2], ensambles[best_ensamble_index][0]
-
-
-    if submission_forecasts is not None:
-        median_forecast = np.median(submission_forecasts, axis=1)
-        if use_features:
-            list = [submission_forecasts, median_forecast, sub_df['Semana'],
-                             sub_df['clients_combined_Mean'], sub_df['Producto_ID_Demanda_uni_equil_Mean']]
-            print "sizes", [ a.shape for a in list]
-            sub_x_all = np.column_stack(list)
-        else:
-            sub_x_all = submission_forecasts
-
-        ensamble_forecast = best_ensamble.predict(sub_x_all)
-
-        to_save = np.column_stack((submission_ids, ensamble_forecast))
-        to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
-        to_saveDf = to_saveDf.fillna(0)
-        to_saveDf["id"] = to_saveDf["id"].astype(int)
-        submission_file = 'en_submission'+str(conf.command)+ '.csv'
-        to_saveDf.to_csv(submission_file, index=False)
-
-        print "Best Ensamble Submission Stats"
-        print to_saveDf.describe()
-
-
-
-
-    print "avg_models took ", (time.time() - start), "s"
-    '''
-    if len(models) >= 3:
-
-        print "toprmsle_valuesrmsle", rmsle_values
-        sorted_index = np.argsort(rmsle_values)
-        print "sorted_index", sorted_index
-        bestindexes = sorted_index[0:3]
-        print "top3indexes", bestindexes
-        top3forecasts = forecasts[:,bestindexes]
-
-        weighted_forecast = top3forecasts[:,0]*0.6+ top3forecasts[:,1]*0.25+ top3forecasts[:,2]*0.15
-        calculate_accuracy("weighted_forecast", y_actual, weighted_forecast)
-
-        weighted_forecast1 = top3forecasts[:,0]*0.5+ top3forecasts[:,1]*0.3+ top3forecasts[:,2]*0.2
-        calculate_accuracy("weighted_forecast1", y_actual, weighted_forecast1)
-        top3rmsle =  rmsle_values[top3forecasts]
-
-
-        #top3rmsle = forecasts[:,top3index]
-        l1, h1 = find_range(top3rmsle[0], top3forecasts[0])
-        l2, h2 = find_range(top3rmsle[1], top3forecasts[1])
-
-        math_based_forecast = np.where(l2 < h1, (l2-h1)/2, np.where(l1 < h2, (l1-h2)/2,top3forecasts) )
-        calculate_accuracy("math_based_forecast", y_actual, weighted_forecast1)
-        #if l2 < h1:(h1+l2)/2
-        #if l1 < h2:(h2+l1)/2
-        #else top3forecasts[2]
-
-        '''
 
 
 def create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D ):
@@ -1694,6 +1503,9 @@ def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNorm
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
     to_saveDf = to_saveDf.fillna(0)
     to_saveDf["id"] = to_saveDf["id"].astype(int)
+
+    save_file(conf.analysis_type, conf.command, to_saveDf, "submission")
+
     submission_file = 'submission'+str(conf.command)+ '.csv'
     to_saveDf.to_csv(submission_file, index=False)
 

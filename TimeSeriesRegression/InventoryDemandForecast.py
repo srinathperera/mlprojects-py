@@ -25,6 +25,7 @@ import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
+
 command = -2
 if len(sys.argv) > 1:
     command = int(sys.argv[1])
@@ -32,6 +33,8 @@ if len(sys.argv) > 2:
     test_run = (int(sys.argv[2]) == 1)
 else:
     test_run = False
+
+analysis_type = 'agr_cat'
 
 use_preprocessed_file = False
 save_preprocessed_file = False
@@ -98,6 +101,7 @@ print "read took %f" %(r_time-s_time)
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.log_target_only = False
 conf.command = command
+conf.analysis_type = analysis_type
 
 
 #df = remove_rare_categories(df)
@@ -185,11 +189,22 @@ if verify_sub_data:
         if not np.allclose(train_df[f], testDf[f], equal_nan=True):
             print "#### Does not match", f
 
-#create and save submission based on ensamble
+#create and save predictions for each model so we can build an ensamble later
 if forecasts.shape[1] > 1:
     ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
-    #avg models also save the submission
-    avg_models(conf, models, forecasts, y_actual_test, test_df, submission_forecasts=kaggale_predicted_list, submission_ids=ids, sub_df=testDf)
+    submission_data = np.column_stack([ids, kaggale_predicted_list])
+    model_names = [m.name for m in models]
+
+        #first we will save all individual model results for reuse
+    model_rmsle = [m.rmsle for m in models]
+    model_forecasts_data = np.column_stack([forecasts, y_actual_test])
+    to_saveDf =  pd.DataFrame(model_forecasts_data, columns=model_names + ["actual"])
+    save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=model_rmsle)
+
+
+    to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + model_names])
+    save_file(analysis_type, command, to_saveDf, 'model_submissions')
+
 
 
 m_time = time.time()

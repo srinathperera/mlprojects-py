@@ -711,6 +711,8 @@ def parse_feature_importance():
     print feature_importance_df
 
 
+
+'''
 def test_voting_ensamble():
     #[0.79032504607649889, 0.82079594626169383, 0.8203164757712077, 0.83624063520333292]
 
@@ -731,6 +733,7 @@ def test_voting_ensamble():
 
 #parse_feature_importance()
 test_voting_ensamble()
+'''
 
 #find_similar_products()
 
