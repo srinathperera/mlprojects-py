@@ -121,7 +121,7 @@ def load_file_with_metadata(model_type, command, name):
     #file = open(metadata_file, 'rb')
     #metadata = pickle.load(file)
 
-    metadata = {[0.82079594626169383, 0.8203164757712077, 0.83624063520333292, 0.63268]}
+    metadata = {'rmsle':[0.82079594626169383, 0.8203164757712077, 0.83624063520333292, 0.63268]}
 
     return load_df, metadata
 
