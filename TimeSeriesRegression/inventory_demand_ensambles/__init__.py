@@ -93,7 +93,6 @@ def vote_based_forecast(forecasts, best_model_index, y_actual=None):
     best_forecast = forecasts[:, best_model_index]
 
     forecasts = np.sort(np.delete(forecasts, best_model_index, axis=1), axis=1)
-
     forecasts = np.where(forecasts <=0, 0.1, forecasts)
 
     final_forecast = np.zeros((forecasts.shape[0],))
@@ -145,8 +144,9 @@ def vote_based_forecast(forecasts, best_model_index, y_actual=None):
 
 def vote_with_lr(conf, forecasts, best_model_index, y_actual):
     best_forecast = forecasts[:, best_model_index]
-
     forecasts = np.sort(np.delete(forecasts, best_model_index, axis=1), axis=1)
+    forecasts = np.where(forecasts <=0, 0.1, forecasts)
+
     data_train = []
 
     for i in range(forecasts.shape[0]):
