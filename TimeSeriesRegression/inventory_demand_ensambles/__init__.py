@@ -43,7 +43,7 @@ class SimpleAvgEnsamble:
         self.name = "SimpleAvg_"+method
     def fit(self, forecasts, best_rmsle_index, y_actual):
         forecast = self.predict(forecasts, best_rmsle_index)
-        calculate_accuracy(self.method + "_forecast", y_actual, forecast)
+        calculate_accuracy(self.method + "_forecast " + str(self.conf.command), y_actual, forecast)
 
         #hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
         #calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
@@ -71,7 +71,7 @@ class BestPairEnsamble:
 
         best_index = np.argmin(rmsle_values)
         self.best_pair = comb[best_index]
-        print "best mean pair value, ", str(self.best_pair), 'rmsle=', rmsle_values[best_index]
+        print "best mean pair value, " + str(self.conf.command), str(self.best_pair), 'rmsle=', rmsle_values[best_index]
 
         return forecast
 
@@ -170,7 +170,7 @@ def vote_with_lr(conf, forecasts, best_model_index, y_actual):
     lr_model.fit(X_train, y_train)
     lr_forecast = lr_model.predict(X_test)
     lr_forcast_revered = retransfrom_from_log(lr_forecast)
-    calculate_accuracy("vote__lr_forecast", y_actual_test, lr_forcast_revered)
+    calculate_accuracy("vote__lr_forecast " + str(conf.command), y_actual_test, lr_forcast_revered)
 
     return lr_forcast_revered
 

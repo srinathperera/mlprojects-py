@@ -63,7 +63,7 @@ def do_ensamble(conf, forecasts, best_forecast_index, y_actual):
         en.fit(forecasts, best_forecast_index, y_actual)
 
     vote_forecast = vote_based_forecast(forecasts, best_forecast_index, y_actual)
-    calculate_accuracy("vote_forecast", y_actual, vote_forecast)
+    calculate_accuracy("vote_forecast "+ str(conf.command), y_actual, vote_forecast)
 
     vote_with_lr(conf, forecasts, best_forecast_index, y_actual)
 
