@@ -117,12 +117,14 @@ def load_file(model_type, command, name):
 def load_file_with_metadata(model_type, command, name):
     load_df = load_file(model_type, command, name)
 
-    #metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
-    #file = open(metadata_file, 'rb')
-    #metadata = pickle.load(file)
+    hardcode = True
 
-    metadata = {'rmsle':[0.82079594626169383, 0.8203164757712077, 0.83624063520333292, 0.63268]}
-
+    if hardcode:
+        metadata = {'rmsle':[0.82079594626169383, 0.8203164757712077, 0.83624063520333292, 0.63268]}
+    else:
+        metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
+        file = open(metadata_file, 'rb')
+        metadata = pickle.load(file)
     return load_df, metadata
 
 

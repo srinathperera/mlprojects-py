@@ -94,6 +94,8 @@ def vote_based_forecast(forecasts, best_model_index, y_actual=None):
 
     forecasts = np.sort(np.delete(forecasts, best_model_index, axis=1), axis=1)
 
+    forecasts = np.where(forecasts <=0, 0.1, forecasts)
+
     final_forecast = np.zeros((forecasts.shape[0],))
     same = 0
     replaced = 0
