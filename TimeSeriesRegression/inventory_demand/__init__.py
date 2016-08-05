@@ -117,7 +117,7 @@ def load_file(model_type, command, name):
 def load_file_with_metadata(model_type, command, name):
     load_df = load_file(model_type, command, name)
 
-    hardcode = True
+    hardcode = False
 
     if hardcode:
         metadata = {'rmsle':[0.82079594626169383, 0.8203164757712077, 0.83624063520333292, 0.63268]}
@@ -128,7 +128,16 @@ def load_file_with_metadata(model_type, command, name):
     return load_df, metadata
 
 
+def save_submission_file(submission_file, ids, submissions):
+    start = time.time()
+    to_save = np.column_stack((ids, submissions))
+    to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+    to_saveDf = to_saveDf.fillna(0)
+    to_saveDf["id"] = to_saveDf["id"].astype(int)
+    to_saveDf.to_csv(submission_file, index=False)
 
+    print "Submission done for ", to_saveDf.shape[0], "file", submission_file
+    print_time_took(start, "create_submission took ")
 
 
 def find_alt_for_missing(to_merge, seen_with_stats):
@@ -1513,22 +1522,20 @@ def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNorm
 
     print "log retransform", kaggale_test.shape
 
-    to_save = np.column_stack((ids, kaggale_predicted))
-    to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
-    to_saveDf = to_saveDf.fillna(0)
-    to_saveDf["id"] = to_saveDf["id"].astype(int)
-
-    save_file(conf.analysis_type, conf.command, to_saveDf, "submission")
-
     submission_file = 'submission'+str(conf.command)+ '.csv'
-    to_saveDf.to_csv(submission_file, index=False)
+    save_submission_file(submission_file, ids, kaggale_predicted)
+
+    #to_save = np.column_stack((ids, kaggale_predicted))
+    #to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+    #to_saveDf = to_saveDf.fillna(0)
+    #to_saveDf["id"] = to_saveDf["id"].astype(int)
+    #save_file(conf.analysis_type, conf.command, to_saveDf, "submission")
+    #to_saveDf.to_csv(submission_file, index=False)
 
     #print "Best Model Submission Stats"
     #print_submission_data(sub_df=to_saveDf, command=conf.command)
-
-    print "Submission done for ", to_saveDf.shape[0], "file", submission_file
-
-    print "create_submission took ", (time.time() - start), "s"
+#    print "Submission done for ", to_saveDf.shape[0], "file", submission_file
+#    print "create_submission took ", (time.time() - start), "s"
 
     return kaggale_predicted
 

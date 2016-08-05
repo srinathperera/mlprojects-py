@@ -72,7 +72,6 @@ class BestPairEnsamble:
         best_index = np.argmin(rmsle_values)
         self.best_pair = comb[best_index]
         print "best mean pair value, " + str(self.conf.command), str(self.best_pair), 'rmsle=', rmsle_values[best_index]
-
         return forecast
 
     def predict(self, forecasts, best_rmsle_index):
