@@ -191,17 +191,17 @@ if verify_sub_data:
 
 #create and save predictions for each model so we can build an ensamble later
 if forecasts.shape[1] > 1:
-    ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
-    submission_data = np.column_stack([ids, kaggale_predicted_list])
     model_names = [m.name for m in models]
 
         #first we will save all individual model results for reuse
     model_rmsle = [m.rmsle for m in models]
     model_forecasts_data = np.column_stack([forecasts, y_actual_test])
     to_saveDf =  pd.DataFrame(model_forecasts_data, columns=model_names + ["actual"])
-    save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=model_rmsle)
+    metadata_map = {'rmsle':model_rmsle}
+    save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=metadata_map)
 
-
+    ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
+    submission_data = np.column_stack([ids, kaggale_predicted_list])
     to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + model_names])
     save_file(analysis_type, command, to_saveDf, 'model_submissions')
 

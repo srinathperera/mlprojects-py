@@ -352,6 +352,21 @@ def show_error_distribution(errors):
     plt.savefig('error_dist.png')
 
 
+def show_error_distribution_all_forecasts(forecasts_df):
+    column_names = list(forecasts_df)
+
+
+    #error dist on one
+    #error by id on one
+    #error by value one one
+
+    create_fig()
+    plt.hist(errors, 50, normed=1, facecolor='green', alpha=0.75)
+    plt.xlabel('Error')
+    plt.ylabel('Frequency')
+    plt.title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
+    plt.tight_layout()
+    plt.savefig('error_dist.png')
 
 
 

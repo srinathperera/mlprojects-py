@@ -80,6 +80,14 @@ def fillna_if_feildexists(df, feild_name, replacement):
     return df
 
 
+def print_time_took(start_time, label, silient_on_small=False):
+    time_took = time.time() - start_time
+    if silient_on_small:
+        if time_took > 10:
+            print label, "took", time_took, "s"
+    else:
+        print label, "took", time_took, "s"
+
 '''
 We can switch to XGboost files later if needed
 http://xgboost.readthedocs.io/en/latest/python/python_intro.html
@@ -109,9 +117,12 @@ def load_file(model_type, command, name):
 def load_file_with_metadata(model_type, command, name):
     load_df = load_file(model_type, command, name)
 
-    metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
-    file = open(metadata_file, 'wb')
-    metadata = pickle.load(file)
+    #metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
+    #file = open(metadata_file, 'rb')
+    #metadata = pickle.load(file)
+
+    metadata = {[0.82079594626169383, 0.8203164757712077, 0.83624063520333292, 0.63268]}
+
     return load_df, metadata
 
 
@@ -1436,9 +1447,10 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
 
 def calculate_accuracy(label, y_actual_test, y_forecast):
-    error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_forecast, 10)
+    #error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_forecast, 10)
     rmsle = calculate_rmsle(y_actual_test, y_forecast)
-    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + label, error_ac, rmsep, mape, rmse, rmsle)
+    #print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + label, error_ac, rmsep, mape, rmse, rmsle)
+    print "%s :rmsle=%.5f" %(label, rmsle)
     return rmsle
 
 
