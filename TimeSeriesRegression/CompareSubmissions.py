@@ -31,7 +31,7 @@ if len(sys.argv) > 1:
     command = int(sys.argv[1])
 
 np.set_printoptions(precision=1, suppress=True)
-pd.options(scipen = 50)
+pd.set_option('precision', 5)
 
 dir = 'submissions'
 files_list = [f for f in listdir(dir) if str(f).endswith(".csv")]
