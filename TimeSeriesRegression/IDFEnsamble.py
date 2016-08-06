@@ -131,6 +131,7 @@ def run_ensambles(rcommand):
         submissions_ids = None
         submissions =None
     best_forecast_index = find_best_forecast(forecasts, y_actual)
-    do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids ,submissions)
+    #do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids ,submissions)
+    blend_models(conf, forecasts, best_forecast_index, y_actual, submissions_ids, submissions)
 
 run_ensambles(command)

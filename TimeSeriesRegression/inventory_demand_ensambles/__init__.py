@@ -177,7 +177,7 @@ def vote_with_lr(conf, forecasts, best_model_index, y_actual):
     print_time_took(start, "vote_with_lr")
     return lr_forcast_revered
 
-def blend_models(conf, forecasts, best_model_index, y_actual):
+def blend_models(conf, forecasts, best_model_index, y_actual, submissions_ids, submissions):
     X_all = forecasts
     forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])]
 
@@ -192,14 +192,23 @@ def blend_models(conf, forecasts, best_model_index, y_actual):
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
     y_actual_test = y_actual_saved[no_of_training_instances:]
 
-    ensambles = []
-
     rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast_as_log = rfr.predict(X_test)
     rfr_forecast = retransfrom_from_log(rfr_forecast_as_log)
     rmsle = calculate_accuracy("rfr_forecast", y_actual_test, rfr_forecast)
+
+    if submissions_ids is not None and submissions is not None:
+        submissions = np.where(np.isnan(submissions), 0, np.where(np.isinf(submissions), 10000, submissions))
+        rfr_ensamble_forecasts = rfr.predict(submissions)
+        if conf.target_as_log:
+            rfr_ensamble_forecasts = retransfrom_from_log(rfr_ensamble_forecasts)
+        save_submission_file("rfr_blend_submission.csv", submissions_ids, rfr_ensamble_forecasts)
+    else:
+        print "submissions not found"
+
+
     return rfr_forecast, rmsle
 
 
