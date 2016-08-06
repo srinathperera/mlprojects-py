@@ -41,12 +41,15 @@ class SimpleAvgEnsamble:
         self.conf = conf
         self.method = method
         self.name = "SimpleAvg_"+method
+
     def fit(self, forecasts, best_rmsle_index, y_actual):
+        start = time.time()
         forecast = self.predict(forecasts, best_rmsle_index)
         calculate_accuracy(self.method + "_forecast " + str(self.conf.command), y_actual, forecast)
 
         #hmean_forecast = scipy.stats.hmean(forecasts, axis=1)
         #calculate_accuracy("hmean_forecast", y_actual, hmean_forecast)
+        print_time_took(start, self.method + "_forecast " + str(self.conf.command))
         return forecast
 
     def predict(self, forecasts, best_rmsle_index):
@@ -62,6 +65,7 @@ class BestPairEnsamble:
         self.method = method
         self.name = "SimpleAvg_"+method
     def fit(self, forecasts, best_rmsle_index, y_actual):
+        start = time.time()
         comb = list(itertools.combinations(range(forecasts.shape[1]),2))
         rmsle_values = []
         for (a,b) in comb:
@@ -72,6 +76,7 @@ class BestPairEnsamble:
         best_index = np.argmin(rmsle_values)
         self.best_pair = comb[best_index]
         print "best mean pair value, " + str(self.conf.command), str(self.best_pair), 'rmsle=', rmsle_values[best_index]
+        print_time_took(start, self.method + "_forecast " + str(self.conf.command))
         return forecast
 
     def predict(self, forecasts, best_rmsle_index):
@@ -88,6 +93,7 @@ class BestPairEnsamble:
 
 
 def vote_based_forecast(forecasts, best_model_index, y_actual=None):
+    start = time.time()
     limit = 0.1
     best_forecast = forecasts[:, best_model_index]
 
@@ -117,7 +123,7 @@ def vote_based_forecast(forecasts, best_model_index, y_actual=None):
             if y_actual is not None:
                 same_c = same_c + 1 if is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]) else 0
         else:
-            if avg_error < limit:
+            if avg_error < 2*limit:
                 final_forecast[i] = np.median(f_row)
                 replaced = replaced +1
                 if y_actual is not None and is_forecast_improved(best_forecast[i], final_forecast[i], y_actual[i]):
@@ -132,9 +138,7 @@ def vote_based_forecast(forecasts, best_model_index, y_actual=None):
 
     print "same, replaced, averaged", same, replaced, averaged
     print "same_c, replaced_c, averaged_c", same_c, replaced_c, averaged_c
-
-
-
+    print_time_took(start, "vote_based_forecast")
     return final_forecast
 
     #ff = np.when(np.abs(best_model_index - best_forecast) < limit, best_forecast,
@@ -142,6 +146,7 @@ def vote_based_forecast(forecasts, best_model_index, y_actual=None):
 
 
 def vote_with_lr(conf, forecasts, best_model_index, y_actual):
+    start = time.time()
     best_forecast = forecasts[:, best_model_index]
     forecasts = np.sort(np.delete(forecasts, best_model_index, axis=1), axis=1)
     forecasts = np.where(forecasts <=0, 0.1, forecasts)
@@ -170,7 +175,7 @@ def vote_with_lr(conf, forecasts, best_model_index, y_actual):
     lr_forecast = lr_model.predict(X_test)
     lr_forcast_revered = retransfrom_from_log(lr_forecast)
     calculate_accuracy("vote__lr_forecast " + str(conf.command), y_actual_test, lr_forcast_revered)
-
+    print_time_took(start, "vote_with_lr")
     return lr_forcast_revered
 
 

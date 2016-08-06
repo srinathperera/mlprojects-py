@@ -85,8 +85,8 @@ def do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids,
     print "vf tooks", (time.time() - vf_start)
 
     if submissions_ids is not None and submissions is not None:
-        best_pair_ensamble_forecasts = ensmbales[2].predict(submissions)
-        save_submission_file("best_pair_submission", submissions_ids, best_pair_ensamble_forecasts)
+        best_pair_ensamble_forecasts = ensmbales[2].predict(submissions, best_forecast_index)
+        save_submission_file("best_pair_submission.csv", submissions_ids, best_pair_ensamble_forecasts)
     else:
         print "submissions not found"
 
@@ -95,6 +95,7 @@ def do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids,
 
 
 def find_best_forecast(forecasts, y_actual):
+    start = time.time()
     forecasts_rmsle = []
     for i in range(forecasts.shape[1]):
         rmsle = calculate_accuracy("vote_forecast "+ str(i), y_actual, forecasts[:, i])
@@ -102,6 +103,7 @@ def find_best_forecast(forecasts, y_actual):
 
     best_findex = np.argmin(forecasts_rmsle)
     print "best single model forecast is", best_findex, "rmsle=", forecasts_rmsle[best_findex]
+    print_time_took(start, "find_best_forecast")
     return best_findex
 
 
