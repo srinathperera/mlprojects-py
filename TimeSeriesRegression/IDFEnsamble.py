@@ -100,7 +100,7 @@ def find_best_forecast(forecasts, y_actual):
     for i in range(forecasts.shape[1]):
         rmsle = calculate_accuracy("vote_forecast "+ str(i), y_actual, forecasts[:, i])
         forecasts_rmsle.append(rmsle)
-        print "forecast "+str(i)+" rmsle="+ rmsle + " stats\n", pd.Series(forecasts[i]).describe()
+        print "forecast "+str(i)+" rmsle=", rmsle, " stats\n", pd.Series(forecasts[i]).describe()
 
     best_findex = np.argmin(forecasts_rmsle)
     print "best single model forecast is", best_findex, "rmsle=", forecasts_rmsle[best_findex]
