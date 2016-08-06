@@ -136,6 +136,9 @@ def save_submission_file(submission_file, ids, submissions):
     to_saveDf["id"] = to_saveDf["id"].astype(int)
     to_saveDf.to_csv(submission_file, index=False)
 
+    print "## Submissions details ##"
+    print to_saveDf.describe()
+
     print "Submission done for ", to_saveDf.shape[0], "file", submission_file
     print_time_took(start, "create_submission took ")
 
@@ -426,16 +429,14 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
 
 #TODO fix defaults
 
-def modeloutput2predictions(model_forecast, parmsFromNormalization, negative_allowed=False):
+def modeloutput2predictions(model_forecast, parmsFromNormalization):
     y_pred_corrected = undoPreprocessing(model_forecast, parmsFromNormalization)
-    zero_frecasts = np.where(y_pred_corrected < 0)[0]
-    print "zero forecasts=%d, %f precent" %(zero_frecasts.shape[0], float(zero_frecasts.shape[0])/y_pred_corrected.shape[0])
-    if not negative_allowed:
-        for i in range(y_pred_corrected.shape[0]):
-            if y_pred_corrected[i] < 0:
-                #y_pred_corrected[i] = default_forecast[i]
-                y_pred_corrected[i] = 1
-        #y_pred_corrected = np.where(y_pred_corrected < 0, 1, y_pred_corrected)
+#    zero_frecasts = np.where(y_pred_corrected < 0)[0]
+#    print "zero forecasts=%d, %f precent" %(zero_frecasts.shape[0], float(zero_frecasts.shape[0])/y_pred_corrected.shape[0])
+#    if not negative_allowed:
+#        for i in range(y_pred_corrected.shape[0]):
+#            if y_pred_corrected[i] < 0:
+#                y_pred_corrected[i] = 1
     return y_pred_corrected
 
 
@@ -868,11 +869,14 @@ def drop_column(df1, df2, feild_name):
 
 
 def transfrom_to_log(data):
-    print "convert to log"
-    return np.log(data + 1)
+    print "->to log\n", pd.Series(data).describe()
+    data_as_log = np.log(data + 1)
+    return data_as_log
 
 def retransfrom_from_log(data):
-    return np.exp(data) - 1
+    data_from_log =  np.exp(data) - 1
+    print "<-from log\n", pd.Series(data_from_log).describe()
+    return data_from_log
 
 
 class InventoryDemandPredictor:
@@ -929,6 +933,8 @@ def check_accuracy(label, model, X_test, parmsFromNormalization, target_as_log, 
     y_pred_final = modeloutput2predictions(y_pred_raw, parmsFromNormalization=parmsFromNormalization)
     if target_as_log:
         y_pred_final = retransfrom_from_log(y_pred_final)
+    else:
+        print 'no log retransform'
 
     error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_pred_final, 10)
     rmsle = calculate_rmsle(y_actual_test, y_pred_final)

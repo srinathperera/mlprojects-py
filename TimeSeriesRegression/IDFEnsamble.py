@@ -104,6 +104,10 @@ def find_best_forecast(forecasts, y_actual):
     best_findex = np.argmin(forecasts_rmsle)
     print "best single model forecast is", best_findex, "rmsle=", forecasts_rmsle[best_findex]
     print_time_took(start, "find_best_forecast")
+
+    print "best single model forecast stats\n", pd.Series(forecasts[best_findex]).describe()
+    print "y actual\n", pd.Series(y_actual).describe()
+
     return best_findex
 
 

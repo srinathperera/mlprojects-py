@@ -363,21 +363,22 @@ def show_error_distribution_all_forecasts(forecasts_df):
 
     create_fig()
 
-    plt.subplot(331)
-    plt.xlabel('Error')
-    plt.ylabel('Frequency')
+    count = 331
 
     for i, e in enumerate(error_list):
+        count = count + 1
+        plt.subplot(count)
+        plt.xlabel('Error ' + column_names[i])
+        plt.ylabel('Frequency')
         plt.hist(e, 50, normed=1, facecolor=colors_list[i], alpha=0.75)
 
 
-    x = range(forecasts_df.shape[0])
+    #x = range(forecasts_df.shape[0])
+    #draw_scatterplot([(x, e) for e in error_list], "Id", 332, c=colors_list)
 
-
-    draw_scatterplot([(x, e) for e in error_list], "Id", 332, c=colors_list)
-
-    draw_scatterplot([(forecasts_df['actual'], e) for e in error_list], "Actual Value", 333, c=colors_list)
-
+    for i, e in enumerate(error_list):
+        count = count + 1
+        draw_scatterplot([(forecasts_df['actual'], e)] , "Actual Value "+ column_names[i], count, c=colors_list)
 
     plt.tight_layout()
     plt.savefig('error_dist.png')

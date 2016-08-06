@@ -12,6 +12,7 @@ create_fig.fig_number = 0
 def draw_scatterplot_one(x,y , x_title, subplotnum, y_title=None, c=None):
     draw_scatterplot([(x,y)], x_title, subplotnum, y_title=y_title, c=c)
 
+
 def draw_scatterplot(data_sets, x_title, subplotnum, y_title=None, c=None):
     plt.subplot(subplotnum)
     plt.xlabel(x_title, fontsize=18)
@@ -25,6 +26,8 @@ def draw_scatterplot(data_sets, x_title, subplotnum, y_title=None, c=None):
             plt.scatter(d[0], d[1], alpha=0.3, s=point_size)
         else:
             plt.scatter(d[0], d[1], alpha=0.3, s=point_size, c=c[i])
+
+
 def draw_error_bars(pltnum, x, mean, ulimit, llimit, x_label, y_label=None, do_log=True):
     ax = plt.subplot(pltnum)
     plt.xlabel(x_label, fontsize=18)
