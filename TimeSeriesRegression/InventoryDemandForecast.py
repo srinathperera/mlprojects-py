@@ -199,12 +199,16 @@ if forecasts.shape[1] > 1:
     to_saveDf =  pd.DataFrame(model_forecasts_data, columns=model_names + ["actual"])
     metadata_map = {'rmsle':model_rmsle}
     save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=metadata_map)
+    print "## model_forecasts ##"
+    print to_saveDf.describe()
+
 
     ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
     submission_data = np.column_stack([ids, kaggale_predicted_list])
     to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + model_names])
     save_file(analysis_type, command, to_saveDf, 'model_submissions')
-
+    print "## model_submissions ##"
+    print to_saveDf.describe()
 
 
 m_time = time.time()

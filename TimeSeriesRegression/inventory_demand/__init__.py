@@ -1494,9 +1494,14 @@ def create_per_model_submission(conf, models, testDf, parmsFromNormalization, pa
 
     print "kaggale_test", kaggale_test.shape
 
-    kaggale_predicted_raw_list = [m.predict(kaggale_test) for m in models]
-    kaggale_predicted_list = [modeloutput2predictions(kpr, parmsFromNormalization=parmsFromNormalization)
-                              for kpr in kaggale_predicted_raw_list]
+    kaggale_predicted_list = []
+    kaggale_predicted_as_log_raw_list = [m.predict(kaggale_test) for m in models]
+    for kpr in kaggale_predicted_as_log_raw_list:
+        kaggale_predicted = modeloutput2predictions(kpr, parmsFromNormalization=parmsFromNormalization)
+        if conf.target_as_log:
+            kaggale_predicted = retransfrom_from_log(kaggale_predicted)
+        kaggale_predicted_list.append(kaggale_predicted)
+
     return ids, np.column_stack(kaggale_predicted_list)
 
 
