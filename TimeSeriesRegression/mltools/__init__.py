@@ -354,7 +354,7 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
 
 #    score = model.evaluate(X_test, y_test, batch_size=16)
 
-    loss = model.evaluate(X_test, y_test, batch_size=16, verbose=True)
+    #loss = model.evaluate(X_test, y_test, batch_size=16, verbose=True)
 
     #print("DL Loss", "{:.6f}".format(loss))
     y_pred = model.predict(X_test)

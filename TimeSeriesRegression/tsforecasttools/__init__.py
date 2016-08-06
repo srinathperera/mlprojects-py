@@ -194,8 +194,8 @@ def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use
     test_data = xgb.DMatrix(X_test, Y_test)
     evallist  = [(test_data,'eval'), (train_data,'train')]
 
-    if xgb_params == None:
-        xgb_params = get_default_xgboost_params()
+    #if xgb_params == None:
+    #    xgb_params = get_default_xgboost_params()
 
     if not use_cv:
         num_rounds = 10
