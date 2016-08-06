@@ -100,6 +100,7 @@ def find_best_forecast(forecasts, y_actual):
     for i in range(forecasts.shape[1]):
         rmsle = calculate_accuracy("vote_forecast "+ str(i), y_actual, forecasts[:, i])
         forecasts_rmsle.append(rmsle)
+        print "forecast "+str(i)+" rmsle="+ rmsle + " stats\n", pd.Series(forecasts[i]).describe()
 
     best_findex = np.argmin(forecasts_rmsle)
     print "best single model forecast is", best_findex, "rmsle=", forecasts_rmsle[best_findex]
@@ -116,7 +117,7 @@ def run_ensambles(rcommand):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
     conf.command=-2
 
-    forecasts_df = load__from_store('agr_cat', "model_forecasts")
+    forecasts_df = load__from_store('agr_cat1', "model_forecasts")
     y_actual = forecasts_df['actual'].values.copy()
     forecasts_df = drop_feilds_1df(forecasts_df, ['actual'])
     forecasts = forecasts_df.values
