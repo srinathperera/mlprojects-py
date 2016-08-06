@@ -77,10 +77,10 @@ def do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids,
     for en in ensmbales:
         en.fit(forecasts, best_forecast_index, y_actual)
 
-    vote_forecast = vote_based_forecast(forecasts, best_forecast_index, y_actual)
-    calculate_accuracy("vote_forecast "+ str(conf.command), y_actual, vote_forecast)
+    #vote_forecast = vote_based_forecast(forecasts, best_forecast_index, y_actual)
+    #calculate_accuracy("vote_forecast "+ str(conf.command), y_actual, vote_forecast)
 
-    vote_with_lr(conf, forecasts, best_forecast_index, y_actual)
+    #vote_with_lr(conf, forecasts, best_forecast_index, y_actual)
 
     print "vf tooks", (time.time() - vf_start)
 

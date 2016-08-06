@@ -6,6 +6,7 @@ from mltools import calculate_rmsle
 import time
 
 from mlpreprocessing import df2feather, feather2df
+from inventory_demand import *
 
 
 def fill_in_missing_dates(df, date_col_name, other_col):
@@ -26,20 +27,14 @@ def fill_in_missing_dates(df, date_col_name, other_col):
 
     return np.row_stack(new_data)
 
+def test_xgboost_configs():
+    xgb_params_list = create_xgboost_params(0, maxdepth=[3], eta=[0.1], min_child_weight=[5],
+                          gamma=[0.5, 0.3, 0.1, 0], subsample=[0.5], colsample_bytree=[0.5],
+                          reg_alpha=[0], reg_lambda=[0])
+    for c in xgb_params_list:
+        print c
+    print "xgb count", len(xgb_params_list)
 
-
-
-
-
-    #df.set_index(date_col_name,drop=True,inplace=True)
-    #df.index = pd.DatetimeIndex(df.index)
-    #d = datetime.now().date()
-    #d2 = d - timedelta(days = days_back)
-    #idx = pd.date_range(d2, d, freq = "D")
-    #df = df.reindex(idx,fill_value=fill_value)
-    #df[date_col_name] = pd.DatetimeIndex(df.index)
-
-    return df
 
 #list = np.array(range(100))
 
@@ -88,8 +83,10 @@ fr_time = time.time()
 #      %((df_time-start), (fw_time-df_time), (fr_time- fw_time), npw_time-fr_time, npr_time-npw_time)
 #print (df_time-time), (fw_time-df_time), (fr_time- fw_time)
 
-sub = pd.read_csv('/Users/srinath/Desktop/submission.csv')
-kaggale_predicted=sub['Demanda_uni_equil']
-kaggale_predicted = np.where(kaggale_predicted < 0, 0, np.round(kaggale_predicted))
-to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
-np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
+#sub = pd.read_csv('/Users/srinath/Desktop/submission.csv')
+#kaggale_predicted=sub['Demanda_uni_equil']
+#kaggale_predicted = np.where(kaggale_predicted < 0, 0, np.round(kaggale_predicted))
+#to_save = np.column_stack((np.array(list(range(len(kaggale_predicted)))), kaggale_predicted))
+#np.savetxt('submission.csv', to_save, delimiter=',', header="id,Demanda_uni_equil", fmt='%d')   # X is an array
+
+test_xgboost_configs()

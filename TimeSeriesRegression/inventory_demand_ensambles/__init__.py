@@ -164,7 +164,6 @@ def vote_with_lr(conf, forecasts, best_model_index, y_actual):
     X_all = np.column_stack([np.row_stack(data_train), best_forecast])
     if conf.target_as_log:
         y_actual = transfrom_to_log(y_actual)
-
     #we use 10% full data to train the ensamble and 30% for evalaution
     no_of_training_instances = int(round(len(y_actual)*0.25))
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)

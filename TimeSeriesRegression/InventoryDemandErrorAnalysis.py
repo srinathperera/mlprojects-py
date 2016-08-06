@@ -354,21 +354,37 @@ def show_error_distribution(errors):
 
 def show_error_distribution_all_forecasts(forecasts_df):
     column_names = list(forecasts_df)
-
+    error_list = [calculate_error(forecasts_df['actual'], forecasts_df[c]) for c in column_names[:-1]]
 
     #error dist on one
     #error by id on one
     #error by value one one
+    colors_list = ['r', 'b', 'g', 'y','c', 'm', 'k']
 
     create_fig()
-    plt.hist(errors, 50, normed=1, facecolor='green', alpha=0.75)
+
+    plt.subplot(331)
     plt.xlabel('Error')
     plt.ylabel('Frequency')
-    plt.title(r'$\mathrm{Histogram\ of\ IQ:}\ \mu=100,\ \sigma=15$')
+
+    for i, e in enumerate(error_list):
+        plt.hist(e, 50, normed=1, facecolor=colors_list[i], alpha=0.75)
+
+
+    x = range(forecasts_df.shape[0])
+
+
+    draw_scatterplot([(x, e) for e in error_list], "Id", 332, c=colors_list)
+
+    draw_scatterplot([(forecasts_df['actual'], e) for e in error_list], "Actual Value", 333, c=colors_list)
+
+
     plt.tight_layout()
     plt.savefig('error_dist.png')
 
 
+def calculate_error(forecast, actual):
+    return np.log(forecast + 1) - np.log(actual + 1)
 
 
 
@@ -422,7 +438,10 @@ def test_scatter_plot():
     plt.savefig('test.png')
 
 
-test_error_analysis()
+#test_error_analysis()
+
+forecasts_df = pd.read_csv('/Users/srinath/code/workspace/mlprojects-py/TimeSeriesRegression/agr_cat1/model_forecasts6.csv')
+show_error_distribution_all_forecasts(forecasts_df)
 
 #show_error_by_features()
 #show_timelines_toperrors()

@@ -76,13 +76,13 @@ Cliente_ID 880604 coverage 0.00190191584674 2015152015
     models.append(model_week)
 
     model_agency = Sequential()
-    model_agency.add(Embedding(552, 5, input_length=1))
-    model_agency.add(Reshape(dims=(5,)))
+    model_agency.add(Embedding(552, 2, input_length=1))
+    model_agency.add(Reshape(dims=(2,)))
     models.append(model_agency)
 
     model_canal = Sequential()
-    model_canal.add(Embedding(9, 3, input_length=1))
-    model_canal.add(Reshape(dims=(3,)))
+    model_canal.add(Embedding(9, 2, input_length=1))
+    model_canal.add(Reshape(dims=(2,)))
     models.append(model_canal)
 
     #model_ruta_sak = Sequential()
@@ -96,24 +96,24 @@ Cliente_ID 880604 coverage 0.00190191584674 2015152015
     #models.append(model_client)
 
     model_product = Sequential()
-    model_product.add(Embedding(1799, 10, input_length=1))
-    model_product.add(Reshape(dims=(10,)))
+    model_product.add(Embedding(1799, 3, input_length=1))
+    model_product.add(Reshape(dims=(3,)))
     models.append(model_product)
 
     model_rs_client = Sequential()
-    model_rs_client.add(Embedding(1700000, 20, input_length=1)) #880604
-    model_rs_client.add(Reshape(dims=(20,)))
+    model_rs_client.add(Embedding(1700000, 3, input_length=1)) #880604
+    model_rs_client.add(Reshape(dims=(3,)))
     models.append(model_rs_client)
 
 
 
     model = Sequential()
     model.add(Merge(models, mode='concat'))
-    model.add(Dense(500, init='uniform'))
+    model.add(Dense(100, init='uniform'))
     model.add(Activation('relu'))
     model.add(Dropout(0.2))
 
-    model.add(Dense(250, init='uniform'))
+    model.add(Dense(100, init='uniform'))
     model.add(Activation('relu'))
     model.add(Dropout(0.2))
 
