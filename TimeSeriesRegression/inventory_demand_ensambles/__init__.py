@@ -177,7 +177,30 @@ def vote_with_lr(conf, forecasts, best_model_index, y_actual):
     print_time_took(start, "vote_with_lr")
     return lr_forcast_revered
 
+def blend_models(conf, forecasts, best_model_index, y_actual):
+    X_all = forecasts
+    forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])]
 
+    #removing NaN and inf if there is any
+    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
+    y_actual_saved = y_actual
+    if conf.target_as_log:
+        y_actual = transfrom_to_log(y_actual)
+
+    #we use 10% full data to train the ensamble and 30% for evalaution
+    no_of_training_instances = int(round(len(y_actual)*0.25))
+    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
+    y_actual_test = y_actual_saved[no_of_training_instances:]
+
+    ensambles = []
+
+    rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
+    rfr.fit(X_train, y_train)
+    print_feature_importance(rfr.feature_importances_, forecasting_feilds)
+    rfr_forecast_as_log = rfr.predict(X_test)
+    rfr_forecast = retransfrom_from_log(rfr_forecast_as_log)
+    rmsle = calculate_accuracy("rfr_forecast", y_actual_test, rfr_forecast)
+    return rfr_forecast, rmsle
 
 
 def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
