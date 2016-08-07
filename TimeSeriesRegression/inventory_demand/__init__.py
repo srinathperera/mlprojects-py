@@ -868,6 +868,15 @@ def drop_column(df1, df2, feild_name):
     return df1, df2
 
 
+def transfrom_to_log2d(data):
+    datat = []
+    for i in range(data.shape[1]):
+        datat.append(transfrom_to_log(data[:, i]))
+    return np.column_stack(datat)
+
+
+
+
 def transfrom_to_log(data):
     print "->to log\n", pd.Series(data).describe()
     data_as_log = np.log(data + 1)

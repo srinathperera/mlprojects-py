@@ -92,6 +92,20 @@ class BestPairEnsamble:
         return forecast
 
 
+def generate_forecast_features(forecasts, model_index_by_acc):
+    sorted_forecats = forecasts[:,model_index_by_acc]
+    sorted_forecats = transfrom_to_log2d(sorted_forecats)
+    diff_best_two = np.abs(sorted_forecats[:, 1] - sorted_forecats[:, 0])
+    min_diff_to_best = np.min(np.abs(sorted_forecats[:, 2:] - sorted_forecats[:, 0].reshape((-1,1))), axis=1)
+    min_diff_to_second = np.min(np.abs(sorted_forecats[:, 2:] - sorted_forecats[:, 1].reshape((-1,1))), axis=1)
+    avg_two = np.mean(sorted_forecats[:, 0:2], axis=1)
+    std_all = np.mean(sorted_forecats, axis=1)
+    weighted_mean = 0.34*sorted_forecats[:, 0] + 0.33*sorted_forecats[:, 0] + 0.33*np.median(sorted_forecats[:, 2:])
+
+    return np.column_stack([sorted_forecats[:, 0], sorted_forecats[:, 1], diff_best_two, min_diff_to_best,
+            min_diff_to_second, avg_two, std_all,weighted_mean]), ["best", "second", "diff_best_two", "min_diff_to_best",
+            "min_diff_to_second", "avg_two", "std_all","weighted_mean"]
+
 def vote_based_forecast(forecasts, best_model_index, y_actual=None):
     start = time.time()
     limit = 0.1
@@ -177,9 +191,12 @@ def vote_with_lr(conf, forecasts, best_model_index, y_actual):
     print_time_took(start, "vote_with_lr")
     return lr_forcast_revered
 
-def blend_models(conf, forecasts, best_model_index, y_actual, submissions_ids, submissions):
-    X_all = forecasts
-    forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])]
+def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions):
+    use_complex_features = True
+    if use_complex_features:
+        X_all, forecasting_feilds = generate_forecast_features(forecasts, model_index_by_acc)
+    else:
+        X_all,forecasting_feilds = forecasts, ["f"+str(f) for f in range(forecasts.shape[1])]
 
     #removing NaN and inf if there is any
     X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
@@ -200,6 +217,8 @@ def blend_models(conf, forecasts, best_model_index, y_actual, submissions_ids, s
     rmsle = calculate_accuracy("rfr_forecast", y_actual_test, rfr_forecast)
 
     if submissions_ids is not None and submissions is not None:
+        if use_complex_features:
+            submissions, _ = generate_forecast_features(submissions, model_index_by_acc)
         submissions = np.where(np.isnan(submissions), 0, np.where(np.isinf(submissions), 10000, submissions))
         rfr_ensamble_forecasts = rfr.predict(submissions)
         if conf.target_as_log:
@@ -207,8 +226,6 @@ def blend_models(conf, forecasts, best_model_index, y_actual, submissions_ids, s
         save_submission_file("rfr_blend_submission.csv", submissions_ids, rfr_ensamble_forecasts)
     else:
         print "submissions not found"
-
-
     return rfr_forecast, rmsle
 
 

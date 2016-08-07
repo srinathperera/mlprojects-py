@@ -102,14 +102,16 @@ def find_best_forecast(forecasts, y_actual):
         forecasts_rmsle.append(rmsle)
         print "forecast "+str(i)+" rmsle=", rmsle, " stats\n", pd.Series(forecasts[i]).describe()
 
-    best_findex = np.argmin(forecasts_rmsle)
+    model_index_by_acc = np.argsort(forecasts_rmsle)
+    print "model index order", model_index_by_acc
+    best_findex = model_index_by_acc[0]
     print "best single model forecast is", best_findex, "rmsle=", forecasts_rmsle[best_findex]
     print_time_took(start, "find_best_forecast")
 
     print "best single model forecast stats\n", pd.Series(forecasts[best_findex]).describe()
     print "y actual\n", pd.Series(y_actual).describe()
 
-    return best_findex
+    return model_index_by_acc
 
 
 
@@ -130,8 +132,9 @@ def run_ensambles(rcommand):
     else:
         submissions_ids = None
         submissions =None
-    best_forecast_index = find_best_forecast(forecasts, y_actual)
+    model_index_by_acc = find_best_forecast(forecasts, y_actual)
+    best_forecast_index = model_index_by_acc[0]
     #do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids ,submissions)
-    blend_models(conf, forecasts, best_forecast_index, y_actual, submissions_ids, submissions)
+    blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions)
 
 run_ensambles(command)
