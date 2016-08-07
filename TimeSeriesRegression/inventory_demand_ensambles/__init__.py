@@ -114,6 +114,7 @@ def generate_forecast_features(forecasts, model_index_by_acc):
             min_diff_to_second, avg_two, std_all,weighted_mean]),['f'+str(f) for f in range(sorted_forecats.shape[1])] \
             + ["kurtosis", "hmean", "diff_best_two", "min_diff_to_best", "min_diff_to_second", "avg_two", "std_all","weighted_mean"]
 
+
 def vote_based_forecast(forecasts, best_model_index, y_actual=None):
     start = time.time()
     limit = 0.1
@@ -217,7 +218,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
     y_actual_test = y_actual_saved[no_of_training_instances:]
 
-    rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
+    rfr = RandomForestRegressor(n_jobs=4, oob_score=True)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast_as_log = rfr.predict(X_test)
@@ -234,6 +235,13 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
         save_submission_file("rfr_blend_submission.csv", submissions_ids, rfr_ensamble_forecasts)
     else:
         print "submissions not found"
+
+    lr_model =linear_model.Lasso(alpha = 0.1)
+    lr_model.fit(X_train, y_train)
+    lr_forecast = lr_model.predict(X_test)
+    lr_forcast_revered = retransfrom_from_log(lr_forecast)
+    calculate_accuracy("vote__lr_forecast " + str(conf.command), y_actual_test, lr_forcast_revered)
+
     return rfr_forecast, rmsle
 
 
