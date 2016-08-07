@@ -102,9 +102,17 @@ def generate_forecast_features(forecasts, model_index_by_acc):
     std_all = np.mean(sorted_forecats, axis=1)
     weighted_mean = 0.34*sorted_forecats[:, 0] + 0.33*sorted_forecats[:, 0] + 0.33*np.median(sorted_forecats[:, 2:])
 
-    return np.column_stack([sorted_forecats[:, 0], sorted_forecats[:, 1], diff_best_two, min_diff_to_best,
-            min_diff_to_second, avg_two, std_all,weighted_mean]), ["best", "second", "diff_best_two", "min_diff_to_best",
-            "min_diff_to_second", "avg_two", "std_all","weighted_mean"]
+    kurtosis = scipy.stats.kurtosis(sorted_forecats, axis=1)
+    kurtosis = np.where(np.isnan(kurtosis), 0, kurtosis)
+    hmean = scipy.stats.hmean(np.where(sorted_forecats <= 0, 0.1, sorted_forecats), axis=1)
+    hmean = np.where(np.isnan(hmean), 0, hmean)
+    #entropy = scipy.stats.entropy(sorted_forecats, axis=1)
+    #entropy = np.where(np.isnan(entropy), 0, entropy)
+
+
+    return np.column_stack([sorted_forecats, kurtosis, hmean, diff_best_two, min_diff_to_best,
+            min_diff_to_second, avg_two, std_all,weighted_mean]),['f'+str(f) for f in range(sorted_forecats.shape[1])] \
+            + ["kurtosis", "hmean", "diff_best_two", "min_diff_to_best", "min_diff_to_second", "avg_two", "std_all","weighted_mean"]
 
 def vote_based_forecast(forecasts, best_model_index, y_actual=None):
     start = time.time()

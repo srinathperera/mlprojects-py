@@ -51,6 +51,8 @@ def load__from_store(model_type, name):
     df_list = [pd.read_csv(dir+'/'+str(f)) for f in files_list]
     if len(df_list) > 0:
         final_df = pd.concat(df_list)
+        print "load file", model_type, name, "shape=", final_df.shape
+
         return final_df
     else:
         return None
