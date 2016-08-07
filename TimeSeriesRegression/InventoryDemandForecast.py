@@ -21,6 +21,8 @@ from inventory_demand import *
 from mltools import *
 #from mlpreprocessing import feather2df
 
+from inventory_demand_ensambles import *
+
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
@@ -191,21 +193,24 @@ if verify_sub_data:
 
 #create and save predictions for each model so we can build an ensamble later
 if forecasts.shape[1] > 1:
-    model_names = [m.name for m in models]
+    blend_features = get_blend_features()
+    blend_data_test = test_df[blend_features].values
 
+
+    model_names = [m.name for m in models]
         #first we will save all individual model results for reuse
     model_rmsle = [m.rmsle for m in models]
-    model_forecasts_data = np.column_stack([forecasts, y_actual_test])
-    to_saveDf =  pd.DataFrame(model_forecasts_data, columns=model_names + ["actual"])
+    model_forecasts_data = np.column_stack([blend_data_test, forecasts, y_actual_test])
+    to_saveDf =  pd.DataFrame(model_forecasts_data, columns=blend_features + model_names + ["actual"])
     metadata_map = {'rmsle':model_rmsle}
     save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=metadata_map)
     print "## model_forecasts ##"
     print to_saveDf.describe()
 
-
+    blend_data_submission = testDf[blend_features].values
     ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
-    submission_data = np.column_stack([ids, kaggale_predicted_list])
-    to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + model_names])
+    submission_data = np.column_stack([ids, blend_data_submission, kaggale_predicted_list])
+    to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + blend_features +model_names])
     save_file(analysis_type, command, to_saveDf, 'model_submissions')
     print "## model_submissions ##"
     print to_saveDf.describe()

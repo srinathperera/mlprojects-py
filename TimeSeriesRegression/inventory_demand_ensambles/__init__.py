@@ -200,12 +200,20 @@ def vote_with_lr(conf, forecasts, best_model_index, y_actual):
     print_time_took(start, "vote_with_lr")
     return lr_forcast_revered
 
-def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions):
+def get_blend_features():
+     return ['Semana','clients_combined_Mean', 'Producto_ID_Demanda_uni_equil_Mean']
+
+
+def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
+                 blend_data, blend_data_submission):
     use_complex_features = True
     if use_complex_features:
         X_all, forecasting_feilds = generate_forecast_features(forecasts, model_index_by_acc)
     else:
         X_all,forecasting_feilds = forecasts, ["f"+str(f) for f in range(forecasts.shape[1])]
+
+    X_all = np.column_stack([X_all, blend_data])
+    forecasting_feilds = forecasting_feilds + get_blend_features()
 
     #removing NaN and inf if there is any
     X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
@@ -228,6 +236,8 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     if submissions_ids is not None and submissions is not None:
         if use_complex_features:
             submissions, _ = generate_forecast_features(submissions, model_index_by_acc)
+            submissions = np.column_stack([submissions, blend_data_submission])
+
         submissions = np.where(np.isnan(submissions), 0, np.where(np.isinf(submissions), 10000, submissions))
         rfr_ensamble_forecasts = rfr.predict(submissions)
         if conf.target_as_log:

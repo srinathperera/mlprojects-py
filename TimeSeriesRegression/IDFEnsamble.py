@@ -121,9 +121,13 @@ def run_ensambles(rcommand):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
     conf.command=-2
 
+    blend_features = get_blend_features()
+
     forecasts_df = load__from_store('agr_cat', "model_forecasts")
     y_actual = forecasts_df['actual'].values.copy()
     forecasts_df = drop_feilds_1df(forecasts_df, ['actual'])
+
+
     forecasts = forecasts_df.values
 
     subdf = load__from_store('agr_cat', "model_submissions")
@@ -134,9 +138,14 @@ def run_ensambles(rcommand):
     else:
         submissions_ids = None
         submissions =None
+
+    blend_data = forecasts_df[blend_features].values
+    blend_data_submission = subdf[blend_features].values
+
     model_index_by_acc = find_best_forecast(forecasts, y_actual)
     best_forecast_index = model_index_by_acc[0]
     #do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids ,submissions)
-    blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions)
+    blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
+                 blend_data, blend_data_submission)
 
 run_ensambles(command)
