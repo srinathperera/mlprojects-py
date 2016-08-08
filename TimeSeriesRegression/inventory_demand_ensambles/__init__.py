@@ -206,7 +206,7 @@ def get_blend_features():
 
 def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
                  blend_data, blend_data_submission):
-    use_complex_features = True
+    use_complex_features = False
     if use_complex_features:
         X_all, forecasting_feilds = generate_forecast_features(forecasts, model_index_by_acc)
     else:

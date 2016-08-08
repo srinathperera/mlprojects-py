@@ -81,12 +81,17 @@ def do_simple_models(conf, train_df, test_df, subdf, y_actual_test):
 
 
     # do linear regression
+    models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
+
 
 
 
 def test_simple_model():
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
-    df = read_train_file("data/trainitems5_10_35_40_45_50k.csv")
+    conf.command = 6
+    df = read_train_file("data/train-rsample-10m.csv")
+    # df = read_train_file("data/train-rsample-500k.csv")
+
     subdf = pd.read_csv('data/test0_100.csv')
 
     training_set_size = int(0.6*df.shape[0])
