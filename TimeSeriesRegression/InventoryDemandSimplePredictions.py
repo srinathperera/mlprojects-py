@@ -60,7 +60,13 @@ def add_five_grouped_stats(train_df, test_df, testDf):
         testDf = pd.merge(testDf, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
         testDf.fillna(0, inplace=True)
 
+    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima']
+    feilds_to_drop =  ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
+    train_df_m, test_df_m, _ = drop_feilds(train_df_m, test_df_m, None, feilds_to_drop + train_data_feilds_to_drop)
+    testDf = drop_feilds_1df(testDf, feilds_to_drop)
+
     slopes_time = time.time()
+
     print "Add Sales Data took %f (%f, %f)" %(slopes_time - start_ts, sale_data_aggr_time-start_ts, slopes_time-sale_data_aggr_time)
     return train_df_m, test_df_m, testDf
 
@@ -80,9 +86,9 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
     if train_df is None or test_df is None or testDf is None:
         train_df, test_df, testDf = add_five_grouped_stats(train_df_raw, test_df_raw, subdf_raw)
         save_train_data(analysis_type, conf.command, train_df, test_df, testDf)
-        print "create and save train data"
+        print "create and save train data", analysis_type
     else:
-        print "reusing train data"
+        print "reusing train data", analysis_type
 
     mean_forecast = test_df['mean_sales']
     calculate_accuracy("mean_forecast", y_actual_test, mean_forecast)
@@ -124,7 +130,6 @@ def test_simple_model(command):
 
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
-
 
 command = -2
 if len(sys.argv) > 1:

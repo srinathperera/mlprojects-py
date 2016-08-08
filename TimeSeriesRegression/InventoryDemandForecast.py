@@ -106,7 +106,7 @@ if verify_sub_data:
 
 
 #print "train", train_df['Semana'].unique(), train_df.shape,"test", test_df['Semana'].unique(), test_df.shape
-#print_mem_usage("before features")
+print_mem_usage("before features")
 #objgraph.show_growth()
 #if test_run:
 #    do_simple_models(conf, train_df,test_df, testDf, y_actual_test)
@@ -122,7 +122,7 @@ prep_time = time.time()
 if test_run:
     print train_df.describe()
 
-#print_mem_usage("before forecast")
+print_mem_usage("before forecast")
 #print "Memory: train, test, sub",  object_size(train_df), object_size(test_df), object_size(testDf)
 #objgraph.show_most_common_types()
 #objgraph.show_growth()
@@ -131,7 +131,7 @@ if test_run:
 #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
 models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
 
-#print_mem_usage("after forecast")
+print_mem_usage("after forecast")
 
 best_model_index = np.argmin([m.rmsle for m in models])
 best_model = models[best_model_index]

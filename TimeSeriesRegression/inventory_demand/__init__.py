@@ -70,11 +70,13 @@ def read_datafiles(command, test_run=True):
 
 
 
-def print_mem_usage(point=""):
-    usage=resource.getrusage(resource.RUSAGE_SELF)
-    print '''%s: usertime=%s systime=%s mem=%s gb
-           '''%(point,usage[0],usage[1],
-                (float(usage[2]*resource.getpagesize()))/1024*1024*1024 )
+def print_mem_usage(label=""):
+    mem_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1000000
+    print label, ":mem_usage", mem_mb, "mb"
+    #usage=resource.getrusage(resource.RUSAGE_SELF)
+    #print '''%s: usertime=%s systime=%s mem=%s gb
+    #       '''%(point,usage[0],usage[1],
+    #            (float(usage[2]*resource.getpagesize()))/1024*1024*1024 )
 
 def object_size(obj):
     return asizeof.asizeof(obj)/1024*1024
@@ -139,6 +141,7 @@ def save_file(model_type, command, df, name, metadata=None):
         metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
         file = open(metadata_file, 'wb')
         pickle.dump(metadata, file)
+    print "saved", submission_file
 
 
 def load_file(model_type, command, name, throw_error=True):
@@ -146,6 +149,7 @@ def load_file(model_type, command, name, throw_error=True):
     if not throw_error:
         if not os.path.exists(submission_file):
             return None
+    print "loading", submission_file
     return  pd.read_csv(submission_file)
 
 
@@ -315,8 +319,6 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
         valuesDf = find_alt_for_missing(to_merge, valuesDf)
         print "Using close values for missing values"
 
-
-
     merge_start = time.time()
     print "join_multiple_feild_stats: complex stats took", (merge_start - start2_start)
     bdf = merge__multiple_feilds_stats_with_df(name, bdf, valuesDf, feild_names, default_stats)
@@ -454,11 +456,6 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
     train_df_m.fillna(0, inplace=True)
     test_df_m.fillna(0, inplace=True)
 
-
-    if drop:
-        train_df_m = train_df_m.drop(feild_name,1)
-        test_df_m = test_df_m.drop(feild_name,1)
-
     if testDf is not None:
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
         testDf[feild_name+"_"+agr_feild+"_Mean"].fillna(default_stats.mean, inplace=True)
@@ -489,21 +486,16 @@ def modeloutput2predictions(model_forecast, parmsFromNormalization):
 
 
 def drop_feilds(train_df, test_df, testDf, feilds):
-    train_df_t = train_df
-    test_df_t = test_df
-    testDf_t = testDf
-    for feild_name in feilds:
-        train_df_t = train_df_t.drop(feild_name,1)
-        test_df_t = test_df_t.drop(feild_name,1)
-        testDf_t = testDf_t.drop(feild_name,1)
+    train_df = train_df.drop(feilds, axis=1)
+    test_df = test_df.drop(feilds, axis=1)
+    if testDf is not None:
+        testDf = testDf.drop(feilds, axis=1)
 
-    return train_df_t, test_df_t, testDf_t
+    return train_df, test_df, testDf
+
 
 def drop_feilds_1df(df, feilds):
-    df_t = df
-    for feild_name in feilds:
-        df_t = df_t.drop(feild_name,1)
-    return df_t
+    return df.drop(feilds, axis=1)
 
 def avgdiff(group):
     group = group.values
@@ -1264,9 +1256,10 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     test_df_before_dropping_features = test_df
 
     #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID', 'Cliente_ID'])
-
-    feilds_to_drop = feilds_to_drop + ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK', 'Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima']
-    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
+    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima']
+    feilds_to_drop = feilds_to_drop + ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
+    train_df, test_df, _ = drop_feilds(train_df, test_df, None, feilds_to_drop + train_data_feilds_to_drop)
+    testDf = drop_feilds_1df(testDf, feilds_to_drop)
 
     #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
     train_df = train_df.fillna(0)
