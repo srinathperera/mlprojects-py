@@ -125,22 +125,19 @@ def run_ensambles(rcommand):
 
     forecasts_df = load__from_store('agr_cat', "model_forecasts")
     y_actual = forecasts_df['actual'].values.copy()
-    forecasts_df = drop_feilds_1df(forecasts_df, ['actual'])
-
-
+    blend_data = forecasts_df[blend_features].values
+    forecasts_df = drop_feilds_1df(forecasts_df, ['actual']+blend_features)
     forecasts = forecasts_df.values
 
     subdf = load__from_store('agr_cat', "model_submissions")
     if subdf is not None:
         submissions_ids = subdf['id']
-        subdf = drop_feilds_1df(subdf, ['id'])
+        blend_data_submission = subdf[blend_features].values
+        subdf = drop_feilds_1df(subdf, ['id']+blend_features)
         submissions = subdf.values
     else:
         submissions_ids = None
         submissions =None
-
-    blend_data = forecasts_df[blend_features].values
-    blend_data_submission = subdf[blend_features].values
 
     model_index_by_acc = find_best_forecast(forecasts, y_actual)
     best_forecast_index = model_index_by_acc[0]
