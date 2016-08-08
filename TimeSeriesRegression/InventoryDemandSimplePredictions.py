@@ -61,9 +61,7 @@ def add_five_grouped_stats(train_df, test_df, testDf):
         testDf.fillna(0, inplace=True)
 
     train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima']
-    feilds_to_drop =  ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
-    train_df_m, test_df_m, _ = drop_feilds(train_df_m, test_df_m, None, feilds_to_drop + train_data_feilds_to_drop)
-    testDf = drop_feilds_1df(testDf, feilds_to_drop)
+    train_df_m, test_df_m, _ = drop_feilds(train_df_m, test_df_m, None, train_data_feilds_to_drop)
 
     slopes_time = time.time()
 
@@ -90,6 +88,11 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
     else:
         print "reusing train data", analysis_type
 
+    #drop the base feilds from forecasts
+    feilds_to_drop =  ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
+    train_df_m, test_df_m, _ = drop_feilds(train_df, test_df, None, feilds_to_drop )
+    testDf = drop_feilds_1df(testDf, feilds_to_drop)
+
     mean_forecast = test_df['mean_sales']
     calculate_accuracy("mean_forecast", y_actual_test, mean_forecast)
 
@@ -99,6 +102,8 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
 
     # do linear regression
     models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
+
+    #TODO save submission
 
 
 

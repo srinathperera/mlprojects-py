@@ -1304,7 +1304,7 @@ def get_models4ensamble(conf):
 
 def get_models4xgboost_tunning(conf):
     #http://www.voidcn.com/blog/mmc2015/article/p-5751771.html
-    case = 3
+    case = 4
 
     if case == 0:
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":5, "eta":0.1, "min_child_weight":1,
@@ -1331,6 +1331,15 @@ def get_models4xgboost_tunning(conf):
         xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
             gamma=[gamma], subsample=[0.6, 0.8, 1.0], colsample_bytree=[0.6, 0.8, 1.0], reg_alpha=[0], reg_lambda=[0])
 
+    elif case == 4:
+        #Run 7 XGBoost_nocv {'reg_alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 5,
+        # 'subsample': 0.6, 'reg_lambda': 0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 10, 'gamma': 0.1} AC_errorRate=88.0 RMSEP=130.365780 MAPE=67.375561 RMSE=15.882261 rmsle=0.60238
+        eta = 0.1
+        maxdepth = 10
+        min_child_weight = 5
+        gamma = 0.1
+        xgb_params_list = create_xgboost_params(0, maxdepth=[3, 10], eta=[eta], min_child_weight=[5, 8],
+            gamma=[gamma], subsample=[0.6], colsample_bytree=[0.8], reg_alpha=[0, 0.2], reg_lambda=[0, 0.2])
     else:
         raise ValueError("Unknown case "+ str(case))
 
@@ -1410,7 +1419,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
     de_normalized_forecasts = []
 
-    tune_paramers = False
+    tune_paramers = True
     if tune_paramers:
         models = get_models4xgboost_tunning(conf)
         #models = get_models4rfr_tunning(conf)
