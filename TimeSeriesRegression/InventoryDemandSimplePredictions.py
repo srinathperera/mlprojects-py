@@ -20,8 +20,11 @@ from sklearn import metrics
 from sklearn.cluster import KMeans, MiniBatchKMeans
 
 from inventory_demand import *
+import sys
+
 
 analysis_type = 'fg_stats'
+
 
 
 def five_group_stats(group):
@@ -72,12 +75,14 @@ def check_accuracy_from_model_output(conf, y_pred_raw, y_actual_test, label):
                                                                               + label, error_ac, rmsep, mape, rmse, rmsle)
 
 
-
 def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
     train_df, test_df, testDf = load_train_data(analysis_type, conf.command)
     if train_df is None or test_df is None or testDf is None:
         train_df, test_df, testDf = add_five_grouped_stats(train_df_raw, test_df_raw, subdf_raw)
         save_train_data(analysis_type, conf.command, train_df, test_df, testDf)
+        print "create and save train data"
+    else:
+        print "reusing train data"
 
     mean_forecast = test_df['mean_sales']
     calculate_accuracy("mean_forecast", y_actual_test, mean_forecast)
@@ -92,13 +97,11 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
 
 
 
-def test_simple_model():
+def test_simple_model(command):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
-    conf.command = 6
-    df = read_train_file("data/train-rsample-10m.csv")
-    # df = read_train_file("data/train-rsample-500k.csv")
+    conf.command = command
 
-    subdf = pd.read_csv('data/test0_100.csv')
+    df, subdf = read_datafiles(command, test_run=False)
 
     training_set_size = int(0.6*df.shape[0])
     test_set_size = df.shape[0] - training_set_size
@@ -118,4 +121,13 @@ def test_simple_model():
     do_simple_models(conf, train_df, test_df, subdf, y_actual_test)
 
 
-test_simple_model()
+
+print 'Number of arguments:', len(sys.argv), 'arguments.'
+print 'Argument List:', str(sys.argv)
+
+
+command = -2
+if len(sys.argv) > 1:
+    command = int(sys.argv[1])
+
+test_simple_model(command)

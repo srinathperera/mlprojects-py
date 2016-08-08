@@ -35,6 +35,41 @@ import os
 import pickle
 
 
+def read_datafiles(command, test_run=True):
+    data_files = [
+        ["trainitems0_5000.csv", 0, 5000, "test_0_5000.csv"], #1.4G, 0
+        ["trainitems5_10_35_40_45_50k.csv", 5000, 10000, "test_5_10_35_40_45_50k.csv"], #534M, 1
+        ["trainitems30000_35000.csv", 30000, 35000, "test_30000_35000.csv"], #559M, 2
+        #["trainitems30000_35000.csv", 30000, 35000, "trainitems5_10_35_40_45_50k.csv"], #559M # to remove ** pass #1 as #2 test
+        ["trainitems40000_45000.csv", 40000, 45000, "test_40000_45000.csv"], #640M, 2
+        ["trainitems5000_15000.csv", -1, -1, "test0_100.csv"], #4
+        ["train-rsample-10m.csv", -1, -1, "test0_100.csv"], #5
+        ["train-rsample-500k.csv", -1, -1, "test0_100.csv"], #6
+        ["train-rsample-15m.csv", -1, -1, "test.csv"] #7
+    ]
+
+    if command == -2:
+        df = read_train_file('data/train.csv')
+        subdf = pd.read_csv('data/test.csv')
+    elif command == -1:
+        df = read_train_file('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
+        testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
+        subdf = testDf[(testDf['Producto_ID'] <= 300)]
+    else:
+        if test_run:
+            dir = "/Users/srinath/playground/data-science/BimboInventoryDemand/"
+        else:
+            dir = "data/"
+
+        df = read_train_file(dir + data_files[command][0])
+        subdf = pd.read_csv(dir +data_files[command][3])
+        print "using ", dir + data_files[command][0], " and ", dir +data_files[command][3]
+        print "testDf read", subdf.shape
+
+    return df, subdf
+
+
+
 def print_mem_usage(point=""):
     usage=resource.getrusage(resource.RUSAGE_SELF)
     print '''%s: usertime=%s systime=%s mem=%s gb
@@ -154,7 +189,6 @@ def load_train_data(model_type, command):
     test_df = load_file(model_type, command, 'test', throw_error=False)
     sub_df = load_file(model_type, command, 'sub', throw_error=False)
     return train_df, test_df, sub_df
-
 
 
 def find_alt_for_missing(to_merge, seen_with_stats):

@@ -49,42 +49,7 @@ s_time = time.time()
 
 np.set_printoptions(precision=1, suppress=True)
 
-data_files = [
-    ["trainitems0_5000.csv", 0, 5000, "test_0_5000.csv"], #1.4G
-    ["trainitems5_10_35_40_45_50k.csv", 5000, 10000, "test_5_10_35_40_45_50k.csv"], #534M
-    ["trainitems30000_35000.csv", 30000, 35000, "test_30000_35000.csv"], #559M
-    #["trainitems30000_35000.csv", 30000, 35000, "trainitems5_10_35_40_45_50k.csv"], #559M # to remove ** pass #1 as #2 test
-    ["trainitems40000_45000.csv", 40000, 45000, "test_40000_45000.csv"], #640M
-    ["trainitems5000_15000.csv", -1, -1, "test0_100.csv"],
-    ["train-rsample-10m.csv", -1, -1, "test0_100.csv"],
-    ["train-rsample-500k.csv", -1, -1, "test0_100.csv"],
-    ["train-rsample-15m.csv", -1, -1, "test.csv"]
-]
-
-ensamble_train_file = 'train-rsample-3m.csv'
-
-if command == -2:
-    df = read_train_file('data/train.csv')
-    testDf = pd.read_csv('data/test.csv')
-    ensamble_train_file = 'data/' + ensamble_train_file
-elif command == -1:
-    df = read_train_file('/Users/srinath/playground/data-science/BimboInventoryDemand/trainitems300.csv')
-    testDf = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/test.csv')
-    testDf = testDf[(testDf['Producto_ID'] <= 300)]
-    ensamble_train_file = '/Users/srinath/playground/data-science/BimboInventoryDemand/' + ensamble_train_file
-else:
-    dir = None
-    if test_run:
-        dir = "/Users/srinath/playground/data-science/BimboInventoryDemand/"
-    else:
-        dir = "data/"
-
-    df = read_train_file(dir + data_files[command][0])
-    testDf = pd.read_csv(dir +data_files[command][3])
-    print "using ", dir + data_files[command][0], " and ", dir +data_files[command][3]
-    print "testDf read", testDf.shape
-
-    ensamble_train_file = dir + ensamble_train_file
+df, testDf = read_datafiles(command, test_run)
 
 
 y_actual_2nd_verification = None
