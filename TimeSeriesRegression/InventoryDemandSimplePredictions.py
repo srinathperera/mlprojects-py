@@ -21,6 +21,9 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 
 from inventory_demand import *
 
+analysis_type = 'fg_stats'
+
+
 def five_group_stats(group):
     sales = np.array(group['Demanda_uni_equil'].values)
     samana = group['Semana'].values
@@ -70,8 +73,11 @@ def check_accuracy_from_model_output(conf, y_pred_raw, y_actual_test, label):
 
 
 
-def do_simple_models(conf, train_df, test_df, subdf, y_actual_test):
-    train_df, test_df, testDf = add_five_grouped_stats(train_df, test_df, subdf)
+def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
+    train_df, test_df, testDf = load_train_data(analysis_type, conf.command)
+    if train_df is None or test_df is None or testDf is None:
+        train_df, test_df, testDf = add_five_grouped_stats(train_df_raw, test_df_raw, subdf_raw)
+        save_train_data(analysis_type, conf.command, train_df, test_df, testDf)
 
     mean_forecast = test_df['mean_sales']
     calculate_accuracy("mean_forecast", y_actual_test, mean_forecast)

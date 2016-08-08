@@ -106,11 +106,11 @@ def save_file(model_type, command, df, name, metadata=None):
         pickle.dump(metadata, file)
 
 
-def load_file(model_type, command, name):
-    if not os.path.exists(model_type):
-        os.makedirs(model_type)
-
+def load_file(model_type, command, name, throw_error=True):
     submission_file = model_type+ '/' + name+str(command)+ '.csv'
+    if not throw_error:
+        if not os.path.exists(submission_file):
+            return None
     return  pd.read_csv(submission_file)
 
 
@@ -141,6 +141,20 @@ def save_submission_file(submission_file, ids, submissions):
 
     print "Submission done for ", to_saveDf.shape[0], "file", submission_file
     print_time_took(start, "create_submission took ")
+
+
+def save_train_data(model_type, command, train_df, test_df, sub_df):
+    save_file(model_type, command,train_df, 'train')
+    save_file(model_type, command,test_df, 'test')
+    save_file(model_type, command,sub_df, 'sub')
+
+
+def load_train_data(model_type, command):
+    train_df = load_file(model_type, command,'train', throw_error=False)
+    test_df = load_file(model_type, command, 'test', throw_error=False)
+    sub_df = load_file(model_type, command, 'sub', throw_error=False)
+    return train_df, test_df, sub_df
+
 
 
 def find_alt_for_missing(to_merge, seen_with_stats):
@@ -1109,6 +1123,8 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     default_dev_proxima_stats = DefaultStats(train_df['Dev_proxima'].mean(), train_df['Dev_proxima'].count(),
                                         train_df['Dev_proxima'].std())
 
+    #this is to drop all features in one go
+    feilds_to_drop = []
 
     #add mean and stddev by groups
 
@@ -1158,6 +1174,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
 
     if use_product_features:
         product_data_df = read_productdata_file('product_data.csv')
+
         #remove  unused feilds
         #product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', 'weight','pieces'])
         product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', "time_between_delivery"])
@@ -1166,24 +1183,23 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         test_df = pd.merge(test_df, product_data_df, how='left', on=['Producto_ID'])
         testDf = pd.merge(testDf, product_data_df, how='left', on=['Producto_ID'])
 
+        #add aggrigates by groups
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'brand_id', testDf, drop=False,
         #    default_stats=default_demand_stats)
-        train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['brand_id'])
-
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'product_word', testDf, drop=False,
             default_stats=default_demand_stats, fops=FeatureOps(hmean=True))
-        train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['product_word'])
+
+        #remove group ids
+        feilds_to_drop = feilds_to_drop + ['product_word', 'brand_id']
 
     if use_agency_features:
         agency_data_df = read_productdata_file('agency_data.csv')
         train_df, test_df, testDf =  merge_csv_by_feild(train_df, test_df, testDf, agency_data_df, 'Agencia_ID')
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Town_id', testDf, drop=False, fops=FeatureOps())
-        train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Town_id'])
-
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'State_id', testDf, drop=False,
                                                             default_stats=default_demand_stats, fops=FeatureOps())
-        train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['State_id'])
+        feilds_to_drop = feilds_to_drop + ['Town_id', 'State_id']
 
     if use_sales_data:
         train_df, test_df, testDf = add_time_bwt_delivery(train_df, test_df, testDf)
@@ -1211,27 +1227,17 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     #train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Canal_ID', 'Ruta_SAK', 'Cliente_ID'],
     #                                                      'Demanda_uni_equil', "routes_combined", demand_val_mean, demand_val_stddev)
 
-
-
     test_df_before_dropping_features = test_df
 
     #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID', 'Cliente_ID'])
 
-    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'])
-    #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Ruta_SAK'])
-    #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID', 'Ruta_SAK'])
-    #train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID'])
-
+    feilds_to_drop = feilds_to_drop + ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK', 'Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima']
+    train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
 
     #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
     train_df = train_df.fillna(0)
     test_df = test_df.fillna(0)
 
-    #following are feilds in test data that is not used
-    train_df, test_df = drop_column(train_df, test_df, 'Venta_uni_hoy')
-    train_df, test_df = drop_column(train_df, test_df, 'Venta_hoy')
-    train_df, test_df = drop_column(train_df, test_df, 'Dev_uni_proxima')
-    train_df, test_df = drop_column(train_df, test_df, 'Dev_proxima')
 
     print "generate_features took ", (time.time() - start), "s"
     return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features

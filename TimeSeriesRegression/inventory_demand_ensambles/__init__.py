@@ -236,7 +236,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     if submissions_ids is not None and submissions is not None:
         if use_complex_features:
             submissions, _ = generate_forecast_features(submissions, model_index_by_acc)
-            submissions = np.column_stack([submissions, blend_data_submission])
+        submissions = np.column_stack([submissions, blend_data_submission])
 
         submissions = np.where(np.isnan(submissions), 0, np.where(np.isinf(submissions), 10000, submissions))
         rfr_ensamble_forecasts = rfr.predict(submissions)
