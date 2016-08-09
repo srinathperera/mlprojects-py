@@ -648,7 +648,7 @@ def submission_stats():
 
     #print df.describe()
 
-
+'''
 def test_ensambles():
     df = pd.read_csv('forecasts4ensamble_s1.csv')
     actual = df['actual'].values
@@ -660,6 +660,7 @@ def test_ensambles():
     avg_models(rmsle_values, df.values, actual)
 
     print 'hello'
+'''
 
 def create_random_file():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
@@ -735,6 +736,15 @@ def test_voting_ensamble():
 test_voting_ensamble()
 '''
 
+
+def test_merge_datasets():
+    cmd = 6
+    train_df, test_df, testDf = load_train_data('agr_cat', cmd)
+    train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', cmd,["mean_sales", "sales_count",
+                                            "sales_stddev", "median_sales", "last_sale", "last_sale_week", "returns"])
+    print list(train_df)
+
+test_merge_datasets()
 #find_similar_products()
 
 #analyze_error()

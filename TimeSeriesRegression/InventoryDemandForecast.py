@@ -66,7 +66,6 @@ r_time = time.time()
 print "read took %f" %(r_time-s_time)
 
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
-conf.log_target_only = False
 conf.command = command
 conf.analysis_type = analysis_type
 
@@ -88,9 +87,6 @@ test_set_size = df.shape[0] - training_set_size
 
 y_all = df['Demanda_uni_equil'].values
 
-if conf.target_as_log and not conf.log_target_only:
-    #then all values are done as logs
-    df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
 
 train_df = df[:training_set_size]
 test_df = df[-1*test_set_size:]
@@ -122,14 +118,22 @@ prep_time = time.time()
 if test_run:
     print train_df.describe()
 
+
+
 print_mem_usage("before forecast")
 #print "Memory: train, test, sub",  object_size(train_df), object_size(test_df), object_size(testDf)
 #objgraph.show_most_common_types()
 #objgraph.show_growth()
 
+if conf.target_as_log:
+    train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis'])
+    y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
+else:
+    y_train_raw, y_test_raw = y_actual_train, y_actual_test
 
 #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
-models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
+models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
+                                                                                           y_train_raw, y_test_raw, y_actual_test)
 
 print_mem_usage("after forecast")
 

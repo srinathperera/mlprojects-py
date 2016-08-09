@@ -111,6 +111,9 @@ def read_productdata_file(file_name):
     return train
 
 
+def fillna_and_inf(data, na_r=0, inf_r=100000):
+    return np.where(np.isnan(data), na_r, np.where(np.isinf(data), inf_r, data))
+
 def fillna_if_feildexists(df, feild_name, replacement):
     if feild_name in df:
         df[feild_name].fillna(replacement, inplace=True)
@@ -141,7 +144,7 @@ def save_file(model_type, command, df, name, metadata=None):
         metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
         file = open(metadata_file, 'wb')
         pickle.dump(metadata, file)
-    print "saved", submission_file
+    print "saved", submission_file, list(df)
 
 
 def load_file(model_type, command, name, throw_error=True):
@@ -300,11 +303,11 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     print "took p90", (time.time() - start)
     if fops.kurtosis:
         kurtosis = groupData.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
-        valuesDf[name+"_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
+        valuesDf[name+"_kurtosis"] = fillna_and_inf(kurtosis)
     print "took kurtosis", (time.time() - start)
     if fops.hmean:
         hmean = groupData.apply(calcuate_hmean)
-        valuesDf[name+"_hMean"] = np.where(np.isnan(hmean), 0, hmean)
+        valuesDf[name+"_hMean"] = fillna_and_inf(hmean)
     print "took hmean", (time.time() - start)
     if fops.entropy:
         entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
@@ -360,7 +363,7 @@ def find_NA_rows_percent(df_check, label):
             #             " or a value too large for %r." % X.dtype)
             error = "feild " + f + " contains " + "np.inf=" + str(np.where(np.isnan(X))) \
                     + "is.inf=" + str(np.where(np.isinf(X))) + "np.max=" + str(np.max(abs(X)))
-            print error
+            print error, "shape", "stats", X.shape, pd.Series(X).describe()
             raise ValueError(error)
     print "find_NA_rows_percent took", (time.time() - start), "s"
     return na_percent
@@ -414,7 +417,7 @@ def calculate_group_stats(grouped_data, name, default_stats, fops):
         valuesDf[name + "_pcerntile90"] = np.where(np.isnan(pcerntile90), 0, pcerntile90)
     if fops.kurtosis:
         kurtosis = grouped_data.apply(lambda x: min(scipy.stats.kurtosis(x), 10000))
-        valuesDf[name + "_kurtosis"] = np.where(np.isnan(kurtosis), 0, kurtosis)
+        valuesDf[name + "_kurtosis"] = fillna_and_inf(kurtosis)
     if fops.hmean:
         hmean = grouped_data.apply(calcuate_hmean)
         valuesDf[name + "_hMean"] = np.where(np.isnan(hmean), 0, hmean)
@@ -918,14 +921,39 @@ def transfrom_to_log2d(data):
 
 
 def transfrom_to_log(data):
-    print "->to log\n", pd.Series(data).describe()
+    #print "->to log\n", pd.Series(data).describe()
     data_as_log = np.log(data + 1)
     return data_as_log
 
 def retransfrom_from_log(data):
     data_from_log =  np.exp(data) - 1
-    print "<-from log\n", pd.Series(data_from_log).describe()
+    #print "<-from log\n", pd.Series(data_from_log).describe()
     return data_from_log
+
+
+def tranform_train_data_to_log(train_df, test_df, sub_df, skip_field_patterns=[]):
+    return transform_df_to_log(train_df, skip_field_patterns), \
+           transform_df_to_log(test_df, skip_field_patterns), \
+           transform_df_to_log(sub_df, skip_field_patterns)
+
+
+    #if conf.target_as_log and not conf.log_target_only:
+    #then all values are done as logs
+    #df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
+
+def transform_df_to_log(df, skip_field_patterns):
+    for c in list(df):
+        skip = False
+        for p in skip_field_patterns:
+            if p in c:
+                skip = True
+        if not skip:
+            df[c] = transfrom_to_log(df[c].values)
+        else:
+            print "skip log transform ", c
+    return df
+
+
 
 
 class InventoryDemandPredictor:
@@ -974,6 +1002,22 @@ def calculate_slope(group):
     else:
         #return pd.Series({'slope': 0, 'mean': 0})
         return [0, 0]
+
+
+def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_to_use):
+    sup_train_df, sup_test_df, sup_sub_df = load_train_data(analysis_type, cmd)
+    sup_train_df = sup_train_df[feilds_to_use]
+    sup_test_df = sup_test_df[feilds_to_use]
+    sup_sub_df = sup_sub_df[feilds_to_use]
+
+    merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+    print list(train_df)
+    print list(sup_train_df)
+
+    train_df = pd.merge(train_df, sup_train_df, how='left', on=merge_feilds)
+    test_df = pd.merge(test_df, sup_test_df, how='left', on=merge_feilds)
+    sub_df = pd.merge(sub_df, sup_sub_df, how='left', on=merge_feilds)
+    return train_df, test_df, sub_df
 
 
 def check_accuracy(label, model, X_test, parmsFromNormalization, target_as_log, y_actual_test, command):
@@ -1094,14 +1138,13 @@ def merge_csv_by_feild(train_df, test_df, testDf, base_df, feild_name ):
 
 
 class IDConfigs:
-    def __init__(self, target_as_log, normalize, save_predictions_with_data, generate_submission, log_target_only=True, analysis_type='base'):
+    def __init__(self, target_as_log, normalize, save_predictions_with_data, generate_submission, analysis_type='base'):
         self.target_as_log = target_as_log
         self.normalize = normalize
         self.save_predictions_with_data = save_predictions_with_data
         self.generate_submission = generate_submission
         self.parmsFromNormalization = None
         self.verify_data = False
-        self.log_target_only = log_target_only
         self.analysis_type = analysis_type
 
 
@@ -1205,6 +1248,14 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         #product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', 'weight','pieces'])
         product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', "time_between_delivery"])
 
+        if 'weight' in product_data_df:
+            weight = product_data_df['weight']
+            product_data_df['weight'] = np.where(weight < 0, 0, weight)
+        if 'pieces' in product_data_df:
+            pieces = product_data_df['pieces']
+            product_data_df['pieces'] = np.where(pieces < 0, 0, pieces)
+
+
         train_df = pd.merge(train_df, product_data_df, how='left', on=['Producto_ID'])
         test_df = pd.merge(test_df, product_data_df, how='left', on=['Producto_ID'])
         testDf = pd.merge(testDf, product_data_df, how='left', on=['Producto_ID'])
@@ -1255,8 +1306,13 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
 
     test_df_before_dropping_features = test_df
 
+    save_train_data(conf.analysis_type, conf.command, train_df, test_df, testDf)
+
+    #train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,["mean_sales", "sales_count",
+    #                                        "sales_stddev", "median_sales", "last_sale", "last_sale_week", "returns"])
+
     #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID', 'Cliente_ID'])
-    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima']
+    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima', 'Demanda_uni_equil']
     feilds_to_drop = feilds_to_drop + ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
     train_df, test_df, _ = drop_feilds(train_df, test_df, None, feilds_to_drop + train_data_feilds_to_drop)
     testDf = drop_feilds_1df(testDf, feilds_to_drop)
@@ -1366,28 +1422,31 @@ def get_models4rfr_tunning(conf):
     return models;
 
 
-def do_forecast(conf, train_df, test_df, y_actual_test):
+def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test):
     start = time.time()
     if train_df.shape[1] != test_df.shape[1]:
         print "train and test does not match " + list(train_df) + " " + list(test_df)
 
+    '''
     if conf.target_as_log and conf.log_target_only:
         y_train_row = transfrom_to_log(train_df['Demanda_uni_equil'].values)
         y_test_row = transfrom_to_log(test_df['Demanda_uni_equil'].values)
     else:
         y_train_row = train_df['Demanda_uni_equil'].values
         y_test_row = test_df['Demanda_uni_equil'].values
+    train_df, test_df = drop_column(train_df, test_df, 'Demanda_uni_equil')
+
+    '''
 
     find_NA_rows_percent(train_df, "train_df before forecast")
     find_NA_rows_percent(test_df, "test before forecast")
 
-    train_df, test_df = drop_column(train_df, test_df, 'Demanda_uni_equil')
 
     forecasting_feilds = list(train_df)
     print "Forecasting Feilds", [ "("+str(i)+")" + forecasting_feilds[i] for i in range(len(forecasting_feilds))]
 
-    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train_row)
-    y_test = apply_zeroMeanUnit(y_test_row, parmsFromNormalization)
+    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train_raw)
+    y_test = apply_zeroMeanUnit(y_test_raw, parmsFromNormalization)
 
     X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(train_df.values.copy())
     x_test_raw = test_df.values.copy()
@@ -1419,7 +1478,7 @@ def do_forecast(conf, train_df, test_df, y_actual_test):
 
     de_normalized_forecasts = []
 
-    tune_paramers = True
+    tune_paramers = False
     if tune_paramers:
         models = get_models4xgboost_tunning(conf)
         #models = get_models4rfr_tunning(conf)
