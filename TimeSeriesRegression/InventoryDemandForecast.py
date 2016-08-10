@@ -139,7 +139,7 @@ print_mem_usage("after forecast")
 
 best_model_index = np.argmin([m.rmsle for m in models])
 best_model = models[best_model_index]
-print "[IDF"+conf.command+"]Best Single Model has rmsle=", best_model.rmsle
+print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", best_model.rmsle
 
 print best_model_index,
 best_forecast = forecasts[:,best_model_index]

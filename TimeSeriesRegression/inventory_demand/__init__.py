@@ -1436,8 +1436,8 @@ def get_models4xgboost_tunning(conf):
         maxdepth = 10
         min_child_weight = 5
         gamma = 0.1
-        xgb_params_list = create_xgboost_params(0, maxdepth=[3, 10], eta=[eta], min_child_weight=[5, 8],
-            gamma=[gamma], subsample=[0.6], colsample_bytree=[0.8], reg_alpha=[0, 0.2], reg_lambda=[0, 0.2])
+        xgb_params_list = create_xgboost_params(0, maxdepth=[3, 10, 15], eta=[eta], min_child_weight=[5, 8, 10],
+            gamma=[0.1, 0.2], subsample=[0.6], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
     else:
         raise ValueError("Unknown case "+ str(case))
 
