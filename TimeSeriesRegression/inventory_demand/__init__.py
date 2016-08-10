@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import ExtraTreesRegressor
+from sklearn.ensemble import AdaBoostRegressor
+
 import time
 import math
 from sklearn.externals import joblib
@@ -830,6 +832,30 @@ class ETRModel:
         return self.model.predict(X_test)
 
 
+class AdaBoostRModel:
+    def __init__(self, conf, model=None):
+        self.conf = conf
+        self.name = "AdaBoostR"
+        if model is None:
+            self.model = AdaBoostRegressor(loss='square')
+        else:
+            self.model = model
+
+    def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        start = time.time()
+        self.model.fit(X_train, y_train)
+        #print_feature_importance(self.model.feature_importances_, forecasting_feilds)
+        #save model
+        #joblib.dump(rfr, 'model.pkl')
+        y_pred_final, rmsle = check_accuracy("AdaBoostR "+ str(self.model), self.model, X_test, self.conf.parmsFromNormalization,
+                                      self.conf.target_as_log, y_actual, self.conf.command)
+        self.rmsle =  rmsle
+        print "AdaBoostR model took", (time.time() - start), "s"
+        return y_pred_final
+
+    def predict(self, X_test):
+        return self.model.predict(X_test)
+
 
 def create_rfr_params(n_estimator=[200], oob_score=[False], max_features=["auto"],
                           min_samples_leaf=[50]):
@@ -1388,12 +1414,15 @@ def get_models4ensamble(conf):
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
                 #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
                 ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
+                #AdaBoostRModel(conf, model=AdaBoostRegressor(loss='square'))
               ]
 
-    #tree model
-#    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
-#            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
-    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":10, "eta":0.1, "min_child_weight":8,
+    #0 was too big to run with depth set to 1, and 1 was overfitting a bit
+    if conf.command == 0 or conf.command == 1:
+        xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+    else:
+        xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":10, "eta":0.1, "min_child_weight":8,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
 
     models.append(XGBoostModel(conf, xgb_params))
@@ -1467,7 +1496,7 @@ def get_models4rfr_tunning(conf):
 def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test):
     start = time.time()
     if train_df.shape[1] != test_df.shape[1]:
-        print "train and test does not match " + list(train_df) + " " + list(test_df)
+        raise ValueError("train and test does not match " + str(list(train_df)) + " " + str(list(test_df)))
 
     '''
     if conf.target_as_log and conf.log_target_only:

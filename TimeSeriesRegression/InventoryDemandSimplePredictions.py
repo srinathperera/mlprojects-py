@@ -34,8 +34,15 @@ def five_group_stats(group):
     returns = group['Dev_proxima'].mean()
     #this is signature on when slaes happens
     signature = np.sum([ math.pow(2,s-3) for s in samana])
+    kurtosis = fillna_and_inf(scipy.stats.kurtosis(sales))
+    hmean = fillna_and_inf(scipy.stats.hmean(np.where(sales <0, 0.1, sales)))
+    entropy = fillna_and_inf(scipy.stats.entropy(sales))
 
-    return np.mean(sales), len(sales), np.std(sales), np.median(sales), sales[max_index], samana[max_index], returns, signature
+
+    return np.mean(sales), len(sales), np.std(sales), np.median(sales), sales[max_index], samana[max_index], \
+           returns, signature, kurtosis, hmean, entropy
+
+
 
 
 def add_five_grouped_stats(train_df, test_df, testDf):
@@ -49,7 +56,7 @@ def add_five_grouped_stats(train_df, test_df, testDf):
     sales_data_df = slope_data_df.to_frame("sales_data")
     sales_data_df.reset_index(inplace=True)
     valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["mean_sales", "sales_count", "sales_stddev",
-                                                    "median_sales", "last_sale", "last_sale_week", "returns", "signature"])
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
     #valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["sales_count"])
 
     #now we merge the data
@@ -82,7 +89,7 @@ def check_accuracy_from_model_output(conf, y_pred_raw, y_actual_test, label):
                                                                               + label, error_ac, rmsep, mape, rmse, rmsle)
 
 
-def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
+def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_train, y_actual_test):
     train_df, test_df, testDf = load_train_data(analysis_type, conf.command)
     if train_df is None or test_df is None or testDf is None:
         train_df, test_df, testDf = add_five_grouped_stats(train_df_raw, test_df_raw, subdf_raw)
@@ -93,7 +100,7 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
 
     #drop the base feilds from forecasts
     feilds_to_drop =  ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
-    train_df_m, test_df_m, _ = drop_feilds(train_df, test_df, None, feilds_to_drop )
+    train_df, test_df, _ = drop_feilds(train_df, test_df, None, feilds_to_drop + ['Demanda_uni_equil'] )
     testDf = drop_feilds_1df(testDf, feilds_to_drop)
 
     mean_forecast = test_df['mean_sales']
@@ -102,9 +109,16 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_test):
     median_forecast = test_df['median_sales']
     calculate_accuracy("median_forecast", y_actual_test, median_forecast)
 
+    if conf.target_as_log:
+        train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
+        y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
+    else:
+        y_train_raw, y_test_raw = y_actual_train, y_actual_test
 
-    # do linear regression
-    models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df, y_actual_test)
+
+    #conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test
+    models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
+                                                                                               y_train_raw, y_test_raw, y_actual_test)
 
     #TODO save submission
 
@@ -122,9 +136,9 @@ def test_simple_model(command):
 
     y_all = df['Demanda_uni_equil'].values
 
-    if conf.target_as_log and not conf.log_target_only:
+    #if conf.target_as_log and not conf.log_target_only:
     #then all values are done as logs
-        df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
+    #    df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
 
     train_df = df[:training_set_size]
     test_df = df[-1*test_set_size:]
@@ -132,7 +146,7 @@ def test_simple_model(command):
     y_actual_train = y_all[:training_set_size]
     y_actual_test = y_all[-1*test_set_size:]
 
-    do_simple_models(conf, train_df, test_df, subdf, y_actual_test)
+    do_simple_models(conf, train_df, test_df, subdf, y_actual_train, y_actual_test)
 
 
 
