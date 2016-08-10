@@ -32,7 +32,10 @@ def five_group_stats(group):
     samana = group['Semana'].values
     max_index = np.argmax(samana)
     returns = group['Dev_proxima'].mean()
-    return np.mean(sales), len(sales), np.std(sales), np.median(sales), sales[max_index], samana[max_index], returns
+    #this is signature on when slaes happens
+    signature = np.sum([ math.pow(2,s-3) for s in samana])
+
+    return np.mean(sales), len(sales), np.std(sales), np.median(sales), sales[max_index], samana[max_index], returns, signature
 
 
 def add_five_grouped_stats(train_df, test_df, testDf):
@@ -46,7 +49,7 @@ def add_five_grouped_stats(train_df, test_df, testDf):
     sales_data_df = slope_data_df.to_frame("sales_data")
     sales_data_df.reset_index(inplace=True)
     valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["mean_sales", "sales_count", "sales_stddev",
-                                                                           "median_sales", "last_sale", "last_sale_week", "returns"])
+                                                    "median_sales", "last_sale", "last_sale_week", "returns", "signature"])
     #valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["sales_count"])
 
     #now we merge the data

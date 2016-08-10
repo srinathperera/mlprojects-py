@@ -7,7 +7,16 @@ def create_fig():
     fig_number = create_fig.fig_number + 1
     plt.figure(fig_number, figsize=(20,10))
 
+
 create_fig.fig_number = 0
+
+
+def draw_simple_scatterplot(x,y , x_title, subplotnum):
+    print x.shape,y.shape , x_title, subplotnum
+    plt.subplot(subplotnum)
+    plt.xlabel(x_title, fontsize=18)
+    plt.scatter(x, y, alpha=0.3)
+
 
 def draw_scatterplot_one(x,y , x_title, subplotnum, y_title=None, c=None):
     draw_scatterplot([(x,y)], x_title, subplotnum, y_title=y_title, c=c)

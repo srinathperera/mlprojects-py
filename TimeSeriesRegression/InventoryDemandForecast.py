@@ -126,7 +126,7 @@ print_mem_usage("before forecast")
 #objgraph.show_growth()
 
 if conf.target_as_log:
-    train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis'])
+    train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
     y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
 else:
     y_train_raw, y_test_raw = y_actual_train, y_actual_test
@@ -139,7 +139,7 @@ print_mem_usage("after forecast")
 
 best_model_index = np.argmin([m.rmsle for m in models])
 best_model = models[best_model_index]
-print "[IDF]Best Single Model has rmsle=", best_model.rmsle
+print "[IDF"+conf.command+"]Best Single Model has rmsle=", best_model.rmsle
 
 print best_model_index,
 best_forecast = forecasts[:,best_model_index]

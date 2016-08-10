@@ -18,6 +18,7 @@ from sklearn.preprocessing import Normalizer
 from sklearn import metrics
 
 from sklearn.cluster import KMeans, MiniBatchKMeans
+from data_explore import *
 
 
 from inventory_demand import *
@@ -664,8 +665,8 @@ def test_ensambles():
 
 def create_random_file():
     df = pd.read_csv('/Users/srinath/playground/data-science/BimboInventoryDemand/train.csv')
-    subset_df = df.sample(3000000)
-    subset_df.to_csv("train-rsample-3m.csv", index=False)
+    subset_df = df.sample(10000)
+    subset_df.to_csv("train-rsample-10k.csv", index=False)
 
 
 def parse_feature_importance():
@@ -712,6 +713,60 @@ def parse_feature_importance():
     print feature_importance_df
 
 
+def parse_map_from_str(data):
+    p2 = re.compile('\'([A-z0-9_]+)\'\s*:\s*([0-9.]+)')
+    dict = {}
+    for match in p2.finditer(data):
+        key = match.group(1)
+        value = float(match.group(2))
+        dict[key] = value
+    return dict
+
+
+def parse_parameter_sweep():
+    file = open('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/xgboost_params-explore-case4.txt','r')
+    data =  file.read()
+
+    data = data.replace('\n','')
+    data = re.sub(r'\[=+\'\].*?s', '', data)
+    #28. feature 27 =Producto_ID_Dev_proxima_StdDev (0.002047)
+
+    p1 = re.compile('Run ([0-9+]) XGBoost_nocv {(.*?)} .*?rmsle=([0-9.]+)')
+
+    readings = []
+    for match in p1.finditer(data):
+        data_index = int(match.group(1))
+        params_as_str = match.group(2)
+        rmsle = float(match.group(3))
+        print data_index, rmsle, params_as_str
+
+        kvmap = parse_map_from_str(params_as_str)
+        print kvmap
+        readings.append([data_index, rmsle, kvmap['eta'], kvmap['max_depth'], kvmap['min_child_weight'], kvmap['gamma'],
+                         kvmap['subsample'], kvmap['colsample_bytree']])
+
+    df_data = np.row_stack(readings)
+    para_sweep_df= pd.DataFrame(df_data, columns=['data_index' , 'rmsle', 'eta', 'max_depth', 'min_child_weight', 'gamma',
+                         'subsample', 'colsample_bytree'])
+    print para_sweep_df
+    return para_sweep_df
+
+def analyze_parameter_sweep():
+    create_fig()
+    para_sweep_df = parse_parameter_sweep()
+    y_val = para_sweep_df['rmsle'].values
+    draw_simple_scatterplot(para_sweep_df['max_depth'].values, y_val, 'max_depth', 321 )
+    draw_simple_scatterplot(para_sweep_df['min_child_weight'], y_val, 'min_child_weight', 322)
+    draw_simple_scatterplot(para_sweep_df['gamma'], y_val, 'gamma', 323)
+    draw_simple_scatterplot(para_sweep_df['subsample'], y_val, 'subsample', 324)
+    draw_simple_scatterplot(para_sweep_df['colsample_bytree'], y_val, 'colsample_bytree', 325)
+    draw_simple_scatterplot(para_sweep_df['data_index'], y_val, 'data_index', 326)
+    plt.tight_layout()
+    plt.savefig('xgboost-pswp.png')
+
+
+
+
 
 '''
 def test_voting_ensamble():
@@ -744,8 +799,10 @@ def test_merge_datasets():
                                             "sales_stddev", "median_sales", "last_sale", "last_sale_week", "returns"])
     print list(train_df)
 
-test_merge_datasets()
+#test_merge_datasets()
 #find_similar_products()
+#analyze_parameter_sweep()
+create_random_file()
 
 #analyze_error()
 

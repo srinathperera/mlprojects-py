@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import ExtraTreesRegressor
 import time
 import math
 from sklearn.externals import joblib
@@ -45,7 +46,8 @@ def read_datafiles(command, test_run=True):
         ["trainitems5000_15000.csv", -1, -1, "test0_100.csv"], #4
         ["train-rsample-10m.csv", -1, -1, "test0_100.csv"], #5
         ["train-rsample-500k.csv", -1, -1, "test0_100.csv"], #6
-        ["train-rsample-15m.csv", -1, -1, "test.csv"] #7
+        ["train-rsample-15m.csv", -1, -1, "test.csv"], #7
+        ["train-rsample-10k.csv", -1, -1, "test0_100.csv"] #8
     ]
 
     if command == -2:
@@ -171,6 +173,8 @@ def load_file_with_metadata(model_type, command, name):
 
 
 def save_submission_file(submission_file, ids, submissions):
+    if np.unique(ids).shape[0] != ids.shape[0]:
+        raise ValueError('submission ids are not unique')
     start = time.time()
     to_save = np.column_stack((ids, submissions))
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
@@ -780,6 +784,9 @@ class RFRModel:
         return self.model.predict(X_test)
 
 
+
+
+
 '''
 http://www.analyticsvidhya.com/blog/2015/06/tuning-random-forest-model/
 
@@ -796,6 +803,33 @@ oob_score : This is a random forest cross validation method. It is very similar 
 however, this is so much faster. This method simply tags every observation used in different tress. And then it finds
 out a maximum vote score for every observation based on only trees which did not use this particular observation to train itself.
 '''
+
+
+class ETRModel:
+    def __init__(self, conf, model=None):
+        self.conf = conf
+        self.name = "ETR"
+        if model is None:
+            self.model = ExtraTreesRegressor(n_jobs=4)
+        else:
+            self.model = model
+
+    def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
+        start = time.time()
+        self.model.fit(X_train, y_train)
+        #print_feature_importance(self.model.feature_importances_, forecasting_feilds)
+        #save model
+        #joblib.dump(rfr, 'model.pkl')
+        y_pred_final, rmsle = check_accuracy("ETR "+ str(self.model), self.model, X_test, self.conf.parmsFromNormalization,
+                                      self.conf.target_as_log, y_actual, self.conf.command)
+        self.rmsle =  rmsle
+        print "ETR model took", (time.time() - start), "s"
+        return y_pred_final
+
+    def predict(self, X_test):
+        return self.model.predict(X_test)
+
+
 
 def create_rfr_params(n_estimator=[200], oob_score=[False], max_features=["auto"],
                           min_samples_leaf=[50]):
@@ -814,7 +848,7 @@ def create_xgboost_params(trialcount, maxdepth=[5], eta=[0.1], min_child_weight=
     for t in itertools.product(maxdepth, eta, min_child_weight, subsample, colsample_bytree, gamma, reg_alpha, reg_lambda, ):
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":t[0], "eta":t[1], "min_child_weight":t[2],
             "subsample":t[3], "nthread":4, "colsample_bytree":t[4], 'gamma':t[5],
-            "reg_alpha":t[6], "reg_lambda":t[7]}
+            "alpha":t[6], "lambda":t[7]}
         xg_configs.append(xgb_params)
 
     if trialcount <= 0:
@@ -1005,12 +1039,14 @@ def calculate_slope(group):
 
 
 def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_to_use):
+    merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+    feilds_to_use = feilds_to_use + merge_feilds
+
     sup_train_df, sup_test_df, sup_sub_df = load_train_data(analysis_type, cmd)
     sup_train_df = sup_train_df[feilds_to_use]
     sup_test_df = sup_test_df[feilds_to_use]
     sup_sub_df = sup_sub_df[feilds_to_use]
 
-    merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
     print list(train_df)
     print list(sup_train_df)
 
@@ -1306,8 +1342,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
 
     test_df_before_dropping_features = test_df
 
-    save_train_data(conf.analysis_type, conf.command, train_df, test_df, testDf)
-
+    #save_train_data(conf.analysis_type, conf.command, train_df, test_df, testDf)
     #train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,["mean_sales", "sales_count",
     #                                        "sales_stddev", "median_sales", "last_sale", "last_sale_week", "returns"])
 
@@ -1327,8 +1362,11 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
 
 def get_models4xgboost_only(conf):
     models = []
-    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+#    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+#            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":10, "eta":0.1, "min_child_weight":8,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+
     models.append(XGBoostModel(conf, xgb_params))
     return models
 
@@ -1343,17 +1381,21 @@ def get_models4ensamble(conf):
                 RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
                 #LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
-                LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
+                #LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
                 #LRModel(conf, model=linear_model.Ridge (alpha = .5))
                 #   ('linear', LinearRegression(fit_intercept=False))])),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
                 #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
+                ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
               ]
 
     #tree model
-    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+#    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
+#            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":10, "eta":0.1, "min_child_weight":8,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+
     models.append(XGBoostModel(conf, xgb_params))
     return models
 
