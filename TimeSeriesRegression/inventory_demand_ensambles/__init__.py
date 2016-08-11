@@ -63,7 +63,7 @@ class BestPairEnsamble:
     def __init__(self, conf, method="mean"):
         self.conf = conf
         self.method = method
-        self.name = "SimpleAvg_"+method
+        self.name = "BestPairEnsamble_"+method
     def fit(self, forecasts, best_rmsle_index, y_actual):
         start = time.time()
         comb = list(itertools.combinations(range(forecasts.shape[1]),2))
