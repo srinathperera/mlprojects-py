@@ -7,7 +7,7 @@ from sklearn.externals import joblib
 
 from mltools import undoPreprocessing
 import itertools
-
+import gc
 
 
 from tsforecasttools import run_timeseries_froecasts, regression_with_xgboost
@@ -56,32 +56,49 @@ if conf.target_as_log:
 else:
     y_train_raw, y_test_raw = y_actual_train, y_actual_test
 
-#model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
-models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
-                                                                                           y_train_raw, y_test_raw, y_actual_test)
-print_mem_usage("after forecast")
+testDf.fillna(0, inplace=True)
+ids = testDf['id']
+testDf.drop('id',axis=1, inplace=True)
+sub_X_all = testDf.values
 
-best_model_index = np.argmin([m.rmsle for m in models])
-best_model = models[best_model_index]
-print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", best_model.rmsle
 
-print best_model_index,
-best_forecast = forecasts[:,best_model_index]
+ml_models = get_models4ensamble(conf)
 
-#save submission based on best model
-if conf.generate_submission:
-    y_forecast_submission = create_submission(conf, best_model, testDf, parmsFromNormalization, parmsFromNormalization2D)
+forecasts = []
+submissions = []
+model_names = []
+model_rmsle = []
 
+for m in ml_models:
+    #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
+    print_mem_usage("before running model " + m.name)
+    tmlist, tforecasts, _, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
+                                                                                           y_train_raw, y_test_raw, y_actual_test, models=[m])
+    forecasts.append(tforecasts[:, 0])
+    t_model = tmlist[0]
+    y_forecast_submission = create_submission(conf, t_model, ids, sub_X_all, parmsFromNormalization, parmsFromNormalization2D)
+    submissions.append(y_forecast_submission)
+    model_names.append(t_model.name)
+    model_rmsle.append(t_model.rmsle)
+    t_model.cleanup()
+    gc.collect() #to free up memory
+    print_mem_usage("after model " + t_model.name)
+
+best_model_index = np.argmin(model_rmsle)
+print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", model_rmsle[best_model_index]
+submission_file = 'submission'+str(conf.command)+ '.csv'
+save_submission_file(submission_file, ids, submissions[best_model_index])
+
+#convert the values to numpy arrays
+forecasts = np.column_stack(forecasts)
+submissions = np.column_stack(submissions)
 
 #create and save predictions for each model so we can build an ensamble later
 if forecasts.shape[1] > 1:
     blend_features = get_blend_features()
     blend_data_test = test_df[blend_features].values
 
-
-    model_names = [m.name for m in models]
-        #first we will save all individual model results for reuse
-    model_rmsle = [m.rmsle for m in models]
+    print "shapes", blend_data_test.shape, forecasts.shape, y_actual_test.shape
     model_forecasts_data = np.column_stack([blend_data_test, forecasts, y_actual_test])
     to_saveDf =  pd.DataFrame(model_forecasts_data, columns=blend_features + model_names + ["actual"])
     metadata_map = {'rmsle':model_rmsle}
@@ -90,8 +107,9 @@ if forecasts.shape[1] > 1:
     print to_saveDf.describe()
 
     blend_data_submission = testDf[blend_features].values
-    ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
-    submission_data = np.column_stack([ids, blend_data_submission, kaggale_predicted_list])
+    #ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
+
+    submission_data = np.column_stack([ids, blend_data_submission, submissions])
     to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + blend_features +model_names])
     save_file(analysis_type, command, to_saveDf, 'model_submissions')
     print "## model_submissions ##"

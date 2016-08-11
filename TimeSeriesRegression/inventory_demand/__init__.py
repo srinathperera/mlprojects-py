@@ -779,8 +779,6 @@ def add_last_sale_and_week(train_df, test_df, testDf):
     return train_df_m, test_df_m, testDf
 
 
-
-
 class RFRModel:
     def __init__(self, conf, model=None):
         self.conf = conf
@@ -804,6 +802,9 @@ class RFRModel:
 
     def predict(self, X_test):
         return self.model.predict(X_test)
+
+    def cleanup(self):
+        self.model = None
 
 
 
@@ -851,6 +852,10 @@ class ETRModel:
     def predict(self, X_test):
         return self.model.predict(X_test)
 
+    def cleanup(self):
+        self.model = None
+
+
 
 class AdaBoostRModel:
     def __init__(self, conf, model=None):
@@ -875,6 +880,10 @@ class AdaBoostRModel:
 
     def predict(self, X_test):
         return self.model.predict(X_test)
+
+    def cleanup(self):
+        self.model = None
+
 
 
 def create_rfr_params(n_estimator=[200], oob_score=[False], max_features=["auto"],
@@ -913,6 +922,8 @@ class XGBoostModel:
         self.name = "XGB"
         self.xgb_params = xgb_params
         self.use_cv = use_cv
+        self.model = None
+
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
         start = time.time()
         if self.use_cv:
@@ -930,6 +941,10 @@ class XGBoostModel:
 
     def predict(self, X_test):
         return self.model.predict(X_test)
+
+    def cleanup(self):
+        self.model = None
+
 
 class LRModel:
     def __init__(self, conf, model=None):
@@ -953,6 +968,9 @@ class LRModel:
     def predict(self, X_test):
         return self.model.predict(X_test)
 
+    def cleanup(self):
+        self.model = None
+
 
 
 class DLModel:
@@ -960,6 +978,7 @@ class DLModel:
         self.conf = conf
         self.dlconf = dlconf
         self.name = "DL"
+        self.model = None
     def fit(self, X_train, y_train, X_test, y_test, y_actual, forecasting_feilds=None):
         start = time.time()
         if self.dlconf == None:
@@ -976,6 +995,10 @@ class DLModel:
 
     def predict(self, X_test):
         return self.model.predict(X_test)
+
+    def cleanup(self):
+        self.model = None
+
 
 
 def run_xgboost(X_train, Y_train, X_test, Y_test, forecasting_feilds=None):
@@ -1422,22 +1445,6 @@ def get_models4ensamble(conf):
     #models = [RFRModel(conf), DLModel(conf), LRModel(conf)]
     #models = [LRModel(conf)]
     # see http://scikit-learn.org/stable/modules/linear_model.html
-    models = [
-                #DLModel(conf),
-
-                #LRModel(conf, model=linear_model.BayesianRidge()),
-                #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
-                #LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
-                #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
-                #LRModel(conf, model=linear_model.Ridge (alpha = .5))
-                #   ('linear', LinearRegression(fit_intercept=False))])),
-
-                #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
-                #RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
-                #LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
-                #ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
-                #AdaBoostRModel(conf, model=AdaBoostRegressor(loss='square'))
-              ]
 
     #0 was too big to run with depth set to 1, and 1 was overfitting a bit
     if conf.command == 0 or conf.command == 1:
@@ -1447,7 +1454,24 @@ def get_models4ensamble(conf):
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":10, "eta":0.1, "min_child_weight":8,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
 
-    models.append(XGBoostModel(conf, xgb_params))
+    models = [
+                #DLModel(conf),
+
+                #LRModel(conf, model=linear_model.BayesianRidge()),
+                #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
+                #LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
+                #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
+                #LRModel(conf, model=linear_model.Ridge (alpha = .5))
+                #   ('linear', LinearRegression(fit_intercept=False))])),
+                XGBoostModel(conf, xgb_params),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
+                RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
+                LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
+                ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
+                #AdaBoostRModel(conf, model=AdaBoostRegressor(loss='square'))
+              ]
+
+
     return models
 
 
@@ -1515,7 +1539,7 @@ def get_models4rfr_tunning(conf):
     return models;
 
 
-def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test):
+def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test, models=None):
     start = time.time()
     if train_df.shape[1] != test_df.shape[1]:
         raise ValueError("train and test does not match " + str(list(train_df)) + " " + str(list(test_df)))
@@ -1544,12 +1568,13 @@ def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test)
     X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(train_df.values.copy())
     x_test_raw = test_df.values.copy()
 
-    print "Before normalize x-text"
-    check4nan(x_test_raw)
+    #print "Before normalize x-text"
+    #check4nan(x_test_raw)
     X_test = apply_zeroMeanUnit2D(x_test_raw, parmsFromNormalization2D)
-    print "After normalize x-text"
-    check4nan(X_test)
     conf.parmsFromNormalization = parmsFromNormalization
+    #print "After normalize x-text"
+    #check4nan(X_test)
+
 
     if X_train.shape[1] != X_test.shape[1]:
         print " columns not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
@@ -1560,32 +1585,33 @@ def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test)
     #print_xy_sample(X_train, y_train)
     #print_xy_sample(X_test, y_test)
 
-    print "X_train"
-    check4nan(X_train)
-    print "X_test"
-    check4nan(X_test)
-    print "y_train"
-    check4nan(y_train)
-    print "y_test"
-    check4nan(y_test)
+    #print "X_train"
+    #check4nan(X_train)
+    #print "X_test"
+    #check4nan(X_test)
+    #print "y_train"
+    #check4nan(y_train)
+    #print "y_test"
+    #check4nan(y_test)
 
     de_normalized_forecasts = []
 
     tune_paramers = False
-    if tune_paramers:
-        models = get_models4xgboost_tunning(conf)
-        #models = get_models4rfr_tunning(conf)
-    else:
-        #models = get_models4xgboost_only(conf)
-        models = get_models4ensamble(conf)
+    if models is None:
+        if tune_paramers:
+            models = get_models4xgboost_tunning(conf)
+            #models = get_models4rfr_tunning(conf)
+        else:
+            #models = get_models4xgboost_only(conf)
+            models = get_models4ensamble(conf)
 
     print_mem_usage("before running models")
     print "trying ", len(models), " Models"
     for m in models:
+        print "running model", m.name
         m_start = time.time()
         den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=forecasting_feilds)
         print "model took ", (time.time() - m_start), "seconds"
-        print_mem_usage("after model" + m.name)
         de_normalized_forecasts.append(den_forecasted_data)
 
     #if len(de_normalized_forecasts) > 1:
@@ -1709,22 +1735,15 @@ def create_per_model_submission(conf, models, testDf, parmsFromNormalization, pa
 
     return ids, np.column_stack(kaggale_predicted_list)
 
-
-
-def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNormalization2D ):
+def create_submission(conf, model, ids, sub_X_all, parmsFromNormalization, parmsFromNormalization2D ):
     start = time.time()
-    ids = testDf['id']
-    temp = testDf.drop('id',1)
     print "creating submission for ", len(ids), "values"
 
     #pd.colnames(temp)[pd.colSums(is.na(temp)) > 0]
     #print temp.describe()
     #print df.isnull().any()
-    temp = temp.fillna(0)
 
-    print "forecasting values",  temp.shape
-
-    kaggale_test = apply_zeroMeanUnit2D(temp.values.copy(), parmsFromNormalization2D)
+    kaggale_test = apply_zeroMeanUnit2D(sub_X_all, parmsFromNormalization2D)
 
     print "kaggale_test", kaggale_test.shape
 
@@ -1738,8 +1757,8 @@ def create_submission(conf, model, testDf, parmsFromNormalization, parmsFromNorm
 
     print "log retransform", kaggale_test.shape
 
-    submission_file = 'submission'+str(conf.command)+ '.csv'
-    save_submission_file(submission_file, ids, kaggale_predicted)
+    #submission_file = 'submission'+str(conf.command)+ '.csv'
+    #save_submission_file(submission_file, ids, kaggale_predicted)
 
     #to_save = np.column_stack((ids, kaggale_predicted))
     #to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
