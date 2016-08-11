@@ -151,6 +151,10 @@ def save_file(model_type, command, df, name, metadata=None):
     print "saved", submission_file, list(df)
 
 
+
+
+
+
 def load_file(model_type, command, name, throw_error=True):
     submission_file = model_type+ '/' + name+str(command)+ '.csv'
     if not throw_error:
@@ -191,17 +195,27 @@ def save_submission_file(submission_file, ids, submissions):
     print_time_took(start, "create_submission took ")
 
 
-def save_train_data(model_type, command, train_df, test_df, sub_df):
+def save_train_data(model_type, command, train_df, test_df, sub_df, y_train, y_test):
     save_file(model_type, command,train_df, 'train')
     save_file(model_type, command,test_df, 'test')
     save_file(model_type, command,sub_df, 'sub')
 
+    ytrain_df =  pd.DataFrame(y_train.reshape(-1,1), columns=["target"])
+    save_file(model_type, command, ytrain_df, 'y_train')
 
-def load_train_data(model_type, command):
-    train_df = load_file(model_type, command,'train', throw_error=False)
-    test_df = load_file(model_type, command, 'test', throw_error=False)
-    sub_df = load_file(model_type, command, 'sub', throw_error=False)
-    return train_df, test_df, sub_df
+    ytest_df =  pd.DataFrame(y_test.reshape(-1,1), columns=["target"])
+    save_file(model_type, command, ytest_df, 'y_test')
+
+
+def load_train_data(model_type, command, throw_error=False):
+    train_df = load_file(model_type, command,'train', throw_error=throw_error)
+    test_df = load_file(model_type, command, 'test', throw_error=throw_error)
+    sub_df = load_file(model_type, command, 'sub', throw_error=throw_error)
+
+    ytrain_df = load_file(model_type, command, 'y_train', throw_error=throw_error)
+    ytest_df = load_file(model_type, command, 'y_test', throw_error=throw_error)
+
+    return train_df, test_df, sub_df, ytrain_df['target'].values, ytest_df['target'].values
 
 
 def find_alt_for_missing(to_merge, seen_with_stats):
