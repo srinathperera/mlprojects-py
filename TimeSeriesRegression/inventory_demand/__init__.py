@@ -215,7 +215,13 @@ def load_train_data(model_type, command, throw_error=False):
     ytrain_df = load_file(model_type, command, 'y_train', throw_error=throw_error)
     ytest_df = load_file(model_type, command, 'y_test', throw_error=throw_error)
 
-    return train_df, test_df, sub_df, ytrain_df['target'].values, ytest_df['target'].values
+    if ytest_df is not None and ytest_df is not None:
+        return train_df, test_df, sub_df, ytrain_df['target'].values, ytest_df['target'].values
+    else:
+        if throw_error:
+            raise ValueError("cannot find ytrain and ytest data in store")
+        else:
+            return train_df, test_df, sub_df, None, None
 
 
 def find_alt_for_missing(to_merge, seen_with_stats):
@@ -1418,16 +1424,18 @@ def get_models4ensamble(conf):
     # see http://scikit-learn.org/stable/modules/linear_model.html
     models = [
                 #DLModel(conf),
-                RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
+
                 #LRModel(conf, model=linear_model.BayesianRidge()),
                 #LRModel(conf, model=linear_model.LassoLars(alpha=.1)),
                 #LRModel(conf, model=linear_model.Lasso(alpha = 0.1)),
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
                 #LRModel(conf, model=linear_model.Ridge (alpha = .5))
                 #   ('linear', LinearRegression(fit_intercept=False))])),
-                LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
+
                 #LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
-                ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
+                #RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
+                #LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
+                #ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
                 #AdaBoostRModel(conf, model=AdaBoostRegressor(loss='square'))
               ]
 
@@ -1571,11 +1579,13 @@ def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test)
         #models = get_models4xgboost_only(conf)
         models = get_models4ensamble(conf)
 
+    print_mem_usage("before running models")
     print "trying ", len(models), " Models"
     for m in models:
         m_start = time.time()
         den_forecasted_data = m.fit(X_train, y_train, X_test, y_test, y_actual_test, forecasting_feilds=forecasting_feilds)
         print "model took ", (time.time() - m_start), "seconds"
+        print_mem_usage("after model" + m.name)
         de_normalized_forecasts.append(den_forecasted_data)
 
     #if len(de_normalized_forecasts) > 1:
