@@ -90,6 +90,9 @@ def do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids,
     if submissions_ids is not None and submissions is not None:
         best_pair_ensamble_forecasts = ensmbales[2].predict(submissions, best_forecast_index)
         save_submission_file("best_pair_submission.csv", submissions_ids, best_pair_ensamble_forecasts)
+
+        best_pair_ensamble_forecasts = ensmbales[3].predict(submissions, best_forecast_index)
+        save_submission_file("best_triple_submission.csv", submissions_ids, best_pair_ensamble_forecasts)
     else:
         print "submissions not found"
 

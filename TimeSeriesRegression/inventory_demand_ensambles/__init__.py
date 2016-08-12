@@ -258,7 +258,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
         y_actual = transfrom_to_log(y_actual)
 
     #we use 10% full data to train the ensamble and 30% for evalaution
-    no_of_training_instances = int(round(len(y_actual)*0.25))
+    no_of_training_instances = int(round(len(y_actual)*0.50))
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
     y_actual_test = y_actual_saved[no_of_training_instances:]
 
