@@ -130,7 +130,6 @@ class BestThreeEnsamble:
 
 def generate_forecast_features(forecasts, model_index_by_acc):
     sorted_forecats = forecasts[:,model_index_by_acc]
-    sorted_forecats = transfrom_to_log2d(sorted_forecats)
     diff_best_two = np.abs(sorted_forecats[:, 1] - sorted_forecats[:, 0])
     min_diff_to_best = np.min(np.abs(sorted_forecats[:, 2:] - sorted_forecats[:, 0].reshape((-1,1))), axis=1)
     min_diff_to_second = np.min(np.abs(sorted_forecats[:, 2:] - sorted_forecats[:, 1].reshape((-1,1))), axis=1)
@@ -255,6 +254,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
     y_actual_saved = y_actual
     if conf.target_as_log:
+        X_all = transfrom_to_log2d(X_all)
         y_actual = transfrom_to_log(y_actual)
 
     #we use 10% full data to train the ensamble and 30% for evalaution
@@ -262,6 +262,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
     y_actual_test = y_actual_saved[no_of_training_instances:]
 
+    '''
     rfr = RandomForestRegressor(n_jobs=4, oob_score=True)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
@@ -287,8 +288,31 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     lr_forecast = lr_model.predict(X_test)
     lr_forcast_revered = retransfrom_from_log(lr_forecast)
     calculate_accuracy("vote__lr_forecast " + str(conf.command), y_actual_test, lr_forcast_revered)
+    '''
 
-    return rfr_forecast, rmsle
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
+    model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
+                            use_sklean=False, xgb_params=xgb_params)
+    #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+    #                                                  xgb_params=xgb_params,num_rounds=100)
+    xgb_forecast = model.predict(X_test)
+    xgb_forecast = retransfrom_from_log(xgb_forecast)
+    rmsle = calculate_accuracy("xgb_forecast", y_actual_test, xgb_forecast)
+
+    dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
+                epoch_count=10, optimizer=Adam(lr=0.0001), regularization=0.2)
+    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
+    y_test = apply_zeroMeanUnit(y_test, parmsFromNormalization)
+    X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(X_train)
+    X_test = apply_zeroMeanUnit2D(X_test, parmsFromNormalization2D)
+
+    model, y_forecast = regression_with_dl(X_train, y_train, X_test, y_test, dlconf)
+
+    y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
+    y_forecast = retransfrom_from_log(y_forecast)
+    rmsle = calculate_accuracy("ml_forecast", y_actual_test, y_forecast)
+
+    return xgb_forecast, rmsle
 
 
 def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):

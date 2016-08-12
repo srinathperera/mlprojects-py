@@ -189,7 +189,7 @@ def load_file_with_metadata(model_type, command, name):
 def save_submission_file(submission_file, ids, submissions):
     uids = np.unique(ids)
     if int(uids.shape[0]) != int(ids.shape[0]):
-        print uids.shape, uids.shape, uids.shape[0], ids.shape[0]
+        print uids.shape, ids.shape, uids.shape[0], ids.shape[0]
         raise ValueError('submission ids are not unique')
     start = time.time()
     to_save = np.column_stack((ids, submissions))

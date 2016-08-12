@@ -149,10 +149,10 @@ def run_ensambles(rcommand):
     model_index_by_acc = find_best_forecast(forecasts, y_actual)
 
     best_forecast_index = model_index_by_acc[0]
-    do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids ,submissions)
-    #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
-    #             blend_data, blend_data_submission)
+    #do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids ,submissions)
+    blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
+                 blend_data, blend_data_submission)
 
-    avg_models(conf, forecasts, y_actual, blend_features)
+    #avg_models(conf, forecasts, y_actual, blend_features)
 
 run_ensambles(command)
