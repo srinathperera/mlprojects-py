@@ -292,9 +292,8 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
 
 
 def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
+    print "start avg models"
     start = time.time()
-
-    #add few more features
     use_features = False
     if use_features:
         X_all = np.column_stack([forecasts, blend_features])
@@ -307,19 +306,13 @@ def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=N
 
 
     #removing NaN and inf if there is any
-    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
-    print "X_all"
-    check4nan(X_all)
-    print "Y_all"
-    check4nan(y_actual)
+    X_all = fillna_and_inf(X_all)
 
     y_actual_saved = y_actual
 
     target_as_log = True
     if target_as_log:
         y_actual = transfrom_to_log(y_actual)
-
-
 
     #we use 10% full data to train the ensamble and 30% for evalaution
     no_of_training_instances = int(round(len(y_actual)*0.25))
@@ -344,19 +337,15 @@ def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=N
     rmsle = calculate_accuracy("xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
     ensambles.append((rmsle, model, "xgboost ensamble"))
 
-
     lr_model =linear_model.Lasso(alpha = 0.2)
     lr_model.fit(X_train, y_train)
     lr_forecast = lr_model.predict(X_test)
     rmsle = calculate_accuracy("lr_forecast", y_actual_test, retransfrom_from_log(lr_forecast))
-    ensambles.append((rmsle, lr_model, "rfr ensamble"))
-
-
+    ensambles.append((rmsle, lr_model, "lr ensamble"))
 
     best_ensamble_index = np.argmin([t[0] for t in ensambles])
     best_ensamble = ensambles[best_ensamble_index][1]
     print "[IDF]Best Ensamble", ensambles[best_ensamble_index][2], ensambles[best_ensamble_index][0]
-
 
     if submission_forecasts is not None:
         median_forecast = np.median(submission_forecasts, axis=1)
