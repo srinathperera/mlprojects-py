@@ -73,7 +73,8 @@ def do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids,
     ensmbales = [
         SimpleAvgEnsamble(conf, "mean"),
         SimpleAvgEnsamble(conf, "median"),
-        BestPairEnsamble(conf)
+        BestPairEnsamble(conf),
+        BestThreeEnsamble(conf)
     ]
 
     for en in ensmbales:
@@ -102,7 +103,7 @@ def find_best_forecast(forecasts, y_actual):
     for i in range(forecasts.shape[1]):
         rmsle = calculate_accuracy("vote_forecast "+ str(i), y_actual, forecasts[:, i])
         forecasts_rmsle.append(rmsle)
-        print "forecast "+str(i)+" rmsle=", rmsle, " stats\n", pd.Series(forecasts[i]).describe()
+        print "[full data] forecast "+str(i)+" rmsle=", rmsle, " stats\n"
 
     model_index_by_acc = np.argsort(forecasts_rmsle)
     print "model index order", model_index_by_acc
@@ -110,8 +111,8 @@ def find_best_forecast(forecasts, y_actual):
     print "best single model forecast is", best_findex, "rmsle=", forecasts_rmsle[best_findex]
     print_time_took(start, "find_best_forecast")
 
-    print "best single model forecast stats\n", pd.Series(forecasts[best_findex]).describe()
-    print "y actual\n", pd.Series(y_actual).describe()
+    print "best single model forecast stats\n", basic_stats_as_str(forecasts[best_findex])
+    print "y actual\n", basic_stats_as_str(y_actual)
 
     return model_index_by_acc
 
@@ -123,12 +124,15 @@ def run_ensambles(rcommand):
 
     blend_features = get_blend_features()
 
+    #load forecast data
     forecasts_df = load__from_store('agr_cat', "model_forecasts")
+    #if we do not copy, we get errors due to shafflinf
     y_actual = forecasts_df['actual'].values.copy()
     blend_data = forecasts_df[blend_features].values
     forecasts_df = drop_feilds_1df(forecasts_df, ['actual']+blend_features)
     forecasts = forecasts_df.values
 
+    #load submission data
     subdf = load__from_store('agr_cat', "model_submissions")
     if subdf is not None:
         submissions_ids = subdf['id']
@@ -140,6 +144,7 @@ def run_ensambles(rcommand):
         submissions =None
 
     model_index_by_acc = find_best_forecast(forecasts, y_actual)
+
     best_forecast_index = model_index_by_acc[0]
     do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids ,submissions)
     blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,

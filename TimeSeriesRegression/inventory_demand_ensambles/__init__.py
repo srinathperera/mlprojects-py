@@ -59,6 +59,7 @@ class SimpleAvgEnsamble:
             forecast = np.mean(forecasts, axis=1)
         return forecast
 
+
 class BestPairEnsamble:
     def __init__(self, conf, method="mean"):
         self.conf = conf
@@ -85,6 +86,41 @@ class BestPairEnsamble:
 
     def predict_pair(self, f1,f2 ):
         forecasts = np.column_stack([f1,f2])
+        if self.method == 'median':
+            forecast = np.median(forecasts, axis=1)
+        elif self.method == 'mean':
+            forecast = np.mean(forecasts, axis=1)
+        return forecast
+
+
+class BestThreeEnsamble:
+    def __init__(self, conf, method="mean"):
+        self.conf = conf
+        self.method = method
+        self.name = "BestThreeEnsamble_"+method
+        self.best_triple = None
+
+    def fit(self, forecasts, best_rmsle_index, y_actual):
+        start = time.time()
+        comb = list(itertools.combinations(range(forecasts.shape[1]),3))
+        rmsle_values = []
+        for (a,b,c) in comb:
+            forecast = self.predict_triple(forecasts[:,a], forecasts[:,b], forecasts[:,b])
+            rmsle = calculate_accuracy("try " +self.method + " triple " + str((a,b)) , y_actual, forecast)
+            rmsle_values.append(rmsle)
+
+        best_index = np.argmin(rmsle_values)
+        self.best_triple = comb[best_index]
+        print "best triple, " + str(self.conf.command), str(self.best_triple), 'rmsle=', rmsle_values[best_index]
+        print_time_took(start, self.name + str(self.conf.command))
+        return forecast
+
+    def predict(self, forecasts, best_rmsle_index):
+        (a,b, c) = self.best_triple
+        return self.predict_triple(forecasts[:, a], forecasts[:, b], forecasts[:, c])
+
+    def predict_triple(self, f1,f2, f3):
+        forecasts = np.column_stack([f1,f2, f3])
         if self.method == 'median':
             forecast = np.median(forecasts, axis=1)
         elif self.method == 'mean':

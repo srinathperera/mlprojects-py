@@ -36,6 +36,7 @@ from pympler import asizeof
 import objgraph
 import os
 import pickle
+import re
 
 
 def read_datafiles(command, test_run=True):
@@ -122,6 +123,13 @@ def fillna_if_feildexists(df, feild_name, replacement):
     if feild_name in df:
         df[feild_name].fillna(replacement, inplace=True)
     return df
+
+
+def basic_stats_as_str(data):
+    stats = pd.Series(data).describe(percentiles=[0.5, .25, .5, .75, 0.95])
+    start_as_str = str(stats).replace('\n', ',')
+    start_as_str = re.sub('\s+', '=', start_as_str)
+    return ">>"+start_as_str
 
 
 def print_time_took(start_time, label, silient_on_small=False):
