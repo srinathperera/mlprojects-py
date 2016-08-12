@@ -291,36 +291,13 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     return rfr_forecast, rmsle
 
 
-def avg_models(conf, models, forecasts, y_actual, test_df, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
+def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
     start = time.time()
-
-
-    if test:
-        rmsle_values = [m for m in models]
-    else:
-        rmsle_values = [m.rmsle for m in models]
-
-    best_forecast_index = np.argmin(rmsle_values)
-
-    print "rmsle values", rmsle_values
-
-    vf_start = time.time()
-    vote_forecast = vote_based_forecast(forecasts, best_forecast_index, y_actual)
-    calculate_accuracy("vote_forecast", y_actual, vote_forecast)
-    print "vf tooks", (time.time() - vf_start)
-
-
-
-
-
-
-
 
     #add few more features
     use_features = False
     if use_features:
-        X_all = np.column_stack([forecasts, test_df['Semana'],
-                             test_df['clients_combined_Mean'], test_df['Producto_ID_Demanda_uni_equil_Mean']])
+        X_all = np.column_stack([forecasts, blend_features])
 
         forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])] \
                              + ["Semana", "clients_combined_Mean", 'Producto_ID_Demanda_uni_equil_Mean']
