@@ -40,6 +40,10 @@ def generate_unit_features(conf, train_df, test_df, subdf, y_actual_test):
     if use_slope:
         train_df, test_df, testDf = addSlopes(train_df, test_df, testDf)
 
+    #Venta_uni_hoy
+    #Dev_uni_proxima
+
+
     default_demand_stats = DefaultStats(mean=train_df['Demanda_uni_equil'].mean(), count=train_df['Demanda_uni_equil'].count(),
                                         stddev=train_df['Demanda_uni_equil'].std())
     default_venta_hoy_stats = DefaultStats(train_df['Venta_hoy'].mean(), train_df['Venta_hoy'].count(),
@@ -49,6 +53,12 @@ def generate_unit_features(conf, train_df, test_df, subdf, y_actual_test):
 
     #this is to drop all features in one go
     feilds_to_drop = []
+
+
+    train_df['sales_units'] = train_df['Venta_uni_hoy'] - train_df['Dev_uni_proxima']
+
+    default_demand_stats = DefaultStats(mean=train_df['sales_units'].mean(), count=train_df['sales_units'].count(),
+                                        stddev=train_df['sales_units'].std())
 
     #add mean and stddev by groups
 

@@ -70,14 +70,15 @@ def add_five_grouped_stats(train_df, test_df, testDf):
         testDf = pd.merge(testDf, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
         testDf.fillna(0, inplace=True)
 
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats,
-                                                            FeatureOps(hmean=True, stddev=True, count=True))
-    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-                'Demanda_uni_equil', "clients_combined", default_demand_stats,
-                            FeatureOps(sum= True, kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
-    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
-                                                            FeatureOps(stddev=True, p90=True, hmean=True,p10=True, count=True))
-
+    #these are top aggrigate features
+    default_demand_stats = DefaultStats(mean=train_df['Demanda_uni_equil'].mean(), count=train_df['Demanda_uni_equil'].count(),
+                                        stddev=train_df['Demanda_uni_equil'].std())
+    train_df_m, test_df_m, testDf = addFeildStatsAsFeatures(train_df_m, test_df_m,'Agencia_ID', testDf, default_demand_stats,
+                                                        FeatureOps(stddev=True))
+    train_df_m, test_df_m, testDf = join_multiple_feild_stats(train_df_m, test_df_m, testDf, ['Ruta_SAK', 'Cliente_ID'],
+                'Demanda_uni_equil', "clients_combined", default_demand_stats, FeatureOps(kurtosis=True, stddev=True))
+    train_df_m, test_df_m, testDf = addFeildStatsAsFeatures(train_df_m, test_df_m,'Producto_ID', testDf, default_demand_stats,
+                                                            FeatureOps(stddev=True))
 
     train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima']
     train_df_m, test_df_m, _ = drop_feilds(train_df_m, test_df_m, None, train_data_feilds_to_drop)
