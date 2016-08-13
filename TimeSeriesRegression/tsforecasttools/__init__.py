@@ -46,6 +46,10 @@ class XGBoostModel:
             return self.model.predict(xgb.DMatrix(data), ntree_limit=self.model.best_ntree_limit)
         else:
             return self.model.predict(xgb.DMatrix(data))
+    def cleanup(self):
+        self.model.cleanup()
+        self.model = None
+
 '''
 def regression_with_xgboost1(X_train, Y_train, X_test):
     #http://datascience.stackexchange.com/questions/9483/xgboost-linear-regression-output-incorrect

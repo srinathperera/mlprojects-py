@@ -348,7 +348,7 @@ def regression_with_dl(X_train, y_train, X_test, y_test, config):
     #activations http://keras.io/activations/
     early_stop = EarlyStopping(monitor='val_loss', patience=1, verbose=1)
     lr_logger = LearningRateLogger()
-    hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=16, validation_data=(X_test, y_test),
+    hist = model.fit(X_train, y_train, nb_epoch=config.epoch_count, batch_size=64, verbose=2, validation_data=(X_test, y_test),
                      callbacks=[early_stop, lr_logger])
     print(">> history",hist.history)
 
