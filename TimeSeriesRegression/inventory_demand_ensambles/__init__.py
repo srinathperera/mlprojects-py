@@ -270,18 +270,6 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     rfr_forecast = retransfrom_from_log(rfr_forecast_as_log)
     rmsle = calculate_accuracy("rfr_forecast", y_actual_test, rfr_forecast)
 
-    if submissions_ids is not None and submissions is not None:
-        if use_complex_features:
-            submissions, _ = generate_forecast_features(submissions, model_index_by_acc)
-        submissions = np.column_stack([submissions, blend_data_submission])
-
-        submissions = np.where(np.isnan(submissions), 0, np.where(np.isinf(submissions), 10000, submissions))
-        rfr_ensamble_forecasts = rfr.predict(submissions)
-        if conf.target_as_log:
-            rfr_ensamble_forecasts = retransfrom_from_log(rfr_ensamble_forecasts)
-        save_submission_file("rfr_blend_submission.csv", submissions_ids, rfr_ensamble_forecasts)
-    else:
-        print "submissions not found"
 
     lr_model =linear_model.Lasso(alpha = 0.1)
     lr_model.fit(X_train, y_train)
@@ -290,17 +278,30 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     calculate_accuracy("vote__lr_forecast " + str(conf.command), y_actual_test, lr_forcast_revered)
     '''
 
-    '''
-    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4, 'min_child_weight':5}
     model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
                             use_sklean=False, xgb_params=xgb_params)
     #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
     #                                                  xgb_params=xgb_params,num_rounds=100)
     xgb_forecast = model.predict(X_test)
     xgb_forecast = retransfrom_from_log(xgb_forecast)
-    rmsle = calculate_accuracy("xgb_forecast", y_actual_test, xgb_forecast)
-    '''
+    calculate_accuracy("xgb_forecast", y_actual_test, xgb_forecast)
 
+    if submissions_ids is not None and submissions is not None:
+        if use_complex_features:
+            submissions, _ = generate_forecast_features(submissions, model_index_by_acc)
+        submissions = np.column_stack([submissions, blend_data_submission])
+        submissions = np.where(np.isnan(submissions), 0, np.where(np.isinf(submissions), 10000, submissions))
+        rfr_ensamble_forecasts = model.predict(submissions)
+        if conf.target_as_log:
+            rfr_ensamble_forecasts = retransfrom_from_log(rfr_ensamble_forecasts)
+        save_submission_file("rfr_blend_submission.csv", submissions_ids, rfr_ensamble_forecasts)
+    else:
+        print "submissions not found"
+
+
+
+    '''
     dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
                 epoch_count=10, optimizer=Adam(lr=0.0001), regularization=0.2)
     y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
@@ -313,6 +314,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
     y_forecast = retransfrom_from_log(y_forecast)
     rmsle = calculate_accuracy("ml_forecast", y_actual_test, y_forecast)
+    '''
 
     #return xgb_forecast, rmsle
 
