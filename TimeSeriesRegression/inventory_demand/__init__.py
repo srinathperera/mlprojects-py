@@ -1506,8 +1506,6 @@ def get_models4ensamble(conf):
                 ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
                 #AdaBoostRModel(conf, model=AdaBoostRegressor(loss='square'))
               ]
-
-
     return models
 
 

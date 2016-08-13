@@ -52,8 +52,12 @@ else:
     print "reusing train data", analysis_type
 
 #load second dataset
-rain_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
+train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
     ["median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis"])
+
+train_df.fillna(0, inplace=True)
+test_df.fillna(0, inplace=True)
+testDf.fillna(0, inplace=True)
 
 #"mean_sales", "sales_count", "sales_stddev", "hmean", "entropy"
 

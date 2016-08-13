@@ -241,7 +241,7 @@ def get_blend_features():
 
 def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
                  blend_data, blend_data_submission):
-    use_complex_features = False
+    use_complex_features = True
     if use_complex_features:
         X_all, forecasting_feilds = generate_forecast_features(forecasts, model_index_by_acc)
     else:
@@ -301,9 +301,9 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
 
 
 
-    '''
+
     dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
-                epoch_count=10, optimizer=Adam(lr=0.0001), regularization=0.2)
+                epoch_count=4, optimizer=Adam(lr=0.0001), regularization=0.2)
     y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
     y_test = apply_zeroMeanUnit(y_test, parmsFromNormalization)
     X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(X_train)
@@ -314,7 +314,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
     y_forecast = retransfrom_from_log(y_forecast)
     rmsle = calculate_accuracy("ml_forecast", y_actual_test, y_forecast)
-    '''
+    
 
     #return xgb_forecast, rmsle
 
