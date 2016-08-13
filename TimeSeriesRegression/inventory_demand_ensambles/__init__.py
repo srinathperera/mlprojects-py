@@ -256,8 +256,8 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
         X_all = transfrom_to_log2d(X_all)
         y_actual = transfrom_to_log(y_actual)
 
-    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
-    y_actual = np.where(np.isnan(y_actual), 0, np.where(np.isinf(y_actual), 10000, X_all))
+    X_all = fillna_and_inf(X_all)
+    y_actual = fillna_and_inf(y_actual)
 
     #we use 10% full data to train the ensamble and 30% for evalaution
     no_of_training_instances = int(round(len(y_actual)*0.50))
