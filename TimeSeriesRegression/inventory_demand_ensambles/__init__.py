@@ -251,11 +251,13 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     forecasting_feilds = forecasting_feilds + get_blend_features()
 
     #removing NaN and inf if there is any
-    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
     y_actual_saved = y_actual
     if conf.target_as_log:
         X_all = transfrom_to_log2d(X_all)
         y_actual = transfrom_to_log(y_actual)
+
+    X_all = np.where(np.isnan(X_all), 0, np.where(np.isinf(X_all), 10000, X_all))
+    y_actual = np.where(np.isnan(y_actual), 0, np.where(np.isinf(y_actual), 10000, X_all))
 
     #we use 10% full data to train the ensamble and 30% for evalaution
     no_of_training_instances = int(round(len(y_actual)*0.50))
@@ -314,7 +316,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
     y_forecast = retransfrom_from_log(y_forecast)
     rmsle = calculate_accuracy("ml_forecast", y_actual_test, y_forecast)
-    
+
 
     #return xgb_forecast, rmsle
 
