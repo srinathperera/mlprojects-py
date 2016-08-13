@@ -52,6 +52,9 @@ else:
 
 #drop five feild
 feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
+test_data_keys = test_df[feilds_to_drop]
+submission_data_keys = testDf[feilds_to_drop]
+
 train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
 
 if conf.target_as_log:
@@ -99,8 +102,10 @@ submissions = np.column_stack(submissions)
 
 #create and save predictions for each model so we can build an ensamble later
 if forecasts.shape[1] > 1:
-    blend_features = get_blend_features()
-    blend_data_test = test_df[blend_features].values
+    blend_features = feilds_to_drop
+    blend_data_test = test_data_keys
+    #blend_features = get_blend_features()
+    #blend_data_test = test_df[blend_features].values
 
     print "shapes", blend_data_test.shape, forecasts.shape, y_actual_test.shape
     model_forecasts_data = np.column_stack([blend_data_test, forecasts, y_actual_test])
@@ -110,8 +115,9 @@ if forecasts.shape[1] > 1:
     print "## model_forecasts ##"
     print to_saveDf.describe()
 
-    blend_data_submission = testDf[blend_features].values
+    #blend_data_submission = testDf[blend_features].values
     #ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
+    blend_data_submission = submission_data_keys
 
     submission_data = np.column_stack([ids, blend_data_submission, submissions])
     to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + blend_features +model_names])

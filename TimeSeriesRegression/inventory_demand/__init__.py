@@ -1499,7 +1499,7 @@ def get_models4ensamble(conf):
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
                 #LRModel(conf, model=linear_model.Ridge (alpha = .5))
                 #   ('linear', LinearRegression(fit_intercept=False))])),
-                XGBoostModel(conf, xgb_params),
+                XGBoostModel(conf, xgb_params, use_cv=True),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
                 RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
