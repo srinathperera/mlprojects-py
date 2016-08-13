@@ -50,6 +50,10 @@ if train_df is None or test_df is None or testDf is None:
 else:
     print "reusing train data", analysis_type
 
+#drop five feild
+feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
+train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
+
 if conf.target_as_log:
     train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
     y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)

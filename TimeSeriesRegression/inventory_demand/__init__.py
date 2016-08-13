@@ -354,6 +354,10 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
         valuesDf[name+"_entropy"] = np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
     if fops.ci:
         valuesDf[name+"ci"] = calculate_ci(stddevData,countData)
+    if fops.median:
+        median = groupData.median()
+        valuesDf[name +"_median"] = fillna_and_inf(median)
+
     #valuesDf = calculate_group_stats(groupData, name, default_stats, fops)
     print "took entropy", (time.time() - start)
     if fops.use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
@@ -463,6 +467,10 @@ def calculate_group_stats(grouped_data, name, default_stats, fops):
     if fops.entropy:
         entropy = grouped_data.apply(lambda x: min(scipy.stats.entropy(x), 10000))
         valuesDf[name +"_entropy"] =  np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
+    if fops.median:
+        median = grouped_data.median()
+        valuesDf[name +"_median"] = fillna_and_inf(median)
+
 
     valuesDf.fillna(default_stats.mean, inplace=True)
     return valuesDf
@@ -1276,6 +1284,7 @@ class DefaultStats:
 class FeatureOps:
     def __init__(self, count=False, stddev=False, sum=False, p10=False, p90=False, kurtosis=False,
                  hmean=False, entropy=False, ci=True):
+        '''
         #self.sum = sum
         self.sum = sum
         self.count = count
@@ -1288,6 +1297,21 @@ class FeatureOps:
         self.entropy=entropy
         self.use_close_products_missing=False
         self.ci = ci
+        '''
+
+        self.sum = False
+        self.count = False
+        self.stddev = False
+        #follow two are too expensive
+        self.p10 =False
+        self.p90 = False
+        self.kurtosis = kurtosis
+        self.hmean = False
+        self.entropy=False
+        self.median=True
+        self.use_close_products_missing=False
+        self.ci = ci
+
 
 
 def generate_features(conf, train_df, test_df, subdf, y_actual_test):
@@ -1430,7 +1454,6 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
 
     #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID', 'Cliente_ID'])
     train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima', 'Demanda_uni_equil']
-    feilds_to_drop = feilds_to_drop + ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
     train_df, test_df, _ = drop_feilds(train_df, test_df, None, feilds_to_drop + train_data_feilds_to_drop)
     testDf = drop_feilds_1df(testDf, feilds_to_drop)
 

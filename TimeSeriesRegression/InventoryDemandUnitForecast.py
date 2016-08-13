@@ -182,8 +182,6 @@ y_all = df['sales_units'].values
 y_actual_train = y_all[:training_set_size]
 y_actual_test = y_all[-1*test_set_size:]
 
-
-
 prep_time = time.time()
 
 if test_run:
