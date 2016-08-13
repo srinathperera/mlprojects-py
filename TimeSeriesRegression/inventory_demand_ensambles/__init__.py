@@ -290,6 +290,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     calculate_accuracy("vote__lr_forecast " + str(conf.command), y_actual_test, lr_forcast_revered)
     '''
 
+    '''
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
     model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
                             use_sklean=False, xgb_params=xgb_params)
@@ -298,6 +299,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     xgb_forecast = model.predict(X_test)
     xgb_forecast = retransfrom_from_log(xgb_forecast)
     rmsle = calculate_accuracy("xgb_forecast", y_actual_test, xgb_forecast)
+    '''
 
     dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
                 epoch_count=10, optimizer=Adam(lr=0.0001), regularization=0.2)
@@ -312,7 +314,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     y_forecast = retransfrom_from_log(y_forecast)
     rmsle = calculate_accuracy("ml_forecast", y_actual_test, y_forecast)
 
-    return xgb_forecast, rmsle
+    #return xgb_forecast, rmsle
 
 
 def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):

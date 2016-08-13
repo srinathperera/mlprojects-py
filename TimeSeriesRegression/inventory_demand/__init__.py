@@ -302,6 +302,10 @@ def setdiff_counts_froms_dfs(df1, df2):
     ds1.difference(ds2)
 
 
+def calculate_ci(std, N):
+    #based on N size, it is a normal or stddev
+    return np.where(N < 30, 1.645*np.divide(std ,np.sqrt(N)), 2.920*np.divide(std ,np.sqrt(N)))
+
 def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, fops):
     start = time.time()
     groupData = bdf.groupby(feild_names)[agr_feild]
@@ -348,8 +352,8 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     if fops.entropy:
         entropy = groupData.apply(lambda x: min(scipy.stats.entropy(x), 10000))
         valuesDf[name+"_entropy"] = np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
-
-    valuesDf[name+"ci"] = stats.norm.interval(0.90, loc=meanData, scale=stddevData/np.sqrt(countData))[1]
+    if fops.ci:
+        valuesDf[name+"ci"] = calculate_ci(stddevData,countData)
     #valuesDf = calculate_group_stats(groupData, name, default_stats, fops)
     print "took entropy", (time.time() - start)
     if fops.use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
@@ -442,8 +446,7 @@ def calculate_group_stats(grouped_data, name, default_stats, fops):
         valuesDf[name + "_Count"] = countData.values
         valuesDf.fillna(default_stats.count, inplace=True)
     if fops.ci:
-        valuesDf[name + "_ci"] = stats.norm.interval(0.90, loc=meanData, scale=stddevData/np.sqrt(countData))[1]
-
+        valuesDf[name+"ci"] = calculate_ci(stddevData.values,countData.values)
 
     if fops.p10:
         pcerntile10 = grouped_data.quantile(0.1, interpolation='nearest')

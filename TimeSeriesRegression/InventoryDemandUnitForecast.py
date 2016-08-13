@@ -27,7 +27,7 @@ import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
-def generate_unit_features(conf, train_df, test_df, subdf, y_actual_test):
+def generate_unit_features(conf, train_df, test_df, subdf):
     start = time.time()
     use_slope = False
     use_group_aggrigate = True
@@ -55,57 +55,22 @@ def generate_unit_features(conf, train_df, test_df, subdf, y_actual_test):
     feilds_to_drop = []
 
 
-    train_df['sales_units'] = train_df['Venta_uni_hoy'] - train_df['Dev_uni_proxima']
-
     default_demand_stats = DefaultStats(mean=train_df['sales_units'].mean(), count=train_df['sales_units'].count(),
                                         stddev=train_df['sales_units'].std())
 
-    #add mean and stddev by groups
-
-    groups = ('Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID')
-    measures = ('Dev_proxima', 'Dev_uni_proxima', 'Demanda_uni_equil', 'unit_prize', 'Venta_uni_hoy', 'Venta_hoy')
-    #for t in itertools.product(groups, measures):
-    #for t in [('Cliente_ID', 'Demanda_uni_equil'), ('Cliente_ID', 'Venta_uni_hoy'), ('Cliente_ID', 'Venta_hoy'),
-    #    ('Ruta_SAK', 'unit_prize')]:
-    #        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df,
-    #                                test_df,t[0], testDf, drop=False, agr_feild=t[1])
-
     if use_group_aggrigate:
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats,
-                                                            FeatureOps(hmean=True, stddev=True, count=True))
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
-        #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
-        #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
+                                                            FeatureOps(hmean=True, stddev=True, count=True), agr_feild='sales_units')
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-                'Demanda_uni_equil', "clients_combined", default_demand_stats,
-                                                              FeatureOps(sum= True, kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
-
+                'sales_units', "clients_combined", default_demand_stats,
+                FeatureOps(sum= True, kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
-                                                            FeatureOps(stddev=True, p90=True, hmean=True,p10=True, count=True))
-
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy',
-                                                            default_stats=default_venta_hoy_stats, fops=FeatureOps(stddev=True, count=True))
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False, agr_feild='Venta_hoy')
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Venta_hoy')
-        #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Venta_hoy')
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
-
+                FeatureOps(stddev=True, p90=True, hmean=True,p10=True, count=True), agr_feild='sales_units')
         train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-            'Venta_hoy', "clients_combined_vh", default_venta_hoy_stats, FeatureOps(sum=True, hmean=True, p90=True, stddev=True))
-
-
-
+            'Dev_uni_proxima', "clients_combined_vh", default_venta_hoy_stats, FeatureOps(sum=True, hmean=True, p90=True, stddev=True))
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
-                                                            agr_feild='Dev_proxima', default_stats=default_dev_proxima_stats,
+                                                            agr_feild='Dev_uni_proxima', default_stats=default_dev_proxima_stats,
                                                             fops=FeatureOps(count=True))
-
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats,
-        #                                                    drop=False, agr_feild='Dev_proxima', fops=FeatureOps())
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Dev_proxima')
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Dev_proxima')
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False, agr_feild='Dev_proxima')
-
-
     if use_product_features:
         product_data_df = read_productdata_file('product_data.csv')
 
@@ -147,36 +112,7 @@ def generate_unit_features(conf, train_df, test_df, subdf, y_actual_test):
         train_df, test_df, testDf = add_time_bwt_delivery(train_df, test_df, testDf)
         train_df, test_df, testDf = add_last_sale_and_week(train_df, test_df, testDf)
 
-    #train_df, test_df, testDf = add_five_grouped_stats(train_df, test_df, testDf)
-
-    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Dev_proxima')
-    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
-
-    #train_df, test_df, testDf =  merge_clusters(train_df, test_df, testDf)
-    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cluster', testDf, drop=False)
-    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Cluster'])
-
-    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Canal_ID'])
-
-    #train_df, test_df, testDf = only_keep_top_categories(train_df, test_df,testDf, 'Producto_ID', 30)
-    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Producto_ID'])
-
-
-
-    #train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Producto_ID', 'Agencia_ID'],
-    #                                                      'Demanda_uni_equil', "agc_product", demand_val_mean, demand_val_stddev)
-
-    #train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Canal_ID', 'Ruta_SAK', 'Cliente_ID'],
-    #                                                      'Demanda_uni_equil', "routes_combined", demand_val_mean, demand_val_stddev)
-
-    test_df_before_dropping_features = test_df
-
-    #save_train_data(conf.analysis_type, conf.command, train_df, test_df, testDf)
-    #train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,["mean_sales", "sales_count",
-    #                                        "sales_stddev", "median_sales", "last_sale", "last_sale_week", "returns"])
-
-    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID', 'Cliente_ID'])
-    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima', 'Demanda_uni_equil']
+    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima', 'Demanda_uni_equil', 'sales_units']
     feilds_to_drop = feilds_to_drop + ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
     train_df, test_df, _ = drop_feilds(train_df, test_df, None, feilds_to_drop + train_data_feilds_to_drop)
     testDf = drop_feilds_1df(testDf, feilds_to_drop)
@@ -187,7 +123,7 @@ def generate_unit_features(conf, train_df, test_df, subdf, y_actual_test):
 
 
     print "generate_features took ", (time.time() - start), "s"
-    return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features
+    return train_df, test_df, testDf
 
 
 
@@ -224,8 +160,11 @@ conf.analysis_type = analysis_type
 #df = remove_rare_categories(df)
 
 df = df[df['Producto_ID'] > 0]
-
 df = df.sample(frac=1)
+
+#unit value
+sales_unit_np = df['Venta_uni_hoy'] - df['Dev_uni_proxima']
+df['sales_units'] = np.where(sales_unit_np <0, 0, sales_unit_np)
 
 find_NA_rows_percent(df, "data set stats")
 
@@ -233,23 +172,17 @@ find_NA_rows_percent(df, "data set stats")
 training_set_size = int(0.6*df.shape[0])
 test_set_size = df.shape[0] - training_set_size
 
-y_all = df['Demanda_uni_equil'].values
-
-
 train_df = df[:training_set_size]
 test_df = df[-1*test_set_size:]
 
+print_mem_usage("before features")
+train_df, test_df, testDf = generate_unit_features(conf, train_df, test_df, testDf)
+
+y_all = df['sales_units'].values
 y_actual_train = y_all[:training_set_size]
 y_actual_test = y_all[-1*test_set_size:]
 
 
-print_mem_usage("before features")
-
-train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features = generate_features(conf, train_df,
-                                                                                               test_df, testDf, y_actual_test)
-
-print "after features", test_df['Semana'].unique(), test_df.shape
-print "after features bd", test_df_before_dropping_features['Semana'].unique(), test_df_before_dropping_features.shape
 
 prep_time = time.time()
 
@@ -276,6 +209,7 @@ print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", best_model.rmsle
 print best_model_index,
 best_forecast = forecasts[:,best_model_index]
 
+'''
 #save submission based on best model
 if conf.generate_submission:
     y_forecast_submission = create_submission(conf, best_model, testDf, parmsFromNormalization, parmsFromNormalization2D)
@@ -303,7 +237,7 @@ if forecasts.shape[1] > 1:
     save_file(analysis_type, command, to_saveDf, 'model_submissions')
     print "## model_submissions ##"
     print to_saveDf.describe()
-
+'''
 
 m_time = time.time()
 
