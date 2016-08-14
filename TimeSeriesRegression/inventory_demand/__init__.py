@@ -140,6 +140,19 @@ def print_time_took(start_time, label, silient_on_small=False):
     else:
         print label, "took", time_took, "s"
 
+
+def extract_regx(p, str):
+    p1 = re.compile(p)
+    for match in p1.finditer(str):
+        return match.group(0)
+
+
+def extract_regx_grps(p, str, groups):
+    p1 = re.compile(p)
+    for match in p1.finditer(str):
+        return [ match.group(g) for g in groups]
+
+
 '''
 We can switch to XGboost files later if needed
 http://xgboost.readthedocs.io/en/latest/python/python_intro.html
@@ -1129,7 +1142,8 @@ def calculate_slope(group):
 
 
 def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_to_use):
-    merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+    column_count_before_merge = train_df.shape[1]
+    merge_feilds = ['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
     feilds_to_use = feilds_to_use + merge_feilds
 
     sup_train_df, sup_test_df, sup_sub_df, _, _ = load_train_data(analysis_type, cmd)
@@ -1137,12 +1151,27 @@ def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_
     sup_test_df = sup_test_df[feilds_to_use]
     sup_sub_df = sup_sub_df[feilds_to_use]
 
-    print list(train_df)
-    print list(sup_train_df)
+    #if left has duplicates, that will increase left side. this fix it
+    sup_train_df = sup_train_df.drop_duplicates(subset=merge_feilds)
 
+    #print "X",train_df.shape, "X _actual", train_df.values.shape
+    #print train_df[['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']].head(5)
+    #print train_df[['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']].tail(5)
     train_df = pd.merge(train_df, sup_train_df, how='left', on=merge_feilds)
+    #print "X",train_df.shape, "Y"
+    #print train_df[['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']].head(5)
+    #print train_df[['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']].tail(5)
+
     test_df = pd.merge(test_df, sup_test_df, how='left', on=merge_feilds)
     sub_df = pd.merge(sub_df, sup_sub_df, how='left', on=merge_feilds)
+
+    if train_df.shape[1] <= column_count_before_merge:
+        raise ValueError("Join failed, no new feilds added, feilds after merge=", list(train_df))
+
+    find_NA_rows_percent(train_df, "merging two tables")
+    find_NA_rows_percent(test_df, "merging two tables")
+    find_NA_rows_percent(sub_df, "merging two tables")
+
     return train_df, test_df, sub_df
 
 
@@ -1499,7 +1528,7 @@ def get_models4ensamble(conf):
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
                 #LRModel(conf, model=linear_model.Ridge (alpha = .5))
                 #   ('linear', LinearRegression(fit_intercept=False))])),
-                XGBoostModel(conf, xgb_params, use_cv=True),
+                XGBoostModel(conf, xgb_params, use_cv=False),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
                 RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),

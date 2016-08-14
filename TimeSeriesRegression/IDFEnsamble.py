@@ -34,7 +34,6 @@ if len(sys.argv) > 1:
     command = int(sys.argv[1])
 
 
-
 def load__single_file(file):
     df = pd.read_csv(file)
     y_actual = df['actual'].values.copy()
@@ -48,22 +47,42 @@ def load__from_store(model_type, name):
     files_list = [f for f in listdir(dir) if str(f).startswith(name) and
                     str(f).endswith(".csv")]
     print name, "found files", files_list
-    df_list = [pd.read_csv(dir+'/'+str(f)) for f in files_list]
+
+    df_list = []
+    for f in files_list:
+        base_df = pd.read_csv(dir+'/'+str(f))
+        cmd = extract_regx('[0-9]+', f)
+        if name == "model_forecasts":
+            fname = "test"
+            addtional_data_feild = 'actual'
+        elif name == "model_submissions":
+            fname = "sub"
+            addtional_data_feild = 'id'
+
+        blend_df = load_file('fg_stats',cmd, fname)
+        feilds_to_use = ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
+        merge_feilds = ['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+        feilds_to_use = feilds_to_use + merge_feilds
+
+        blend_df = blend_df[feilds_to_use]
+
+        feature_df = pd.merge(base_df, blend_df, how='left', on=merge_feilds)
+        feature_df = drop_feilds_1df(feature_df, merge_feilds)
+        df_list.append(feature_df)
+
     if len(df_list) > 0:
         final_df = pd.concat(df_list)
-        print "load file", model_type, name, "shape=", final_df.shape
+         #if we do not copy, we get errors due to shafflinf
+        find_NA_rows_percent(final_df, "loading data for ensamble")
 
-        return final_df
+        addtional_data = final_df[addtional_data_feild].values.copy()
+        final_df = drop_feilds_1df(final_df, [addtional_data_feild])
+
+        print "load file", model_type, name, "shape=", final_df.shape, "with features", list(feature_df)
+        return final_df, addtional_data
     else:
         return None
-
-    #df, metadata = load_file_with_metadata(model_type, command, name)
-    #rmsle_values = metadata['rmsle']
-    #bf_index = np.argmin(rmsle_values)
-    #print "best single model rmsle=", rmsle_values[bf_index]
-    #y_actual = df['actual'].values.copy()
-    #df = drop_feilds_1df(df, ['actual'])
-    #return df, y_actual, bf_index
 
 
 
@@ -125,26 +144,19 @@ def run_ensambles(rcommand):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
     conf.command=-2
 
-    blend_features = get_blend_features()
-
     #load forecast data
-    forecasts_df = load__from_store('agr_cat', "model_forecasts")
-    #if we do not copy, we get errors due to shafflinf
-    y_actual = forecasts_df['actual'].values.copy()
-    blend_data = forecasts_df[blend_features].values
-    forecasts_df = drop_feilds_1df(forecasts_df, ['actual']+blend_features)
-    forecasts = forecasts_df.values
+    forecasts_df, y_actual = load__from_store('agr_cat', "model_forecasts")
+
+    #not using LR forecasts
+    print list(forecasts_df)
+    forecasts = forecasts_df[['XGB', 'RFR','ETR']].values
+    forecasting_feilds = list(forecasts_df)
+    X_all = forecasts_df.values
 
     #load submission data
-    subdf = load__from_store('agr_cat', "model_submissions")
-    if subdf is not None:
-        submissions_ids = subdf['id']
-        blend_data_submission = subdf[blend_features].values
-        subdf = drop_feilds_1df(subdf, ['id']+blend_features)
-        submissions = subdf.values
-    else:
-        submissions_ids = None
-        submissions =None
+    subdf, submissions_ids = load__from_store('agr_cat', "model_submissions")
+    sub_X_all = subdf.values
+    submissions = subdf[['XGB', 'RFR','ETR']].values
 
     model_index_by_acc = find_best_forecast(forecasts, y_actual)
 
@@ -153,6 +165,6 @@ def run_ensambles(rcommand):
     #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
     #             blend_data, blend_data_submission)
 
-    avg_models(conf, forecasts, y_actual, blend_features)
+    avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=sub_X_all, submission_ids=submissions_ids)
 
 run_ensambles(command)

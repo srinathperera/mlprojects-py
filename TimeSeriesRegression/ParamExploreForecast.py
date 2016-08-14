@@ -45,15 +45,16 @@ conf.analysis_type = analysis_type
 s_time = time.time()
 
 #load first dataset
-train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data(analysis_type, conf.command)
-if train_df is None or test_df is None or testDf is None:
-    raise ValueError('data not found for '+ analysis_type)
-else:
-    print "reusing train data", analysis_type
+train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data(analysis_type, conf.command, throw_error=True)
+print "reusing train data", analysis_type
+
+print "X",train_df.shape, "Y", y_actual_train.shape
 
 #load second dataset
 train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
     ["median_sales", "returns", "signature", "kurtosis"])
+
+print "X",train_df.shape, "Y", y_actual_train.shape
 
 train_df.fillna(0, inplace=True)
 test_df.fillna(0, inplace=True)

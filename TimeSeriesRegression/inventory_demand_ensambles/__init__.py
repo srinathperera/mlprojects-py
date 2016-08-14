@@ -321,19 +321,9 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     #return xgb_forecast, rmsle
 
 
-def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
+def avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
     print "start avg models"
     start = time.time()
-    use_features = False
-    if use_features:
-        X_all = np.column_stack([forecasts, blend_features])
-
-        forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])] \
-                             + ["Semana", "clients_combined_Mean", 'Producto_ID_Demanda_uni_equil_Mean']
-    else:
-        X_all = forecasts
-        forecasting_feilds = ["f"+str(f) for f in range(forecasts.shape[1])]
-
 
     #removing NaN and inf if there is any
     X_all = fillna_and_inf(X_all)
@@ -379,13 +369,7 @@ def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=N
 
     if submission_forecasts is not None:
         median_forecast = np.median(submission_forecasts, axis=1)
-        if use_features:
-            list = [submission_forecasts, median_forecast, sub_df['Semana'],
-                             sub_df['clients_combined_Mean'], sub_df['Producto_ID_Demanda_uni_equil_Mean']]
-            print "sizes", [ a.shape for a in list]
-            sub_x_all = np.column_stack(list)
-        else:
-            sub_x_all = submission_forecasts
+        sub_x_all = submission_forecasts
 
         ensamble_forecast = best_ensamble.predict(sub_x_all)
 
