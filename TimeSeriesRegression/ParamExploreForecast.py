@@ -53,7 +53,7 @@ else:
 
 #load second dataset
 train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
-    ["median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis"])
+    ["median_sales", "returns", "signature", "kurtosis"])
 
 train_df.fillna(0, inplace=True)
 test_df.fillna(0, inplace=True)
