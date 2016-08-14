@@ -1149,7 +1149,7 @@ def calculate_slope(group):
 
 def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_to_use):
     column_count_before_merge = train_df.shape[1]
-    merge_feilds = ['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+    merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
     feilds_to_use = feilds_to_use + merge_feilds
 
     sup_train_df, sup_test_df, sup_sub_df, _, _ = load_train_data(analysis_type, cmd, throw_error=True)
@@ -1158,7 +1158,7 @@ def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_
     sup_sub_df = sup_sub_df[feilds_to_use]
 
     #if left has duplicates, that will increase left side. this fix it
-    sup_train_df = sup_train_df.drop_duplicates(subset=merge_feilds)
+    #sup_train_df = sup_train_df.drop_duplicates(subset=merge_feilds)
 
     #print "X",train_df.shape, "X _actual", train_df.values.shape
     #print train_df[['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']].head(5)

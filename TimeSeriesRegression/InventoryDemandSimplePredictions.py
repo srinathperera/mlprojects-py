@@ -105,7 +105,7 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_train_
     train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data(analysis_type, conf.command)
     if train_df is None or test_df is None or testDf is None:
         train_df, test_df, testDf = add_five_grouped_stats(train_df_raw, test_df_raw, subdf_raw)
-        save_train_data(analysis_type, conf.command, train_df, test_df, testDf,y_actual_train_o, y_actual_test_o)
+        save_train_data(analysis_type, conf.command, train_df, test_df, testDf, y_actual_train_o, y_actual_test_o)
         y_actual_train = y_actual_train_o
         y_actual_test = y_actual_test_o
         print "create and save train data", analysis_type
