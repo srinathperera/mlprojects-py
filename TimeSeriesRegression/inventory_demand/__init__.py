@@ -239,7 +239,9 @@ def load_train_data(model_type, command, throw_error=False):
     ytest_df = load_file(model_type, command, 'y_test', throw_error=throw_error)
 
     if ytest_df is not None and ytest_df is not None:
-        return train_df, test_df, sub_df, ytrain_df['target'].values, ytest_df['target'].values
+        y_train = ytrain_df['target'].values
+        y_test = test_df['target'].values
+        return train_df, test_df, sub_df, y_train, y_test
     else:
         if throw_error:
             raise ValueError("cannot find ytrain and ytest data in store")
@@ -1217,10 +1219,12 @@ def doPCA(X, output_columns_count):
 
 def verify_forecasting_data(X_train, y_train, X_test, y_test):
     if X_train.shape[1] != X_test.shape[1]:
-        raise ValueError("columns not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+        raise ValueError("columns not aligned X_train, y_train, X_test, y_test " + X_train.shape + " "+ y_train.shape
+                         + " " + X_test.shape + " " +y_test.shape)
 
     if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
-        raise ValueError("rows not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+        raise ValueError("columns not aligned X_train, y_train, X_test, y_test " + X_train.shape + " "+ y_train.shape
+                         + " " + X_test.shape + " " +y_test.shape)
 
 
         #print_xy_sample(X_train, y_train)

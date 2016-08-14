@@ -48,7 +48,7 @@ s_time = time.time()
 train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data(analysis_type, conf.command, throw_error=True)
 print "reusing train data", analysis_type
 
-print "X",train_df.shape, "Y", y_actual_train.shape, "testDf",testDf.shape, "Y test", y_actual_test.shape
+print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
 
 #load second dataset
 train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
