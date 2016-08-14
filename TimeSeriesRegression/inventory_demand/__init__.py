@@ -239,7 +239,7 @@ def load_train_data(model_type, command, throw_error=False):
     ytest_df = load_file(model_type, command, 'y_test', throw_error=throw_error)
 
     if ytest_df is not None and ytest_df is not None:
-        y_train = ytrain_df['target'].values
+        y_train = train_df['target'].values
         y_test = test_df['target'].values
         return train_df, test_df, sub_df, y_train, y_test
     else:
