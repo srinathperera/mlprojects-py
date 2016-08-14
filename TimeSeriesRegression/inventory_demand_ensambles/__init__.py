@@ -393,7 +393,7 @@ def avg_models(conf, forecasts, y_actual, blend_features, submission_forecasts=N
         to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
         to_saveDf = to_saveDf.fillna(0)
         to_saveDf["id"] = to_saveDf["id"].astype(int)
-        submission_file = 'en_submission'+str(conf.command)+ '.csv'
+        submission_file = 'en_submission_full.csv'
         to_saveDf.to_csv(submission_file, index=False)
 
         print "Best Ensamble Submission Stats"
