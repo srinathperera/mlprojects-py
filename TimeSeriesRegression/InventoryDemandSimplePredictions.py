@@ -57,6 +57,8 @@ def add_five_grouped_stats(train_df, test_df, testDf):
     sales_data_df.reset_index(inplace=True)
     valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["mean_sales", "sales_count", "sales_stddev",
                     "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+    find_NA_rows_percent(valuesDf, "valuesDf base stats")
+
     #valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["sales_count"])
 
     #now we merge the data

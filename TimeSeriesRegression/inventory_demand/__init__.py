@@ -1215,6 +1215,29 @@ def doPCA(X, output_columns_count):
     return X
 
 
+def verify_forecasting_data(X_train, y_train, X_test, y_test):
+    if X_train.shape[1] != X_test.shape[1]:
+        raise ValueError("columns not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+
+    if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
+        raise ValueError("rows not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape)
+
+
+        #print_xy_sample(X_train, y_train)
+    #print_xy_sample(X_test, y_test)
+
+    #print "X_train"
+    #check4nan(X_train)
+    #print "X_test"
+    #check4nan(X_test)
+    #print "y_train"
+    #check4nan(y_train)
+    #print "y_test"
+    #check4nan(y_test)
+
+
+
+
 def encode_onehot(df, cols, vec=None):
     """
     One-hot encoding is applied to columns specified in a pandas DataFrame.
@@ -1638,24 +1661,7 @@ def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test,
     #print "After normalize x-text"
     #check4nan(X_test)
 
-
-    if X_train.shape[1] != X_test.shape[1]:
-        print " columns not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
-
-    if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
-        print "rows not aligned X_train, y_train, X_test, y_test", X_train.shape, y_train.shape, X_test.shape, y_test.shape
-
-    #print_xy_sample(X_train, y_train)
-    #print_xy_sample(X_test, y_test)
-
-    #print "X_train"
-    #check4nan(X_train)
-    #print "X_test"
-    #check4nan(X_test)
-    #print "y_train"
-    #check4nan(y_train)
-    #print "y_test"
-    #check4nan(y_test)
+    verify_forecasting_data(X_train, y_train, X_test, y_test)
 
     de_normalized_forecasts = []
 

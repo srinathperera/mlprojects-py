@@ -77,6 +77,8 @@ ids = testDf['id']
 testDf.drop('id',axis=1, inplace=True)
 sub_X_all = testDf.values
 
+verify_forecasting_data(train_df.values, y_train_raw, test_df.values, y_test_raw)
+print "train_df", train_df.shape, "test_df", test_df.shape
 
 ml_models = get_models4ensamble(conf)
 
