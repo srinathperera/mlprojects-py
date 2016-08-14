@@ -239,8 +239,12 @@ def load_train_data(model_type, command, throw_error=False):
     ytest_df = load_file(model_type, command, 'y_test', throw_error=throw_error)
 
     if ytest_df is not None and ytest_df is not None:
-        y_train = train_df['target'].values
-        y_test = test_df['target'].values
+        y_train = ytrain_df['target'].values
+        y_test = ytest_df['target'].values
+        if train_df.shape[0] != y_train.shape[0] or y_test.shape[0] != test_df.shape[0]:
+            raise ValueError("columns not aligned X_train, y_train, X_test, y_test " + train_df.shape + " "+ y_train.shape
+                         + " " + test_df.shape + " " +y_test.shape)
+
         return train_df, test_df, sub_df, y_train, y_test
     else:
         if throw_error:
