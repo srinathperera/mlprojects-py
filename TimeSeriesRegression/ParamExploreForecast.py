@@ -48,7 +48,7 @@ s_time = time.time()
 train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data(analysis_type, conf.command, throw_error=True)
 print "reusing train data", analysis_type
 
-print "X",train_df.shape, "Y", y_actual_train.shape
+print "X",train_df.shape, "Y", y_actual_train.shape, "testDf",testDf.shape, "Y test", y_actual_test.shape
 
 #load second dataset
 train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
@@ -77,8 +77,8 @@ ids = testDf['id']
 testDf.drop('id',axis=1, inplace=True)
 sub_X_all = testDf.values
 
-verify_forecasting_data(train_df.values, y_train_raw, test_df.values, y_test_raw)
 print "train_df", train_df.shape, "test_df", test_df.shape
+verify_forecasting_data(train_df.values, y_train_raw, test_df.values, y_test_raw)
 
 ml_models = get_models4ensamble(conf)
 
