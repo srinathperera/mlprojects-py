@@ -75,6 +75,7 @@ def load__from_store(model_type, name):
         final_df = pd.concat(df_list)
          #if we do not copy, we get errors due to shafflinf
         find_NA_rows_percent(final_df, "loading data for ensamble")
+        final_df.fillna(0, inplace=True)
 
         addtional_data = final_df[addtional_data_feild].values.copy()
         final_df = drop_feilds_1df(final_df, [addtional_data_feild])
