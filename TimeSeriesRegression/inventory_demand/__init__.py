@@ -169,7 +169,7 @@ def save_file(model_type, command, df, name, metadata=None):
         metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
         file = open(metadata_file, 'wb')
         pickle.dump(metadata, file)
-    print "saved", submission_file, list(df)
+    print "saved", submission_file, " feilds=", list(df)
 
 
 
@@ -1559,10 +1559,10 @@ def get_models4ensamble(conf):
                 #LRModel(conf, model=Pipeline([('poly', PolynomialFeatures(degree=3)),
                 #LRModel(conf, model=linear_model.Ridge (alpha = .5))
                 #   ('linear', LinearRegression(fit_intercept=False))])),
-                XGBoostModel(conf, xgb_params, use_cv=False),
+                XGBoostModel(conf, xgb_params, use_cv=True),
                 LRModel(conf, model=linear_model.Lasso(alpha = 0.3)),
                 RFRModel(conf, RandomForestRegressor(oob_score=True, n_jobs=4)),
-                LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
+                #LRModel(conf, model=linear_model.Lasso(alpha = 0.2)),
                 ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
                 #AdaBoostRModel(conf, model=AdaBoostRegressor(loss='square'))
               ]

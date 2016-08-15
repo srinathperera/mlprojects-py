@@ -72,6 +72,8 @@ def load__from_store(model_type, name, use_agr_features=True):
                              "Producto_ID_Demanda_uni_equil_median", "Producto_ID_Venta_hoy_Mean" ,"Producto_ID_Venta_hoyci" , "Producto_ID_Dev_proxima_Mean", "Producto_ID_Dev_proximaci" ,
                              "Producto_ID_Dev_proxima_median"]
             blend_df = blend_df[feilds_to_use]
+
+            print list(base_df)
             base_df = drop_feilds_1df(base_df, merge_feilds)
             if base_df.shape[0] != blend_df.shape[0]:
                 raise ValueError("two data frame sizes does not match "+ str(base_df.shape) + " " + str(blend_df))

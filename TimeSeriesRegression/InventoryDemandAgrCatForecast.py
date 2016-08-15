@@ -52,11 +52,13 @@ else:
 
 #drop five feild
 feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
-test_data_keys = test_df[feilds_to_drop]
-submission_data_keys = testDf[feilds_to_drop]
+
+# we added following data when we write the submission file
+blend_features = feilds_to_drop + ['Semana']
+blend_test_data_keys = test_df[blend_features]
+blend_submission_data_keys = testDf[blend_features]
 
 train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
-
 if conf.target_as_log:
     train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
     y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
@@ -102,24 +104,14 @@ submissions = np.column_stack(submissions)
 
 #create and save predictions for each model so we can build an ensamble later
 if forecasts.shape[1] > 1:
-    blend_features = feilds_to_drop
-    blend_data_test = test_data_keys
-    #blend_features = get_blend_features()
-    #blend_data_test = test_df[blend_features].values
-
-    print "shapes", blend_data_test.shape, forecasts.shape, y_actual_test.shape
-    model_forecasts_data = np.column_stack([blend_data_test, forecasts, y_actual_test])
+    model_forecasts_data = np.column_stack([blend_test_data_keys, forecasts, y_actual_test])
     to_saveDf =  pd.DataFrame(model_forecasts_data, columns=blend_features + model_names + ["actual"])
     metadata_map = {'rmsle':model_rmsle}
     save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=metadata_map)
     print "## model_forecasts ##"
     print to_saveDf.describe()
 
-    #blend_data_submission = testDf[blend_features].values
-    #ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
-    blend_data_submission = submission_data_keys
-
-    submission_data = np.column_stack([ids, blend_data_submission, submissions])
+    submission_data = np.column_stack([ids, blend_submission_data_keys, submissions])
     to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + blend_features +model_names])
     save_file(analysis_type, command, to_saveDf, 'model_submissions')
     print "## model_submissions ##"
