@@ -204,7 +204,7 @@ def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use
     if not use_cv:
         num_rounds = 10
     else:
-        cvresult = xgb.cv(xgb_params, train_data, num_boost_round=30, nfold=5,
+        cvresult = xgb.cv(xgb_params, train_data, num_boost_round=100, nfold=5,
             metrics={'rmse'}, show_progress=True)
         print cvresult
         num_rounds = len(cvresult)
@@ -227,10 +227,6 @@ def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use
 
         y_pred = gbdt.predict(xgb.DMatrix(X_test))
         return XGBoostModel(gbdt), y_pred
-
-
-
-
 
 def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count, parmsFromNormalization):
     start_time = time.time()

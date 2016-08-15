@@ -172,10 +172,6 @@ def save_file(model_type, command, df, name, metadata=None):
     print "saved", submission_file, " feilds=", list(df)
 
 
-
-
-
-
 def load_file(model_type, command, name, throw_error=True):
     submission_file = model_type+ '/' + name+str(command)+ '.csv'
     if not throw_error:
@@ -315,7 +311,6 @@ def find_alt_for_missing(to_merge, seen_with_stats):
 
 def setdiff_counts_froms_dfs(df1, df2):
     #missing_ids = pd.Index(to_merge).difference(pd.Index(merged_withstats[['Ruta_SAK','Cliente_ID']]))
-
     ds1 = set([ tuple(line) for line in df1.values.tolist()])
     ds2 = set([ tuple(line) for line in df2.values.tolist()])
     ds1.difference(ds2)
@@ -324,6 +319,7 @@ def setdiff_counts_froms_dfs(df1, df2):
 def calculate_ci(std, N):
     #based on N size, it is a normal or stddev
     return np.where(N < 30, 1.645*np.divide(std ,np.sqrt(N)), 2.920*np.divide(std ,np.sqrt(N)))
+
 
 def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, fops):
     start = time.time()

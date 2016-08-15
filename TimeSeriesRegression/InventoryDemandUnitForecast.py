@@ -21,7 +21,9 @@ from inventory_demand import *
 from mltools import *
 #from mlpreprocessing import feather2df
 
+
 from inventory_demand_ensambles import *
+from mlpreprocessing import *
 
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
@@ -147,7 +149,7 @@ s_time = time.time()
 
 np.set_printoptions(precision=1, suppress=True)
 
-df, testDf = read_datafiles(command, test_run)
+df, sub_dfo = read_datafiles(command, test_run)
 
 r_time = time.time()
 print "read took %f" %(r_time-s_time)
@@ -168,7 +170,7 @@ df['sales_units'] = np.where(sales_unit_np <0, 0, sales_unit_np)
 
 find_NA_rows_percent(df, "data set stats")
 
-
+'''
 training_set_size = int(0.6*df.shape[0])
 test_set_size = df.shape[0] - training_set_size
 
@@ -181,31 +183,35 @@ train_df, test_df, testDf = generate_unit_features(conf, train_df, test_df, test
 y_all = df['sales_units'].values
 y_actual_train = y_all[:training_set_size]
 y_actual_test = y_all[-1*test_set_size:]
+'''
 
-prep_time = time.time()
+fold_list = prepare_train_and_test_data_with_folds(df, 'sales_units', fold_count=2)
 
-if test_run:
-    print train_df.describe()
+for fold_id, (train_dfo, test_dfo, y_actual_train,y_actual_test) in enumerate(fold_list):
+    train_df = train_dfo; test_df =test_dfo; testDf = sub_dfo.copy()
 
-print_mem_usage("before forecast")
+    print_mem_usage(str(fold_id) + ": before features")
+    train_df, test_df, testDf = generate_unit_features(conf, train_df, test_df, testDf)
 
-if conf.target_as_log:
-    train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
-    y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
-else:
-    y_train_raw, y_test_raw = y_actual_train, y_actual_test
+    prep_time = time.time()
+    print_mem_usage(str(fold_id) + ": before forecast")
+    if conf.target_as_log:
+        train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
+        y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
+    else:
+        y_train_raw, y_test_raw = y_actual_train, y_actual_test
 
-models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
+    models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
                                                                                            y_train_raw, y_test_raw, y_actual_test)
 
-print_mem_usage("after forecast")
+    print_mem_usage(str(fold_id) + ":after forecast")
 
-best_model_index = np.argmin([m.rmsle for m in models])
-best_model = models[best_model_index]
-print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", best_model.rmsle
+    best_model_index = np.argmin([m.rmsle for m in models])
+    best_model = models[best_model_index]
+    print "[IDF"+str(conf.command)+" fold="+ str(fold_id) +"]Best Single Model has rmsle=", best_model.rmsle
 
-print best_model_index,
-best_forecast = forecasts[:,best_model_index]
+    print best_model_index,
+    best_forecast = forecasts[:,best_model_index]
 
 '''
 #save submission based on best model
