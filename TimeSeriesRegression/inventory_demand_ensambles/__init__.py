@@ -373,7 +373,7 @@ def avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=N
 
         ensamble_forecast = best_ensamble.predict(sub_x_all)
 
-        to_save = np.column_stack((submission_ids, ensamble_forecast))
+        to_save = np.column_stack((submission_ids, retransfrom_from_log(ensamble_forecast)))
         to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
         to_saveDf = to_saveDf.fillna(0)
         to_saveDf["id"] = to_saveDf["id"].astype(int)

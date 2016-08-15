@@ -72,4 +72,4 @@ def prepare_train_and_test_data_with_folds(data_df, y_feild, fold_count=2):
         y_train, y_test = y_all[train_index], y_all[test_index]
         folds.append((train_df, test_df, y_train,y_test))
 
-    return folds
+    return folds, y_all

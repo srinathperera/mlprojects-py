@@ -184,8 +184,14 @@ y_all = df['sales_units'].values
 y_actual_train = y_all[:training_set_size]
 y_actual_test = y_all[-1*test_set_size:]
 '''
+sub_dfo.fillna(0, inplace=True)
+ids = sub_dfo['id']
+sub_dfo.drop('id',axis=1, inplace=True)
 
-fold_list = prepare_train_and_test_data_with_folds(df, 'sales_units', fold_count=2)
+
+fold_list, y_all = prepare_train_and_test_data_with_folds(df, 'sales_units', fold_count=2)
+fold_forecasts = []
+submissions_forecasts = []
 
 for fold_id, (train_dfo, test_dfo, y_actual_train,y_actual_test) in enumerate(fold_list):
     train_df = train_dfo; test_df =test_dfo; testDf = sub_dfo.copy()
@@ -212,6 +218,24 @@ for fold_id, (train_dfo, test_dfo, y_actual_train,y_actual_test) in enumerate(fo
 
     print best_model_index,
     best_forecast = forecasts[:,best_model_index]
+    fold_forecasts.append(best_forecast)
+
+    sub_X_all = testDf.values
+    y_forecast_submission = create_submission(conf, best_model, ids, sub_X_all, parmsFromNormalization, parmsFromNormalization2D)
+    submissions_forecasts.append(y_forecast_submission)
+
+fold_forecasts.reverse()
+final_forecast = np.column_stack(fold_forecasts).flatten()
+print "results shapes, actual=", y_all.shape, "forecast=", final_forecast.shape
+calculate_accuracy("kfold unit forecast", y_all, final_forecast)
+
+submissions_forecasts_np = np.column_stack(submissions_forecasts)
+final_submission = np.mean(submissions_forecasts_np, axis=1)
+print "submission shapes=", final_submission.shape
+
+
+
+
 
 '''
 #save submission based on best model
