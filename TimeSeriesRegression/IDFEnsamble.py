@@ -87,6 +87,10 @@ def load__from_store(model_type, name, use_agr_features=True):
 
     if len(df_list) > 0:
         final_df = pd.concat(df_list)
+
+        #this is criticial as otherwise few stores will depend all in testing data
+        final_df = final_df.sample(frac=1)
+
          #if we do not copy, we get errors due to shafflinf
         find_NA_rows_percent(final_df, "loading data for ensamble")
         final_df.fillna(0, inplace=True)

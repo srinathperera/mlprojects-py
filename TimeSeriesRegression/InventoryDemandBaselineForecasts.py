@@ -43,12 +43,15 @@ def run_simple_models(conf):
 
     mean_forecast = test_df['mean_sales']
     calculate_accuracy("mean_forecast", y_actual_test, mean_forecast)
+    print basic_stats_as_str(mean_forecast)
+
 
     median_forecast = test_df['median_sales']
     calculate_accuracy("median_forecast", y_actual_test, median_forecast)
 
     last_sale_forecast = test_df['last_sale']
     calculate_accuracy("last_sale", y_actual_test, last_sale_forecast)
+    print basic_stats_as_str(last_sale_forecast)
 
 
 
