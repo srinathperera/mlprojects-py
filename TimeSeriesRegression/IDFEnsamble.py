@@ -42,7 +42,7 @@ def load__single_file(file):
     return df, y_actual, best_forecast_index
 
 
-def load__from_store(model_type, name):
+def load__from_store(model_type, name, use_agr_features=True):
     dir = model_type
     files_list = [f for f in listdir(dir) if str(f).startswith(name) and
                     str(f).endswith(".csv")]
@@ -59,16 +59,28 @@ def load__from_store(model_type, name):
             fname = "sub"
             addtional_data_feild = 'id'
 
-        blend_df = load_file('fg_stats',cmd, fname)
-        feilds_to_use = ["mean_sales", "sales_count", "sales_stddev",
+        merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+        if use_agr_features:
+            #then features are in order, we just concatinate
+            blend_df = load_file('agr_cat',cmd, fname)
+            feilds_to_use = ["Agencia_ID_Demanda_uni_equil_Mean", "Agencia_ID_Demanda_uni_equilci" , "Agencia_ID_Demanda_uni_equil_median", "clients_combined_Mean",
+                             "clients_combinedci", "clients_combined_median", "Producto_ID_Demanda_uni_equil_Mean" , "Producto_ID_Demanda_uni_equilci" ,
+                             "Producto_ID_Demanda_uni_equil_median", "Producto_ID_Venta_hoy_Mean" ,"Producto_ID_Venta_hoyci" , "Producto_ID_Dev_proxima_Mean", "Producto_ID_Dev_proximaci" ,
+                             "Producto_ID_Dev_proxima_median"]
+            blend_df = blend_df[feilds_to_use]
+            base_df = drop_feilds_1df(base_df, merge_feilds)
+            if base_df.shape[0] != blend_df.shape[0]:
+                raise ValueError("two data frame sizes does not match "+ str(base_df.shape) + " " + str(blend_df))
+            feature_df = pd.concat([base_df, blend_df], axis=1)
+        else:
+            blend_df = load_file('fg_stats',cmd, fname)
+            feilds_to_use = ["mean_sales", "sales_count", "sales_stddev",
                     "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
-        merge_feilds = ['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
-        feilds_to_use = feilds_to_use + merge_feilds
+            feilds_to_use = feilds_to_use + merge_feilds
+            blend_df = blend_df[feilds_to_use]
+            feature_df = pd.merge(base_df, blend_df, how='left', on=merge_feilds)
+            feature_df = drop_feilds_1df(feature_df, merge_feilds)
 
-        blend_df = blend_df[feilds_to_use]
-
-        feature_df = pd.merge(base_df, blend_df, how='left', on=merge_feilds)
-        feature_df = drop_feilds_1df(feature_df, merge_feilds)
         df_list.append(feature_df)
 
     if len(df_list) > 0:
