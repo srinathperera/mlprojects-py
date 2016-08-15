@@ -61,6 +61,10 @@ def load__from_store(model_type, name, use_agr_features=True):
 
         merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
         if use_agr_features:
+            #TODO remove when samana added
+            merge_feilds = ['Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+
+
             #then features are in order, we just concatinate
             blend_df = load_file('agr_cat',cmd, fname)
             feilds_to_use = ["Agencia_ID_Demanda_uni_equil_Mean", "Agencia_ID_Demanda_uni_equilci" , "Agencia_ID_Demanda_uni_equil_median", "clients_combined_Mean",
