@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import datetime
-
+from sklearn.cross_validation import KFold
 
 import feather
 
@@ -45,3 +45,31 @@ def df2feather(df, path):
 #http://pandas-docs.github.io/pandas-docs-travis/io.html#hdf5-pytables
 #http://scikit-learn.org/stable/modules/scaling_strategies.html
 #install py tables ( bit complicated http://docs.h5py.org/en/latest/build.html)
+
+
+def prepare_train_and_test_data(data_df, y_feild, split_frac=0.6):
+    training_set_size = int(split_frac*data_df.shape[0])
+    test_set_size = data_df.shape[0] - training_set_size
+
+    train_df = data_df[:training_set_size]
+    test_df = data_df[-1*test_set_size:]
+
+    y_all = data_df[y_feild].values
+    y_actual_train = y_all[:training_set_size]
+    y_actual_test = y_all[-1*test_set_size:]
+
+    return train_df, test_df, y_actual_train,y_actual_test
+
+
+def prepare_train_and_test_data_with_folds(data_df, y_feild, fold_count=2):
+    #http://www.programcreek.com/python/example/83247/sklearn.cross_validation.KFold
+    kf = KFold(data_df.shape[0], n_folds=fold_count)
+    y_all = data_df[y_feild].values
+
+    folds =[]
+    for train_index, test_index in kf:
+        train_df, test_df = data_df.ix[train_index], data_df.ix[test_index]
+        y_train, y_test = y_all[train_index], y_all[test_index]
+        folds.append((train_df, test_df, y_train,y_test))
+
+    return folds
