@@ -59,17 +59,10 @@ blend_test_data_keys = test_df[blend_features]
 blend_submission_data_keys = testDf[blend_features]
 
 train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
-if conf.target_as_log:
-    train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
-    y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
-else:
-    y_train_raw, y_test_raw = y_actual_train, y_actual_test
 
 testDf.fillna(0, inplace=True)
 ids = testDf['id']
 testDf.drop('id',axis=1, inplace=True)
-sub_X_all = testDf.values
-
 
 ml_models = get_models4ensamble(conf)
 
@@ -81,12 +74,11 @@ model_rmsle = []
 for m in ml_models:
     #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
     print_mem_usage("before running model " + m.name)
-    tmlist, tforecasts, _, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
-                                                                                           y_train_raw, y_test_raw, y_actual_test, models=[m])
+
+    tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_df, test_df, testDf, y_actual_train, y_actual_test, models=[m])
     forecasts.append(tforecasts[:, 0])
-    t_model = tmlist[0]
-    y_forecast_submission = create_submission(conf, t_model, ids, sub_X_all, parmsFromNormalization, parmsFromNormalization2D)
-    submissions.append(y_forecast_submission)
+    t_model = tmodels[0]
+    submissions.append(tforecasts[0])
     model_names.append(t_model.name)
     model_rmsle.append(t_model.rmsle)
     t_model.cleanup()

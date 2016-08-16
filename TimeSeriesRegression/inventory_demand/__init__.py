@@ -1082,10 +1082,11 @@ def retransfrom_from_log(data):
 
 
 def tranform_train_data_to_log(train_df, test_df, sub_df, skip_field_patterns=[]):
+    if sub_df is not None:
+        sub_df = transform_df_to_log(sub_df, skip_field_patterns)
     return transform_df_to_log(train_df, skip_field_patterns), \
            transform_df_to_log(test_df, skip_field_patterns), \
-           transform_df_to_log(sub_df, skip_field_patterns)
-
+           sub_df
 
     #if conf.target_as_log and not conf.log_target_only:
     #then all values are done as logs
@@ -1640,41 +1641,32 @@ def get_models4rfr_tunning(conf):
     return models;
 
 
-def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test, models=None):
+#takes data as no transformation and returns results after undoing all tranformatins
+def do_forecast(conf, train_df, test_df, sub_df, y_train, y_test, models=None):
+    y_actual_test = y_test
+
+    if conf.target_as_log:
+        train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, sub_df, skip_field_patterns=['kurtosis', 'id'])
+        y_train, y_test = transfrom_to_log(y_train), transfrom_to_log(y_test)
+
     start = time.time()
     if train_df.shape[1] != test_df.shape[1]:
         raise ValueError("train and test does not match " + str(list(train_df)) + " " + str(list(test_df)))
 
-    '''
-    if conf.target_as_log and conf.log_target_only:
-        y_train_row = transfrom_to_log(train_df['Demanda_uni_equil'].values)
-        y_test_row = transfrom_to_log(test_df['Demanda_uni_equil'].values)
-    else:
-        y_train_row = train_df['Demanda_uni_equil'].values
-        y_test_row = test_df['Demanda_uni_equil'].values
-    train_df, test_df = drop_column(train_df, test_df, 'Demanda_uni_equil')
-
-    '''
-
     find_NA_rows_percent(train_df, "train_df before forecast")
     find_NA_rows_percent(test_df, "test before forecast")
-
 
     forecasting_feilds = list(train_df)
     print "Forecasting Feilds", [ "("+str(i)+")" + forecasting_feilds[i] for i in range(len(forecasting_feilds))]
 
-    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train_raw)
-    y_test = apply_zeroMeanUnit(y_test_raw, parmsFromNormalization)
+    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
+    y_test = apply_zeroMeanUnit(y_test, parmsFromNormalization)
 
     X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(train_df.values.copy())
     x_test_raw = test_df.values.copy()
 
-    #print "Before normalize x-text"
-    #check4nan(x_test_raw)
     X_test = apply_zeroMeanUnit2D(x_test_raw, parmsFromNormalization2D)
     conf.parmsFromNormalization = parmsFromNormalization
-    #print "After normalize x-text"
-    #check4nan(X_test)
 
     verify_forecasting_data(X_train, y_train, X_test, y_test)
 
@@ -1698,65 +1690,6 @@ def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test,
         print "model took ", (time.time() - m_start), "seconds"
         de_normalized_forecasts.append(den_forecasted_data)
 
-    #if len(de_normalized_forecasts) > 1:
-    #    avg_models(conf, models, np.column_stack(de_normalized_forecasts) , y_actual_test, test_df)
-
-
-
-    #model = run_rfr(X_train, y_train, X_test, y_test, forecasting_feilds)
-    #model = run_lr(X_train, y_train, X_test, y_test)
-    #model = run_xgboost(X_train, y_train, X_test, y_test, forecasting_feilds=forecasting_feilds)
-    #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds, num_rounds=20)
-
-    #ntdepths, ntwidths, dropouts, reglur, lr, trialcount
-    #configs = create_rondomsearch_configs4DL((1,2,3), (10, 20), (0.1, 0.2, 0.4),
-    #                                       (0.1, 0.2, 0.3), (0.001, 0.0001), 10)
-    #for c  in configs:
-    #    c.epoch_count = 5
-    #model = run_dl(X_train, y_train, X_test, y_test,c)
-    #    print c.tostr() + "rmsle"
-    #    y_pred_final = check_accuracy(c.tostr(), model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
-
-    #model = run_dl(X_train, y_train, X_test, y_test)
-    #y_pred_final = check_accuracy("Linear Booster", model, X_test, parmsFromNormalization, test_df, conf.target_as_log,
-    #                             y_actual_test, conf.command)
-
-
-    '''
-    for t in itertools.product((3, 5, 10), (0,0.1,0.2), (0,0.1,0.2)):
-        xgb_params = {"objective": "reg:linear", "booster":"gblinear", "max_depth":t[0], "lambda":t[1], "lambda_bias":t[2], "alpha":0, "nthread":4}
-        print t, xgb_params
-        model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, xgb_params=xgb_params)
-        y_pred_final = check_accuracy("Linear Booster" + str(t), model, X_test, parmsFromNormalization, test_df, target_as_log, y_actual_test, command)
-    '''
-    #xgboost(data = X, booster = "gbtree", objective = "binary:logistic", max.depth = 5, eta = 0.5, nthread = 2, nround = 2,  min_child_weight = 1, subsample = 0.5, colsample_bytree = 1,num_parallel_tree = 1)
-
-    #xgb_params['subsample'] = 0.5 #0.5-1, Lower values make the algorithm more conservative and prevents overfitting but too small values might lead to under-fitting.
-    #xgb_params['min_child_weight'] = 3 #      #Used to control over-fitting. Higher values prevent a model from learning relations which might be highly specific to the particular sample selected for a tree.
-    #xgb_params['max_depth'] = 3 #Used to control over-fitting as higher depth will allow model to learn relations very specific to a particular sample.
-
-    '''
-    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
-            "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
-    #for md  in [(3, 0.5, 5), (5, 0.5, 10), (8, 0.7, 10)]:
-    #for md  in [(0.5, 0.5)]:
-    #for md  in [1, 5, 10]:
-    for md  in [0]:
-        #xgb_params['max_depth'] = md[0]
-        #xgb_params['subsample'] = md[1]
-        #xgb_params['min_child_weight'] = md[2]
-
-        #xgb_params['max_delta_step'] = 1
-
-        print md, xgb_params
-        #model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, xgb_params=xgb_params)
-        model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-                                                      xgb_params=xgb_params,num_rounds=200)
-        y_pred_final = check_accuracy("Linear Booster " + str(md), model, X_test, parmsFromNormalization,
-                                      conf.target_as_log, y_actual_test, conf.command)
-    '''
-
-
     if conf.verify_data:
         corrected_Y_test = modeloutput2predictions(y_test, parmsFromNormalization=parmsFromNormalization)
         if conf.target_as_log:
@@ -1771,7 +1704,14 @@ def do_forecast(conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test,
     else:
         forecasts = np.column_stack(de_normalized_forecasts)
     print "do_forecast took ", (time.time() - start), "s"
-    return models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D
+
+    #lets generate submissions
+    submission_forecasts = None
+    if sub_df is not None:
+        sub_X_all = test_df.values
+        submission_forecasts = [create_submission(conf, m, sub_X_all, parmsFromNormalization, parmsFromNormalization2D) for m in models]
+
+    return models, forecasts, submission_forecasts
 
 
     #return best_model, parmsFromNormalization, parmsFromNormalization2D, best_forecast
@@ -1819,9 +1759,10 @@ def create_per_model_submission(conf, models, testDf, parmsFromNormalization, pa
 
     return ids, np.column_stack(kaggale_predicted_list)
 
-def create_submission(conf, model, ids, sub_X_all, parmsFromNormalization, parmsFromNormalization2D ):
+
+def create_submission(conf, model, sub_X_all, parmsFromNormalization, parmsFromNormalization2D ):
     start = time.time()
-    print "creating submission for ", len(ids), "values"
+    print "creating submission for ", sub_X_all.shape[0], "values"
 
     #pd.colnames(temp)[pd.colSums(is.na(temp)) > 0]
     #print temp.describe()
