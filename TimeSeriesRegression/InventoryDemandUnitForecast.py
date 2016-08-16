@@ -56,9 +56,14 @@ def generate_unit_features(conf, train_df, test_df, subdf):
     #this is to drop all features in one go
     feilds_to_drop = []
 
-
     default_demand_stats = DefaultStats(mean=train_df['sales_units'].mean(), count=train_df['sales_units'].count(),
                                         stddev=train_df['sales_units'].std())
+    default_unit_price_stats = DefaultStats(train_df['unit_price'].mean(), train_df['unit_price'].count(),
+                                        train_df['unit_price'].std())
+
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK'],
+                'unit_price', "unit_price", default_unit_price_stats,
+                FeatureOps())
 
     if use_group_aggrigate:
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats,
@@ -73,6 +78,9 @@ def generate_unit_features(conf, train_df, test_df, subdf):
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
                                                             agr_feild='Dev_uni_proxima', default_stats=default_dev_proxima_stats,
                                                             fops=FeatureOps(count=True))
+
+
+
     if use_product_features:
         product_data_df = read_productdata_file('product_data.csv')
 
@@ -114,7 +122,11 @@ def generate_unit_features(conf, train_df, test_df, subdf):
         train_df, test_df, testDf = add_time_bwt_delivery(train_df, test_df, testDf)
         train_df, test_df, testDf = add_last_sale_and_week(train_df, test_df, testDf)
 
-    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima', 'Demanda_uni_equil', 'sales_units']
+    #we use these features for second stage
+    f2_features = ['unit_price_Mean', 'unit_priceci', 'unit_price_median']
+    f2_train_df = train_df[f2_features]; f2_test_df = test_df[f2_features]; f2_sub_df= testDf[f2_features]
+
+    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima', 'Demanda_uni_equil', 'sales_units', 'unit_price'] + f2_features
     feilds_to_drop = feilds_to_drop + ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
     train_df, test_df, _ = drop_feilds(train_df, test_df, None, feilds_to_drop + train_data_feilds_to_drop)
     testDf = drop_feilds_1df(testDf, feilds_to_drop)
@@ -123,9 +135,8 @@ def generate_unit_features(conf, train_df, test_df, subdf):
     train_df = train_df.fillna(0)
     test_df = test_df.fillna(0)
 
-
     print "generate_features took ", (time.time() - start), "s"
-    return train_df, test_df, testDf
+    return train_df, test_df, testDf, f2_train_df, f2_test_df, f2_sub_df
 
 
 
@@ -168,6 +179,11 @@ df = df.sample(frac=1)
 sales_unit_np = df['Venta_uni_hoy'] - df['Dev_uni_proxima']
 df['sales_units'] = np.where(sales_unit_np <0, 0, sales_unit_np)
 
+
+sales_unit_price = df['Venta_hoy']/np.where(df['Venta_uni_hoy'] == 0, 1, df['Venta_uni_hoy'])
+df['unit_price'] = sales_unit_price
+
+
 find_NA_rows_percent(df, "data set stats")
 
 '''
@@ -196,8 +212,10 @@ submissions_forecasts = []
 for fold_id, (train_dfo, test_dfo, y_actual_train,y_actual_test) in enumerate(fold_list):
     train_df = train_dfo; test_df =test_dfo; testDf = sub_dfo.copy()
 
+
+
     print_mem_usage(str(fold_id) + ": before features")
-    train_df, test_df, testDf = generate_unit_features(conf, train_df, test_df, testDf)
+    train_df, test_df, testDf, f2_train_df, f2_test_df, f2_sub_df = generate_unit_features(conf, train_df, test_df, testDf)
 
     prep_time = time.time()
     print_mem_usage(str(fold_id) + ": before forecast")
@@ -219,6 +237,22 @@ for fold_id, (train_dfo, test_dfo, y_actual_train,y_actual_test) in enumerate(fo
     print best_model_index,
     best_forecast = forecasts[:,best_model_index]
     fold_forecasts.append(best_forecast)
+
+    '''
+    #lets train second model
+    f2_train_df['units_sold'] = y_actual_train; f2_y_train = train_dfo['Demanda_uni_equil']
+    f2_test_df['units_sold'] = y_actual_test; f2_y_test = test_dfo['Demanda_uni_equil']
+
+    if conf.target_as_log:
+        f2_train_df, f2_test_df, _ = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
+        f2_y_train, f2_y_test = transfrom_to_log(f2_y_train), transfrom_to_log(f2_y_train)
+
+
+    f2_m = get_models4xgboost_only()
+    f2models, f2forecasts, _, f2parmsFromNormalization, f2parmsFromNormalization2D = do_forecast(conf, f2_train_df, f2_test_df,
+                                                                                           f2_y_train, f2_y_test, test_dfo['Demanda_uni_equil'], models=f2_m)
+    f2models[0].predict()
+    '''
 
     sub_X_all = testDf.values
     y_forecast_submission = create_submission(conf, best_model, ids, sub_X_all, parmsFromNormalization, parmsFromNormalization2D)

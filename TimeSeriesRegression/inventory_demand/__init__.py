@@ -153,6 +153,19 @@ def extract_regx_grps(p, str, groups):
         return [ match.group(g) for g in groups]
 
 
+def sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000):
+    x_size = X_train.shape[0]
+    sample_indexes_train = np.random.randint(0, X_train.shape[0], min(maxentries, x_size))
+    X_train = X_train[sample_indexes_train]
+    y_train = y_train[sample_indexes_train]
+
+    sample_indexes_test = np.random.randint(0, X_test.shape[0], min(maxentries, x_size))
+    X_test = X_test[sample_indexes_test]
+    y_test = y_test[sample_indexes_test]
+    return X_train, y_train, X_test, y_test
+
+
+
 '''
 We can switch to XGboost files later if needed
 http://xgboost.readthedocs.io/en/latest/python/python_intro.html
@@ -389,8 +402,6 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     print "join_multiple_feild_stats: merge took", (time.time() - merge_start)
 
     print "join_multiple_feild_stats", str(feild_names), " took ", (time.time() - start), "s"
-
-
 
     return bdf, testdf, subdf
 

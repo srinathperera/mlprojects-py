@@ -398,11 +398,8 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
 
 
     #we randomly select 5 million values
-    x_size = X_train.shape[0]
-    sample_indexes = np.random.randint(0, X_train.shape[0], min(5000000, x_size))
-    X_train = X_train[sample_indexes]
-    y_train = y_train[sample_indexes]
 
+    X_train, y_train, X_test, y_test = sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000)
     dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
                 epoch_count=4, optimizer=Adam(lr=0.0001), regularization=0.2)
     y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
