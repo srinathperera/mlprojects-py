@@ -169,12 +169,10 @@ def run_ensambles(rcommand):
     #not using LR forecasts
     print list(forecasts_df)
     forecasts = forecasts_df[['XGB', 'RFR','ETR']].values
-    forecasting_feilds = list(forecasts_df)
-    X_all = forecasts_df.values
+
 
     #load submission data
     subdf, submissions_ids = load__from_store('agr_cat', "model_submissions")
-    sub_X_all = subdf.values
     submissions = subdf[['XGB', 'RFR','ETR']].values
 
     model_index_by_acc = find_best_forecast(forecasts, y_actual)
@@ -184,6 +182,6 @@ def run_ensambles(rcommand):
     #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
     #             blend_data, blend_data_submission)
 
-    avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=sub_X_all, submission_ids=submissions_ids)
+    avg_models(conf, forecasts_df, y_actual, subdf, submission_ids=None)
 
 run_ensambles(command)

@@ -131,14 +131,19 @@ def ceate_feature_map_for_feature_importance(features):
 
     outfile.close()
 
-def show_feature_importance(gbdt):
+
+def show_feature_importance(gbdt, feature_names=None):
     importance = gbdt.get_fscore(fmap='xgb.fmap')
-    print importance
     importance = sorted(importance.items(), key=operator.itemgetter(1))
 
     df = pd.DataFrame(importance, columns=['feature', 'fscore'])
     df['fscore'] = df['fscore'] / df['fscore'].sum()
     print "feature importance", df
+
+    if feature_names is not None:
+        used_features = df['feature']
+        unused_features = [f for f in feature_names if f not in used_features]
+        print "[IDF]Unused features:", str(unused_features)
 
     plt.figure()
     df.plot()
@@ -222,8 +227,8 @@ def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use
         #gbdt = xgb.train( xgb_params, train_data, num_rounds, evallist, verbose_eval = True, early_stopping_rounds=5)
         gbdt = xgb.train( xgb_params, train_data, num_rounds, evallist, verbose_eval = True)
 
-        #ceate_feature_map_for_feature_importance(features)
-        #show_feature_importance(gbdt)
+        ceate_feature_map_for_feature_importance(features)
+        show_feature_importance(gbdt, feature_names=features)
 
         y_pred = gbdt.predict(xgb.DMatrix(X_test))
         return XGBoostModel(gbdt), y_pred

@@ -301,8 +301,11 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     else:
         print "submissions not found"
 
-
-
+    #we randomly select 5 million values
+    x_size = X_train.shape[0]
+    sample_indexes = np.random.randint(0, X_train.shape[0], min(5000000, x_size))
+    X_train = X_train[sample_indexes]
+    y_train = y_train[sample_indexes]
 
     dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
                 epoch_count=4, optimizer=Adam(lr=0.0001), regularization=0.2)
@@ -321,9 +324,13 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     #return xgb_forecast, rmsle
 
 
-def avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=None, test=False, submission_ids=None, sub_df=None):
+def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None):
     print "start avg models"
     start = time.time()
+
+    forecasting_feilds = list(blend_forecasts_df)
+    X_all = blend_forecasts_df.values
+    sub_X_all = submission_forecasts_df.values
 
     #removing NaN and inf if there is any
     X_all = fillna_and_inf(X_all)
@@ -340,7 +347,7 @@ def avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=N
     y_actual_test = y_actual_saved[no_of_training_instances:]
 
     ensambles = []
-
+    '''
     rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
@@ -348,6 +355,14 @@ def avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=N
     rmsle = calculate_accuracy("rfr_forecast", y_actual_test, retransfrom_from_log(rfr_forecast))
     ensambles.append((rmsle, rfr, "rfr ensamble"))
 
+    lr_model =linear_model.Lasso(alpha = 0.2)
+    lr_model.fit(X_train, y_train)
+    lr_forecast = lr_model.predict(X_test)
+    rmsle = calculate_accuracy("lr_forecast", y_actual_test, retransfrom_from_log(lr_forecast))
+    ensambles.append((rmsle, lr_model, "lr ensamble"))
+
+    '''
+    '''
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
     model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
                             use_sklean=False, xgb_params=xgb_params)
@@ -357,23 +372,18 @@ def avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=N
     rmsle = calculate_accuracy("xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
     ensambles.append((rmsle, model, "xgboost ensamble"))
 
-    lr_model =linear_model.Lasso(alpha = 0.2)
-    lr_model.fit(X_train, y_train)
-    lr_forecast = lr_model.predict(X_test)
-    rmsle = calculate_accuracy("lr_forecast", y_actual_test, retransfrom_from_log(lr_forecast))
-    ensambles.append((rmsle, lr_model, "lr ensamble"))
-
     best_ensamble_index = np.argmin([t[0] for t in ensambles])
     best_ensamble = ensambles[best_ensamble_index][1]
     print "[IDF]Best Ensamble", ensambles[best_ensamble_index][2], ensambles[best_ensamble_index][0]
 
-    if submission_forecasts is not None:
-        median_forecast = np.median(submission_forecasts, axis=1)
-        sub_x_all = submission_forecasts
+    if sub_X_all is not None:
+        ensamble_forecast = best_ensamble.predict(sub_X_all)
+        ensamble_forecast = retransfrom_from_log(ensamble_forecast)
 
-        ensamble_forecast = best_ensamble.predict(sub_x_all)
+        #becouse forecast cannot be negative
+        ensamble_forecast = np.where(ensamble_forecast < 0, 0, ensamble_forecast)
 
-        to_save = np.column_stack((submission_ids, retransfrom_from_log(ensamble_forecast)))
+        to_save = np.column_stack((submission_ids, ensamble_forecast))
         to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
         to_saveDf = to_saveDf.fillna(0)
         to_saveDf["id"] = to_saveDf["id"].astype(int)
@@ -383,36 +393,25 @@ def avg_models(conf, X_all, y_actual, forecasting_feilds, submission_forecasts=N
         print "Best Ensamble Submission Stats"
         print to_saveDf.describe()
 
-
-
-
     print "avg_models took ", (time.time() - start), "s"
     '''
-    if len(models) >= 3:
-
-        print "toprmsle_valuesrmsle", rmsle_values
-        sorted_index = np.argsort(rmsle_values)
-        print "sorted_index", sorted_index
-        bestindexes = sorted_index[0:3]
-        print "top3indexes", bestindexes
-        top3forecasts = forecasts[:,bestindexes]
-
-        weighted_forecast = top3forecasts[:,0]*0.6+ top3forecasts[:,1]*0.25+ top3forecasts[:,2]*0.15
-        calculate_accuracy("weighted_forecast", y_actual, weighted_forecast)
-
-        weighted_forecast1 = top3forecasts[:,0]*0.5+ top3forecasts[:,1]*0.3+ top3forecasts[:,2]*0.2
-        calculate_accuracy("weighted_forecast1", y_actual, weighted_forecast1)
-        top3rmsle =  rmsle_values[top3forecasts]
 
 
-        #top3rmsle = forecasts[:,top3index]
-        l1, h1 = find_range(top3rmsle[0], top3forecasts[0])
-        l2, h2 = find_range(top3rmsle[1], top3forecasts[1])
+    #we randomly select 5 million values
+    x_size = X_train.shape[0]
+    sample_indexes = np.random.randint(0, X_train.shape[0], min(5000000, x_size))
+    X_train = X_train[sample_indexes]
+    y_train = y_train[sample_indexes]
 
-        math_based_forecast = np.where(l2 < h1, (l2-h1)/2, np.where(l1 < h2, (l1-h2)/2,top3forecasts) )
-        calculate_accuracy("math_based_forecast", y_actual, weighted_forecast1)
-        #if l2 < h1:(h1+l2)/2
-        #if l1 < h2:(h2+l1)/2
-        #else top3forecasts[2]
+    dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
+                epoch_count=4, optimizer=Adam(lr=0.0001), regularization=0.2)
+    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
+    y_test = apply_zeroMeanUnit(y_test, parmsFromNormalization)
+    X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(X_train)
+    X_test = apply_zeroMeanUnit2D(X_test, parmsFromNormalization2D)
 
-        '''
+    model, y_forecast = regression_with_dl(X_train, y_train, X_test, y_test, dlconf)
+
+    y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
+    y_forecast = retransfrom_from_log(y_forecast)
+    calculate_accuracy("ml_forecast", y_actual_test, y_forecast)
