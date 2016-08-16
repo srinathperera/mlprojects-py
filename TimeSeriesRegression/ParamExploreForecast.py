@@ -51,16 +51,44 @@ print "reusing train data", analysis_type
 print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
 
 #load second dataset
-train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
-    ["median_sales", "returns", "signature", "kurtosis"])
+#train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
+#    ["median_sales", "returns", "signature", "kurtosis"])
+
+train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+
+groups = [
+    ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
+    ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
+    ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
+    ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median'],
+    ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
+    ['weight', 'pieces'],
+    ['product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'product_word_Demanda_uni_equil_median'],
+    ['mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean'],
+    ['last_sale', 'last_sale_week'],
+    ['returns'],
+    ['signature'],
+    ['kurtosis'],
+    ['entropy']
+]
+
+features = []
+for t in list(itertools.combinations(range(len(groups)),4)):
+    fset = groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
+    features.append(fset)
+
+
+np.random.shuffle(features)
+features = features[:3]
+
+print features
 
 print "X",train_df.shape, "Y", y_actual_train.shape
 
 train_df.fillna(0, inplace=True)
 test_df.fillna(0, inplace=True)
 testDf.fillna(0, inplace=True)
-
-#"mean_sales", "sales_count", "sales_stddev", "hmean", "entropy"
 
 #drop five feild
 feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
@@ -74,25 +102,29 @@ testDf.drop('id',axis=1, inplace=True)
 print "train_df", train_df.shape, "test_df", test_df.shape
 verify_forecasting_data(train_df.values, y_actual_train, test_df.values, y_actual_test)
 
-ml_models = get_models4ensamble(conf)
+ml_models = get_models4xgboost_only(conf)
 
-forecasts = []
-submissions = []
-model_names = []
-model_rmsle = []
+for fset  in features:
+    forecasts = []
+    submissions = []
+    model_names = []
+    model_rmsle = []
 
-for m in ml_models:
-    #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
-    print_mem_usage("before running model " + m.name)
-    tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_df, test_df, testDf, y_actual_train, y_actual_test, models=[m])
-    forecasts.append(tforecasts[:, 0])
-    t_model = tmodels[0]
-    submissions.append(tsubmission_forecasts[:, 0])
-    model_names.append(t_model.name)
-    model_rmsle.append(t_model.rmsle)
-    t_model.cleanup()
-    gc.collect() #to free up memory
-    print_mem_usage("after model " + t_model.name)
+    for m in ml_models:
+        train_dft = train_df[fset].copy(); test_dft = test_df[fset].copy(); testDft = testDf[fset].copy()
+        #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
+        print_mem_usage("before running model " + m.name)
+        tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_dft, test_dft, testDft, y_actual_train, y_actual_test, models=[m])
+        forecasts.append(tforecasts[:, 0])
+        t_model = tmodels[0]
+        submissions.append(tsubmission_forecasts[:, 0])
+        model_names.append(t_model.name)
+        model_rmsle.append(t_model.rmsle)
+        t_model.cleanup()
+        gc.collect() #to free up memory
+        print_mem_usage("after model " + t_model.name)
+        print "[IDF"+str(conf.command)+"]", fset, t_model.name, t_model.rmsle
+
 
 best_model_index = np.argmin(model_rmsle)
 print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", model_rmsle[best_model_index]
