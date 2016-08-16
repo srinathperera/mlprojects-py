@@ -83,6 +83,7 @@ def print_mem_usage(label=""):
     #       '''%(point,usage[0],usage[1],
     #            (float(usage[2]*resource.getpagesize()))/1024*1024*1024 )
 
+
 def object_size(obj):
     return asizeof.asizeof(obj)/1024*1024
 
@@ -1639,6 +1640,10 @@ def get_models4rfr_tunning(conf):
     configs = create_rfr_params(n_estimator=[100,200, 300, 500], oob_score=[True, False], min_samples_leaf=[50, 100, 200])
     models = [RFRModel(conf, rfr) for rfr in configs]
     return models;
+
+
+#class ModelSet:
+
 
 
 #takes data as no transformation and returns results after undoing all tranformatins

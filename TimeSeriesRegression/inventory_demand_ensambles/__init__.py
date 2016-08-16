@@ -411,6 +411,16 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     model, y_forecast = regression_with_dl(X_train, y_train, X_test, y_test, dlconf)
 
     y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
+    print "dl results size =", y_forecast.shape
     y_forecast = retransfrom_from_log(y_forecast)
     print_mem_usage("after dl forcast")
-    calculate_accuracy("dl_forecast", y_actual_test, y_forecast)
+    try:
+        calculate_accuracy("dl_forecast", y_actual_test, y_forecast)
+    except:
+        print_mem_usage("after error")
+        print "Unexpected error:"
+    raise
+
+    print "Done"
+
+
