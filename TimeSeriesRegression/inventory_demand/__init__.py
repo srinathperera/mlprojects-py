@@ -157,12 +157,12 @@ def extract_regx_grps(p, str, groups):
 def sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000):
     x_size = X_train.shape[0]
     sample_indexes_train = np.random.randint(0, X_train.shape[0], min(maxentries, x_size))
-    X_train = X_train[sample_indexes_train]
-    y_train = y_train[sample_indexes_train]
+    X_train = X_train[sample_indexes_train].copy()
+    y_train = y_train[sample_indexes_train].copy()
 
     sample_indexes_test = np.random.randint(0, X_test.shape[0], min(maxentries, x_size))
-    X_test = X_test[sample_indexes_test]
-    y_test = y_test[sample_indexes_test]
+    X_test = X_test[sample_indexes_test].copy()
+    y_test = y_test[sample_indexes_test].copy()
     return X_train, y_train, X_test, y_test
 
 

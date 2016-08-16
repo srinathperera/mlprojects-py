@@ -29,14 +29,16 @@ print 'Argument List:', str(sys.argv)
 
 
 command = -2
+
+
 if len(sys.argv) > 1:
     command = int(sys.argv[1])
 if len(sys.argv) > 2:
-    test_run = (int(sys.argv[2]) == 1)
+    feature_set = sys.argv[2]
 else:
-    test_run = False
+    feature_set = None
 
-analysis_type = 'agr_cat'
+analysis_type = feature_set
 
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.command = command
@@ -45,7 +47,7 @@ conf.analysis_type = analysis_type
 s_time = time.time()
 
 #load first dataset
-train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data(analysis_type, conf.command, throw_error=True)
+train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('agr_cat', conf.command, throw_error=True)
 print "reusing train data", analysis_type
 
 print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
@@ -57,32 +59,42 @@ print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y
 train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, ["mean_sales", "sales_count", "sales_stddev",
                     "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
 
-groups = [
-    ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
-    ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
-    ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
-    ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median'],
-    ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
-    ['weight', 'pieces'],
-    ['product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'product_word_Demanda_uni_equil_median'],
-    ['mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean'],
-    ['last_sale', 'last_sale_week'],
-    ['returns'],
-    ['signature'],
-    ['kurtosis'],
-    ['entropy']
-]
+if feature_set is None:
+    groups = [
+        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
+        ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
+        ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
+        ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median'],
+        ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
+        ['weight', 'pieces'],
+        ['product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'product_word_Demanda_uni_equil_median'],
+        ['mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean'],
+        ['last_sale', 'last_sale_week'],
+        ['returns'],
+        ['signature'],
+        ['kurtosis'],
+        ['entropy']
+    ]
 
-features = []
-for t in list(itertools.combinations(range(len(groups)),4)):
-    fset = groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
-    features.append(fset)
+    features = []
+    for t in list(itertools.combinations(range(len(groups)),4)):
+        fset = groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
+        features.append(fset)
 
+    np.random.shuffle(features)
+    features = features[:30]
 
-np.random.shuffle(features)
-features = features[:30]
+    ml_models = get_models4xgboost_only(conf)
+else:
+    if feature_set == "fg-vhmean-product":
+        list = ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean', 'entropy']
+    elif feature_set == "vh-mean-product":
+        list = ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median', 'weight', 'pieces', 'signature']
+    else:
+        raise ValueError("Unknown feature set "+ feature_set)
 
-print features
+    features = [list]
+    ml_models = get_models4ensamble(conf)
 
 print "X",train_df.shape, "Y", y_actual_train.shape
 
@@ -90,8 +102,14 @@ train_df.fillna(0, inplace=True)
 test_df.fillna(0, inplace=True)
 testDf.fillna(0, inplace=True)
 
-#drop five feild
 feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
+
+# we added following data when we write the submission file
+blend_features = feilds_to_drop + ['Semana']
+blend_test_data_keys = test_df[blend_features]
+blend_submission_data_keys = testDf[blend_features]
+
+#drop five feild
 train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
 
 
@@ -102,9 +120,7 @@ testDf.drop('id',axis=1, inplace=True)
 print "train_df", train_df.shape, "test_df", test_df.shape
 verify_forecasting_data(train_df.values, y_actual_train, test_df.values, y_actual_test)
 
-ml_models = get_models4xgboost_only(conf)
-
-for fset  in features:
+for fset in features:
     forecasts = []
     submissions = []
     model_names = []
@@ -137,26 +153,18 @@ submissions = np.column_stack(submissions)
 
 #create and save predictions for each model so we can build an ensamble later
 if forecasts.shape[1] > 1:
-    blend_features = get_blend_features()
-    blend_data_test = test_df[blend_features].values
-
-    print "shapes", blend_data_test.shape, forecasts.shape, y_actual_test.shape
-    model_forecasts_data = np.column_stack([blend_data_test, forecasts, y_actual_test])
+    model_forecasts_data = np.column_stack([blend_test_data_keys, forecasts, y_actual_test])
     to_saveDf =  pd.DataFrame(model_forecasts_data, columns=blend_features + model_names + ["actual"])
     metadata_map = {'rmsle':model_rmsle}
     save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=metadata_map)
     print "## model_forecasts ##"
     print to_saveDf.describe()
 
-    blend_data_submission = testDf[blend_features].values
-    #ids, kaggale_predicted_list = create_per_model_submission(conf, models, testDf, parmsFromNormalization, parmsFromNormalization2D )
-
-    submission_data = np.column_stack([ids, blend_data_submission, submissions])
+    submission_data = np.column_stack([ids, blend_submission_data_keys, submissions])
     to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + blend_features +model_names])
     save_file(analysis_type, command, to_saveDf, 'model_submissions')
     print "## model_submissions ##"
     print to_saveDf.describe()
-
 
 m_time = time.time()
 

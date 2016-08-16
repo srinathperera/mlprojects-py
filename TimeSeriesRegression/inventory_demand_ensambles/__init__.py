@@ -396,7 +396,6 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     print "avg_models took ", (time.time() - start), "s"
     '''
 
-
     #we randomly select 5 million values
     print_mem_usage("before dl")
     X_train, y_train, X_test, y_test = sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000)
@@ -419,7 +418,6 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     except:
         print_mem_usage("after error")
         print "Unexpected error:"
-    raise
 
     print "Done"
 
