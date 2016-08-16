@@ -78,7 +78,7 @@ for m in ml_models:
     tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_df, test_df, testDf, y_actual_train, y_actual_test, models=[m])
     forecasts.append(tforecasts[:, 0])
     t_model = tmodels[0]
-    submissions.append(tforecasts[0])
+    submissions.append(tsubmission_forecasts[:, 0])
     model_names.append(t_model.name)
     model_rmsle.append(t_model.rmsle)
     t_model.cleanup()

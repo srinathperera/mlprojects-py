@@ -212,21 +212,13 @@ submissions_forecasts = []
 for fold_id, (train_dfo, test_dfo, y_actual_train,y_actual_test) in enumerate(fold_list):
     train_df = train_dfo; test_df =test_dfo; testDf = sub_dfo.copy()
 
-
-
     print_mem_usage(str(fold_id) + ": before features")
     train_df, test_df, testDf, f2_train_df, f2_test_df, f2_sub_df = generate_unit_features(conf, train_df, test_df, testDf)
 
     prep_time = time.time()
     print_mem_usage(str(fold_id) + ": before forecast")
-    if conf.target_as_log:
-        train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
-        y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
-    else:
-        y_train_raw, y_test_raw = y_actual_train, y_actual_test
 
-    models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
-                                                                                           y_train_raw, y_test_raw, y_actual_test)
+    models, forecasts, submission_forecasts = do_forecast(conf, train_df, test_df, testDf, y_actual_train, y_actual_test)
 
     print_mem_usage(str(fold_id) + ":after forecast")
 
@@ -254,9 +246,9 @@ for fold_id, (train_dfo, test_dfo, y_actual_train,y_actual_test) in enumerate(fo
     f2models[0].predict()
     '''
 
-    sub_X_all = testDf.values
-    y_forecast_submission = create_submission(conf, best_model, ids, sub_X_all, parmsFromNormalization, parmsFromNormalization2D)
-    submissions_forecasts.append(y_forecast_submission)
+    #sub_X_all = testDf.values
+    #y_forecast_submission = create_submission(conf, best_model, ids, sub_X_all, parmsFromNormalization, parmsFromNormalization2D)
+    #submissions_forecasts.append(y_forecast_submission)
 
 fold_forecasts.reverse()
 final_forecast = np.column_stack(fold_forecasts).flatten()

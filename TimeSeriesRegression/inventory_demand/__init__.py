@@ -1646,7 +1646,7 @@ def do_forecast(conf, train_df, test_df, sub_df, y_train, y_test, models=None):
     y_actual_test = y_test
 
     if conf.target_as_log:
-        train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, sub_df, skip_field_patterns=['kurtosis', 'id'])
+        train_df, test_df, sub_df = tranform_train_data_to_log(train_df, test_df, sub_df, skip_field_patterns=['kurtosis', 'id'])
         y_train, y_test = transfrom_to_log(y_train), transfrom_to_log(y_test)
 
     start = time.time()
@@ -1708,9 +1708,11 @@ def do_forecast(conf, train_df, test_df, sub_df, y_train, y_test, models=None):
     #lets generate submissions
     submission_forecasts = None
     if sub_df is not None:
-        sub_X_all = test_df.values
+        sub_X_all = sub_df.values
         submission_forecasts = [create_submission(conf, m, sub_X_all, parmsFromNormalization, parmsFromNormalization2D) for m in models]
+        submission_forecasts = np.column_stack(submission_forecasts)
 
+    print str(len(models)), " models forecasts=", forecasts.shape, ", submission_forecasts=", submission_forecasts.shape
     return models, forecasts, submission_forecasts
 
 

@@ -123,16 +123,7 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_train_
     median_forecast = test_df['median_sales']
     calculate_accuracy("median_forecast", y_actual_test, median_forecast)
 
-    if conf.target_as_log:
-        train_df, test_df, testDf = tranform_train_data_to_log(train_df, test_df, testDf, skip_field_patterns=['kurtosis', 'id'])
-        y_train_raw, y_test_raw = transfrom_to_log(y_actual_train), transfrom_to_log(y_actual_test)
-    else:
-        y_train_raw, y_test_raw = y_actual_train, y_actual_test
-
-
-    #conf, train_df, test_df, y_train_raw, y_test_raw, y_actual_test
-    models, forecasts, test_df, parmsFromNormalization, parmsFromNormalization2D = do_forecast(conf, train_df, test_df,
-                                                                                               y_train_raw, y_test_raw, y_actual_test)
+    tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_df, test_df, testDf, y_actual_train, y_actual_test)
 
     #TODO save submission
 

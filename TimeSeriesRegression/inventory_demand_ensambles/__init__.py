@@ -398,7 +398,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
 
 
     #we randomly select 5 million values
-
+    print_mem_usage("before dl")
     X_train, y_train, X_test, y_test = sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000)
     dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
                 epoch_count=4, optimizer=Adam(lr=0.0001), regularization=0.2)
@@ -407,8 +407,10 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(X_train)
     X_test = apply_zeroMeanUnit2D(X_test, parmsFromNormalization2D)
 
+    print_mem_usage("before dl forcast")
     model, y_forecast = regression_with_dl(X_train, y_train, X_test, y_test, dlconf)
 
     y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
     y_forecast = retransfrom_from_log(y_forecast)
-    calculate_accuracy("ml_forecast", y_actual_test, y_forecast)
+    print_mem_usage("after dl forcast")
+    calculate_accuracy("dl_forecast", y_actual_test, y_forecast)
