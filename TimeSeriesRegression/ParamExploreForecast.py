@@ -80,7 +80,7 @@ for t in list(itertools.combinations(range(len(groups)),4)):
 
 
 np.random.shuffle(features)
-features = features[:3]
+features = features[:30]
 
 print features
 
