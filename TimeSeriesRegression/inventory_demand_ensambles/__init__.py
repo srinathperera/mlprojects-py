@@ -362,63 +362,84 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     ensambles.append((rmsle, lr_model, "lr ensamble"))
 
     '''
-    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
-    model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
-                            use_sklean=False, xgb_params=xgb_params)
-    #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-    #                                                  xgb_params=xgb_params,num_rounds=20)
-    xgb_forecast = model.predict(X_test)
-    rmsle = calculate_accuracy("xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
-    ensambles.append((rmsle, model, "xgboost ensamble"))
+    do_xgb = False
+    do_ml = True
 
-    best_ensamble_index = np.argmin([t[0] for t in ensambles])
-    best_ensamble = ensambles[best_ensamble_index][1]
-    print "[IDF]Best Ensamble", ensambles[best_ensamble_index][2], ensambles[best_ensamble_index][0]
+    if do_xgb:
+        xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
+        model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
+                                use_sklean=False, xgb_params=xgb_params)
+        #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+        #                                                  xgb_params=xgb_params,num_rounds=20)
+        xgb_forecast = model.predict(X_test)
+        rmsle = calculate_accuracy("xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
+        ensambles.append((rmsle, model, "xgboost ensamble"))
 
-    if sub_X_all is not None:
-        ensamble_forecast = best_ensamble.predict(sub_X_all)
-        ensamble_forecast = retransfrom_from_log(ensamble_forecast)
+        best_ensamble_index = np.argmin([t[0] for t in ensambles])
+        best_ensamble = ensambles[best_ensamble_index][1]
+        print "[IDF]Best Ensamble", ensambles[best_ensamble_index][2], ensambles[best_ensamble_index][0]
 
-        #becouse forecast cannot be negative
-        ensamble_forecast = np.where(ensamble_forecast < 0, 0, ensamble_forecast)
+        if sub_X_all is not None:
+            ensamble_forecast = best_ensamble.predict(sub_X_all)
+            ensamble_forecast = retransfrom_from_log(ensamble_forecast)
 
-        to_save = np.column_stack((submission_ids, ensamble_forecast))
-        to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
-        to_saveDf = to_saveDf.fillna(0)
-        to_saveDf["id"] = to_saveDf["id"].astype(int)
-        submission_file = 'en_submission_full.csv'
-        to_saveDf.to_csv(submission_file, index=False)
+            #becouse forecast cannot be negative
+            ensamble_forecast = np.where(ensamble_forecast < 0, 0, ensamble_forecast)
 
-        print "Best Ensamble Submission Stats"
-        print to_saveDf.describe()
+            to_save = np.column_stack((submission_ids, ensamble_forecast))
+            to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+            to_saveDf = to_saveDf.fillna(0)
+            to_saveDf["id"] = to_saveDf["id"].astype(int)
+            submission_file = 'en_submission_full.csv'
+            to_saveDf.to_csv(submission_file, index=False)
 
-    print "avg_models took ", (time.time() - start), "s"
+            print "Best Ensamble Submission Stats"
+            print to_saveDf.describe()
 
-    '''
-    #we randomly select 5 million values
-    print_mem_usage("before dl")
-    X_train, y_train, X_test, y_test = sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000)
-    dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
-                epoch_count=4, optimizer=Adam(lr=0.0001), regularization=0.2)
-    y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
-    y_test = apply_zeroMeanUnit(y_test, parmsFromNormalization)
-    X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(X_train)
-    X_test = apply_zeroMeanUnit2D(X_test, parmsFromNormalization2D)
+        print "avg_models took ", (time.time() - start), "s"
 
-    print_mem_usage("before dl forcast")
-    model, y_forecast = regression_with_dl(X_train, y_train, X_test, y_test, dlconf)
+    if do_ml:
+        #we randomly select 5 million values
+        print_mem_usage("before dl")
+        X_train, y_train, X_test, y_test = sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000)
+        dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
+                    epoch_count=4, optimizer=Adam(lr=0.0001), regularization=0.2)
+        y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
+        y_test = apply_zeroMeanUnit(y_test, parmsFromNormalization)
+        X_train, parmsFromNormalization2D = preprocess2DtoZeroMeanUnit(X_train)
+        X_test = apply_zeroMeanUnit2D(X_test, parmsFromNormalization2D)
 
-    y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
-    print "dl results size =", y_forecast.shape
-    y_forecast = retransfrom_from_log(y_forecast)
-    print_mem_usage("after dl forcast")
-    try:
-        calculate_accuracy("dl_forecast", y_actual_test, y_forecast)
-    except:
-        print_mem_usage("after error")
-        print "Unexpected error:"
-    '''
+        print_mem_usage("before dl forcast")
+        model, y_forecast = regression_with_dl(X_train, y_train, X_test, y_test, dlconf)
 
-    print "Done"
+        y_forecast = undoPreprocessing(y_forecast, parmsFromNormalization)
+        print "dl results size =", y_forecast.shape
+        y_forecast = retransfrom_from_log(y_forecast)
+        print_mem_usage("after dl forcast")
+        try:
+            y_forecast_df =  pd.DataFrame(y_forecast.reshape(-1,1), columns=["target"])
+            save_file("temp", 0, y_forecast_df, 'forecast_ml')
+            y_forecast_df = load_file("temp", 0, 'forecast_ml', throw_error=True)
+            calculate_accuracy("dl_forecast", y_actual_test, y_forecast_df['target'])
+        except:
+            print_mem_usage("after error")
+            print "Unexpected error:"
+
+        if sub_X_all is not None:
+            ensamble_forecast = model.predict(sub_X_all)
+            ensamble_forecast = retransfrom_from_log(ensamble_forecast)
+
+            #becouse forecast cannot be negative
+            ensamble_forecast = np.where(ensamble_forecast < 0, 0, ensamble_forecast)
+
+            to_save = np.column_stack((submission_ids, ensamble_forecast))
+            to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+            to_saveDf = to_saveDf.fillna(0)
+            to_saveDf["id"] = to_saveDf["id"].astype(int)
+            submission_file = 'en_submission_full_dl.csv'
+            to_saveDf.to_csv(submission_file, index=False)
+
+            print "Best Ensamble Submission Stats"
+            print to_saveDf.describe()
 
 
