@@ -362,7 +362,6 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     ensambles.append((rmsle, lr_model, "lr ensamble"))
 
     '''
-    '''
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
     model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
                             use_sklean=False, xgb_params=xgb_params)
@@ -394,8 +393,8 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
         print to_saveDf.describe()
 
     print "avg_models took ", (time.time() - start), "s"
-    '''
 
+    '''
     #we randomly select 5 million values
     print_mem_usage("before dl")
     X_train, y_train, X_test, y_test = sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000)
@@ -418,6 +417,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     except:
         print_mem_usage("after error")
         print "Unexpected error:"
+    '''
 
     print "Done"
 
