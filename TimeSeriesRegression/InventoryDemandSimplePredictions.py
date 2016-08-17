@@ -33,14 +33,34 @@ def five_group_stats(group):
     max_index = np.argmax(samana)
     returns = group['Dev_proxima'].mean()
     #this is signature on when slaes happens
+
+    sorted_samana_index = np.argsort(samana)
+    sorted_sales = sales[sorted_samana_index]
+
     signature = np.sum([ math.pow(2,s-3) for s in samana])
-    kurtosis = fillna_and_inf(scipy.stats.kurtosis(sales))
+    kurtosis = fillna_and_inf(scipy.stats.kurtosis(sorted_sales))
     hmean = fillna_and_inf(scipy.stats.hmean(np.where(sales <0, 0.1, sales)))
     entropy = fillna_and_inf(scipy.stats.entropy(sales))
+    std = np.std(sales)
+    N = len(sales)
+    ci = calculate_ci(std, N)
+    corr = scipy.stats.pearsonr(range(N), sorted_sales)[0]
 
+    autocorr_list = np.correlate(sorted_sales, sorted_sales, mode='same')
+    mean_autocorr = np.mean(autocorr_list)
 
-    return np.mean(sales), len(sales), np.std(sales), np.median(sales), sales[max_index], samana[max_index], \
-           returns, signature, kurtosis, hmean, entropy
+    mean = np.mean(sales)
+
+    mean_corss_points_count = 0
+    if N > 1:
+        high_than_mean = mean < sorted_sales[0]
+        for i in range(1,N):
+            if (high_than_mean and mean > sorted_sales[i]) or (not high_than_mean and mean > sorted_sales[i]):
+                mean_corss_points_count += mean_corss_points_count
+            high_than_mean = mean < sorted_sales[i]
+
+    return mean, N, std, np.median(sales), sales[max_index], samana[max_index], \
+           returns, signature, kurtosis, hmean, entropy, ci, corr, mean_autocorr, mean_corss_points_count
 
 
 
@@ -56,7 +76,7 @@ def add_five_grouped_stats(train_df, test_df, testDf):
     sales_data_df = slope_data_df.to_frame("sales_data")
     sales_data_df.reset_index(inplace=True)
     valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy", "ci", "corr", "mean_autocorr", "mean_corss_points_count"])
     find_NA_rows_percent(valuesDf, "valuesDf base stats")
 
     #valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["sales_count"])
@@ -122,6 +142,10 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_train_
 
     median_forecast = test_df['median_sales']
     calculate_accuracy("median_forecast", y_actual_test, median_forecast)
+
+    testDf.fillna(0, inplace=True)
+    ids = testDf['id']
+    testDf.drop('id',axis=1, inplace=True)
 
     tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_df, test_df, testDf, y_actual_train, y_actual_test)
 

@@ -27,9 +27,7 @@ import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
-
 command = -2
-
 
 if len(sys.argv) > 1:
     command = int(sys.argv[1])
@@ -38,28 +36,11 @@ if len(sys.argv) > 2:
 else:
     feature_set = None
 
-analysis_type = feature_set
-
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.command = command
-conf.analysis_type = analysis_type
-
-s_time = time.time()
-
-#load first dataset
-train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('agr_cat', conf.command, throw_error=True)
-print "reusing train data", analysis_type
-
-print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
-
-#load second dataset
-#train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
-#    ["median_sales", "returns", "signature", "kurtosis"])
-
-train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
 
 if feature_set is None:
+    feature_set = "feature-explore"
     groups = [
         ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
         ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
@@ -83,7 +64,6 @@ if feature_set is None:
 
     np.random.shuffle(features)
     features = features[:30]
-
     ml_models = get_models4xgboost_only(conf)
 else:
     if feature_set == "fg-vhmean-product":
@@ -95,6 +75,25 @@ else:
 
     features = [list]
     ml_models = get_models4ensamble(conf)
+
+analysis_type = feature_set
+conf.analysis_type = analysis_type
+
+s_time = time.time()
+
+#load first dataset
+train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('agr_cat', conf.command, throw_error=True)
+print "reusing train data", analysis_type
+
+print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
+
+#load second dataset
+#train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
+#    ["median_sales", "returns", "signature", "kurtosis"])
+
+train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+
 
 print "X",train_df.shape, "Y", y_actual_train.shape
 
