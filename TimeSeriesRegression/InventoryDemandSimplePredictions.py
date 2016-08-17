@@ -41,13 +41,13 @@ def five_group_stats(group):
     kurtosis = fillna_and_inf(scipy.stats.kurtosis(sorted_sales))
     hmean = fillna_and_inf(scipy.stats.hmean(np.where(sales <0, 0.1, sales)))
     entropy = fillna_and_inf(scipy.stats.entropy(sales))
-    std = np.std(sales)
+    std = fillna_and_inf(np.std(sales))
     N = len(sales)
-    ci = calculate_ci(std, N)
-    corr = scipy.stats.pearsonr(range(N), sorted_sales)[0]
+    ci = fillna_and_inf(calculate_ci(std, N))
+    corr = fillna_and_inf(scipy.stats.pearsonr(range(N), sorted_sales)[0])
 
     autocorr_list = np.correlate(sorted_sales, sorted_sales, mode='same')
-    mean_autocorr = np.mean(autocorr_list)
+    mean_autocorr = fillna_and_inf(np.mean(autocorr_list))
 
     mean = np.mean(sales)
 
@@ -147,7 +147,7 @@ def do_simple_models(conf, train_df_raw, test_df_raw, subdf_raw, y_actual_train_
     ids = testDf['id']
     testDf.drop('id',axis=1, inplace=True)
 
-    tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_df, test_df, testDf, y_actual_train, y_actual_test)
+    #tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_df, test_df, testDf, y_actual_train, y_actual_test)
 
     #TODO save submission
 
