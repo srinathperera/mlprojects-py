@@ -3,7 +3,6 @@ import pandas as pd
 import datetime
 from sklearn.cross_validation import KFold
 
-import feather
 
 
 #extract dates and other column from data frame and fill missing entries as None
@@ -29,12 +28,16 @@ def fill_in_missing_dates(df, date_col_name, other_col):
 def pad_missing_value(df):
     return df.fillna(method='pad')
 
+'''
 #feather is a fast binary format https://blog.rstudio.org/2016/03/29/feather/
+
 def feather2df(path):
     return feather.read_dataframe(path)
 
 def df2feather(df, path):
     return feather.write_dataframe(df,path)
+
+'''
 
 ##Numpy binary format http://docs.scipy.org/doc/numpy/reference/generated/numpy.save.html#numpy.save
 
