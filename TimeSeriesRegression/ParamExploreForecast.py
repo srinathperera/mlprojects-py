@@ -92,8 +92,9 @@ if feature_set is None or feature_set == "feature-explore":
 
 
     features = []
-    for t in list(itertools.combinations(range(len(groups)),3)):
-        fset = groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
+    for t in list(itertools.combinations(range(len(groups)), 3)):
+        #fset = groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
+        fset = groups[t[0]] + groups[t[1]] + groups[t[2]]
         features.append(fset)
 
     np.random.shuffle(features)
