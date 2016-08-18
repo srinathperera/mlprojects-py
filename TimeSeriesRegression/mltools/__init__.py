@@ -193,10 +193,8 @@ def print_graph_test(y_test, y_pred1, y_pred2, maxEntries=50):
     plt.show()
 
 
-
-def calculate_rmsle_fast_slow(Y_actual, Y_predicted):
+def calculate_rmsle(Y_actual, Y_predicted):
     rmsle_sum = []
-    ignored_count = 0
     for i in range(len(Y_actual)):
         if Y_predicted[i] > 0:
             v = (math.log(1+ Y_predicted[i]) - math.log(1+Y_actual[i]))
@@ -205,15 +203,10 @@ def calculate_rmsle_fast_slow(Y_actual, Y_predicted):
             v = 0 - math.log(1+Y_actual[i])
         rmsle_sum.append(v*v)
     rmsle =  sqrt(sum(rmsle_sum)/len(rmsle_sum))
-
-    rmsle2 = calculate_rmsle(Y_actual, Y_predicted)
-
-    print rmsle, "=", rmsle2, (rmsle2 == rmsle)
-
     return rmsle
 
 
-def calculate_rmsle(Y_actual, Y_predicted):
+def calculate_rmsle_fast(Y_actual, Y_predicted):
     square_values = np.where(Y_predicted < 0, np.square(np.log(1+Y_actual)),
                                 np.square(np.log(1+Y_predicted) - np.log(1+Y_actual)))
     rmsle = np.sqrt(np.mean(square_values))

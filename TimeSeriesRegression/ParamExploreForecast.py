@@ -39,8 +39,10 @@ else:
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.command = command
 
-if feature_set is None:
+if feature_set is None or feature_set == "feature-explore":
     feature_set = "feature-explore"
+
+    '''
     groups = [
         ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
         ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
@@ -56,6 +58,38 @@ if feature_set is None:
         ['kurtosis'],
         ['entropy']
     ]
+    '''
+
+    groups = [
+        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
+        ['Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Dev_proximaci', 'Agencia_ID_Dev_proxima_median'],
+        ['Agencia_ID_Venta_hoy_Mean', 'Agencia_ID_Venta_hoyci', 'Agencia_ID_Venta_hoy_median', 'clients_combined_Mean'],
+        ['clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
+        ['clients_combined_vh_Mean_x', 'clients_combined_vhci_x', 'clients_combined_vh_median_x'],
+        ['clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median', 'Producto_ID_Demanda_uni_equil_Mean'],
+        ['Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median'],
+        ['Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
+        ['clients_combined_vh_Mean_y', 'clients_combined_vhci_y', 'clients_combined_vh_median_y'],
+        ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
+        ['Canal_ID_Demanda_uni_equil_Mean', 'Canal_ID_Demanda_uni_equilci'],
+        ['Canal_ID_Demanda_uni_equil_median', 'Canal_ID_Venta_hoy_Mean', 'Canal_ID_Venta_hoyci', 'Canal_ID_Venta_hoy_median', 'Canal_ID_Dev_proxima_Mean', 'Canal_ID_Dev_proximaci', 'Canal_ID_Dev_proxima_median'],
+        ['Ruta_SAK_Demanda_uni_equil_Mean', 'Ruta_SAK_Demanda_uni_equilci', 'Ruta_SAK_Demanda_uni_equil_median'],
+        ['Ruta_SAK_Venta_hoy_Mean', 'Ruta_SAK_Venta_hoyci', 'Ruta_SAK_Venta_hoy_median'],
+        ['Ruta_SAK_Dev_proxima_Mean', 'Ruta_SAK_Dev_proximaci', 'Ruta_SAK_Dev_proxima_median'],
+        ['weight', 'pieces', 'has_choco', 'has_vanilla', 'has_multigrain'],
+        ['brand_id_Demanda_uni_equil_Mean', 'brand_id_Demanda_uni_equilci', 'brand_id_Demanda_uni_equil_median'],
+        ['product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'product_word_Demanda_uni_equil_median'],
+        ['Town_id_Demanda_uni_equil_Mean', 'Town_id_Demanda_uni_equilci', 'Town_id_Demanda_uni_equil_median'],
+        ['State_id_Demanda_uni_equil_Mean', 'State_id_Demanda_uni_equilci', 'State_id_Demanda_uni_equil_median'],
+        ['agc_product_Mean', 'agc_productci', 'agc_product_median'],
+        ['routes_combined_Mean', 'routes_combinedci', 'routes_combined_median'],
+        ['clients_route_agc_Mean', 'clients_route_agcci', 'clients_route_agc_median'],
+        ["mean_sales", "sales_count", "sales_stddev", "median_sales", "hmean", "ci", "kurtosis"],
+        ["last_sale", "last_sale_week", 'Semana'],
+        ["returns", "signature"],
+        ["entropy", "corr", "mean_autocorr", "mean_corss_points_count"]
+    ]
+
 
     features = []
     for t in list(itertools.combinations(range(len(groups)),4)):
@@ -63,7 +97,7 @@ if feature_set is None:
         features.append(fset)
 
     np.random.shuffle(features)
-    features = features[:30]
+    features = features[:3]
     ml_models = get_models4xgboost_only(conf)
 else:
     if feature_set == "fg-vhmean-product":
@@ -82,7 +116,7 @@ conf.analysis_type = analysis_type
 s_time = time.time()
 
 #load first dataset
-train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('agr_cat', conf.command, throw_error=True)
+train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True)
 print "reusing train data", analysis_type
 
 print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
@@ -125,45 +159,54 @@ for fset in features:
     model_names = []
     model_rmsle = []
 
-    for m in ml_models:
-        train_dft = train_df[fset].copy(); test_dft = test_df[fset].copy(); testDft = testDf[fset].copy()
+    try:
+        for m in ml_models:
+            print "using ", fset, "from", list(train_df)
+            train_dft = train_df[fset].copy(); test_dft = test_df[fset].copy(); testDft = testDf[fset].copy()
+            print_mem_usage("before running model " + m.name)
+            tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_dft, test_dft, testDft, y_actual_train, y_actual_test, models=[m])
+            forecasts.append(tforecasts[:, 0])
+            t_model = tmodels[0]
+            submissions.append(tsubmission_forecasts[:, 0])
+            model_names.append(t_model.name)
+            model_rmsle.append(t_model.rmsle)
+            t_model.cleanup()
+            gc.collect() #to free up memory
+            print_mem_usage("after model " + t_model.name)
+            print "[IDF"+str(conf.command)+"]", fset, t_model.name, t_model.rmsle
+
+        best_model_index = np.argmin(model_rmsle)
+        print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", model_rmsle[best_model_index]
+        submission_file = 'submission'+str(conf.command)+ '.csv'
+        save_submission_file(submission_file, ids, submissions[best_model_index])
+        #convert the values to numpy arrays
+        forecasts = np.column_stack(forecasts)
+        submissions = np.column_stack(submissions)
+
+        #create and save predictions for each model so we can build an ensamble later
+        if forecasts.shape[1] > 1:
+            model_forecasts_data = np.column_stack([blend_test_data_keys, forecasts, y_actual_test])
+            to_saveDf =  pd.DataFrame(model_forecasts_data, columns=blend_features + model_names + ["actual"])
+            metadata_map = {'rmsle':model_rmsle}
+            save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=metadata_map)
+            print "## model_forecasts ##"
+            print to_saveDf.describe()
+
+            submission_data = np.column_stack([ids, blend_submission_data_keys, submissions])
+            to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + blend_features +model_names])
+            save_file(analysis_type, command, to_saveDf, 'model_submissions')
+            print "## model_submissions ##"
+            print to_saveDf.describe()
+
+    except Exception, error:
+        print "An exception was thrown!"
+        print str(error)
+
+
         #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
-        print_mem_usage("before running model " + m.name)
-        tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_dft, test_dft, testDft, y_actual_train, y_actual_test, models=[m])
-        forecasts.append(tforecasts[:, 0])
-        t_model = tmodels[0]
-        submissions.append(tsubmission_forecasts[:, 0])
-        model_names.append(t_model.name)
-        model_rmsle.append(t_model.rmsle)
-        t_model.cleanup()
-        gc.collect() #to free up memory
-        print_mem_usage("after model " + t_model.name)
-        print "[IDF"+str(conf.command)+"]", fset, t_model.name, t_model.rmsle
 
 
-best_model_index = np.argmin(model_rmsle)
-print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", model_rmsle[best_model_index]
-submission_file = 'submission'+str(conf.command)+ '.csv'
-save_submission_file(submission_file, ids, submissions[best_model_index])
 
-#convert the values to numpy arrays
-forecasts = np.column_stack(forecasts)
-submissions = np.column_stack(submissions)
-
-#create and save predictions for each model so we can build an ensamble later
-if forecasts.shape[1] > 1:
-    model_forecasts_data = np.column_stack([blend_test_data_keys, forecasts, y_actual_test])
-    to_saveDf =  pd.DataFrame(model_forecasts_data, columns=blend_features + model_names + ["actual"])
-    metadata_map = {'rmsle':model_rmsle}
-    save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=metadata_map)
-    print "## model_forecasts ##"
-    print to_saveDf.describe()
-
-    submission_data = np.column_stack([ids, blend_submission_data_keys, submissions])
-    to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + blend_features +model_names])
-    save_file(analysis_type, command, to_saveDf, 'model_submissions')
-    print "## model_submissions ##"
-    print to_saveDf.describe()
 
 m_time = time.time()
 

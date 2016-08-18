@@ -1186,10 +1186,9 @@ def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_
     if train_df.shape[1] <= column_count_before_merge:
         raise ValueError("Join failed, no new feilds added, feilds after merge=", list(train_df))
 
-    find_NA_rows_percent(train_df, "merging two tables")
-    find_NA_rows_percent(test_df, "merging two tables")
-    find_NA_rows_percent(sub_df, "merging two tables")
-
+    #find_NA_rows_percent(train_df, "merging two tables")
+    #ind_NA_rows_percent(test_df, "merging two tables")
+    #find_NA_rows_percent(sub_df, "merging two tables")
     return train_df, test_df, sub_df
 
 
@@ -1202,9 +1201,10 @@ def check_accuracy(label, model, X_test, parmsFromNormalization, target_as_log, 
     else:
         print 'no log retransform'
 
-    error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_pred_final, 10)
+    #error_ac, rmsep, mape, rmse = almost_correct_based_accuracy(y_actual_test, y_pred_final, 10)
     rmsle = calculate_rmsle(y_actual_test, y_pred_final)
-    print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + str(command)+ " "+ label, error_ac, rmsep, mape, rmse, rmsle)
+    #print ">> %s AC_errorRate=%.1f RMSEP=%.6f MAPE=%6f RMSE=%6f rmsle=%.5f" %("Run " + str(command)+ " "+ label, error_ac, rmsep, mape, rmse, rmsle)
+    print ">> %s rmsle=%.5f" %("Run " + str(command)+ " "+ label, rmsle)
     return y_pred_final, rmsle
 
 
