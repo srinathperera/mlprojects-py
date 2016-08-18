@@ -1030,7 +1030,7 @@ class DLModel:
         start = time.time()
         if self.dlconf == None:
             self.dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
-                epoch_count=10, optimizer=Adam(lr=0.0001), regularization=0.2)
+                epoch_count=20, optimizer=Adam(lr=0.0001), regularization=0.2)
         model, y_pred_dl = regression_with_dl(X_train, y_train, X_test, y_test, self.dlconf)
         self.model = model
 
