@@ -97,7 +97,7 @@ if feature_set is None or feature_set == "feature-explore":
         features.append(fset)
 
     np.random.shuffle(features)
-    features = features[:3]
+    features = features[:100]
     ml_models = get_models4xgboost_only(conf)
 else:
     if feature_set == "fg-vhmean-product":
