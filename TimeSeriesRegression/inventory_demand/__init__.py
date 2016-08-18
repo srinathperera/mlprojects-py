@@ -181,7 +181,8 @@ def save_file(model_type, command, df, name, metadata=None):
         metadata_file = model_type+ '/' + name+str(command)+ '.pickle'
         file = open(metadata_file, 'wb')
         pickle.dump(metadata, file)
-    print "saved", submission_file, " feilds=", list(df)
+    feature_list = list(df)
+    print "saved", submission_file, len(feature_list), " feilds=", feature_list
 
 
 def load_file(model_type, command, name, throw_error=True):

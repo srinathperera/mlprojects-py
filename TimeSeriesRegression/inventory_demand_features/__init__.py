@@ -317,17 +317,6 @@ def add_multiple_feild_stats(bdf, feild_stats, feild_names, name, default_stats)
 
 def generate_all_features(conf, train_df, test_df, subdf, y_actual_test):
     start = time.time()
-    use_slope = False
-    use_group_aggrigate = True
-    use_product_features = True
-    use_agency_features = False
-    use_sales_data = False
-
-    testDf = subdf
-
-    if use_slope:
-        train_df, test_df, testDf = addSlopes(train_df, test_df, testDf)
-
     default_demand_stats = DefaultStats(mean=train_df['Demanda_uni_equil'].mean(), count=train_df['Demanda_uni_equil'].count(),
                                         stddev=train_df['Demanda_uni_equil'].std())
     default_venta_hoy_stats = DefaultStats(train_df['Venta_hoy'].mean(), train_df['Venta_hoy'].count(),
@@ -338,122 +327,88 @@ def generate_all_features(conf, train_df, test_df, subdf, y_actual_test):
     #this is to drop all features in one go
     feilds_to_drop = []
 
-    #add mean and stddev by groups
+    #agency
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', subdf, default_demand_stats,
+                                                        FeatureOps(hmean=True, stddev=True, count=True))
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_dev_proxima_stats, fops=FeatureOps(), agr_feild='Dev_proxima')
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_venta_hoy_stats, fops=FeatureOps(), agr_feild='Venta_hoy')
 
-    groups = ('Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID')
-    measures = ('Dev_proxima', 'Dev_uni_proxima', 'Demanda_uni_equil', 'unit_prize', 'Venta_uni_hoy', 'Venta_hoy')
-    #for t in itertools.product(groups, measures):
-    #for t in [('Cliente_ID', 'Demanda_uni_equil'), ('Cliente_ID', 'Venta_uni_hoy'), ('Cliente_ID', 'Venta_hoy'),
-    #    ('Ruta_SAK', 'unit_prize')]:
-    #        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df,
-    #                                test_df,t[0], testDf, drop=False, agr_feild=t[1])
+    #client
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
+            'Demanda_uni_equil', "clients_combined", default_demand_stats,
+                                                          FeatureOps(sum= True, kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
+            'Venta_hoy', "clients_combined_vh", default_demand_stats, FeatureOps())
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
+            'Dev_proxima', "clients_combined_dp", default_demand_stats, FeatureOps())
 
-    if use_group_aggrigate:
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats,
-                                                            FeatureOps(hmean=True, stddev=True, count=True))
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
-        #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False)
-        #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False) #duplicated
-        train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-                'Demanda_uni_equil', "clients_combined", default_demand_stats,
-                                                              FeatureOps(sum= True, kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
+    #product
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
+                                                        FeatureOps(stddev=True, p90=True, hmean=True,p10=True, count=True))
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy',
+                                                        default_stats=default_venta_hoy_stats, fops=FeatureOps(stddev=True, count=True))
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
+        'Venta_hoy', "clients_combined_vh", default_venta_hoy_stats, FeatureOps(sum=True, hmean=True, p90=True, stddev=True))
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
+                                                        agr_feild='Dev_proxima', default_stats=default_dev_proxima_stats,
+                                                        fops=FeatureOps(count=True))
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
-                                                            FeatureOps(stddev=True, p90=True, hmean=True,p10=True, count=True))
+    #Canal_ID
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats, fops=FeatureOps())
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_venta_hoy_stats, fops=FeatureOps(), agr_feild='Venta_hoy')
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_dev_proxima_stats,
+                                                        fops=FeatureOps(), agr_feild='Dev_proxima')
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy',
-                                                            default_stats=default_venta_hoy_stats, fops=FeatureOps(stddev=True, count=True))
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False, agr_feild='Venta_hoy')
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Venta_hoy')
-        #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Venta_hoy')
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
-
-        train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Ruta_SAK', 'Cliente_ID'],
-            'Venta_hoy', "clients_combined_vh", default_venta_hoy_stats, FeatureOps(sum=True, hmean=True, p90=True, stddev=True))
-
-
-
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
-                                                            agr_feild='Dev_proxima', default_stats=default_dev_proxima_stats,
-                                                            fops=FeatureOps(count=True))
-
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats,
-        #                                                    drop=False, agr_feild='Dev_proxima', fops=FeatureOps())
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Dev_proxima')
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Dev_proxima')
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, drop=False, agr_feild='Dev_proxima')
+    #Ruta_SAK
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, default_demand_stats, fops=FeatureOps())
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, default_venta_hoy_stats, fops=FeatureOps(), agr_feild='Venta_hoy')
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, default_dev_proxima_stats, fops=FeatureOps(), agr_feild='Dev_proxima')
 
 
-    if use_product_features:
-        product_data_df = read_productdata_file('product_data.csv')
+    ############ add product data
+    product_data_df = read_productdata_file('product_data.csv')
+    #remove  unused feilds
+    product_data_df = drop_feilds_1df(product_data_df, ["time_between_delivery"])
 
-        #remove  unused feilds
-        #product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', 'weight','pieces'])
-        product_data_df = drop_feilds_1df(product_data_df, ['has_vanilla','has_multigrain', 'has_choco', "time_between_delivery"])
+    if 'weight' in product_data_df:
+        weight = product_data_df['weight']
+        product_data_df['weight'] = np.where(weight < 0, 0, weight)
+    if 'pieces' in product_data_df:
+        pieces = product_data_df['pieces']
+        product_data_df['pieces'] = np.where(pieces < 0, 0, pieces)
+    train_df = pd.merge(train_df, product_data_df, how='left', on=['Producto_ID'])
+    test_df = pd.merge(test_df, product_data_df, how='left', on=['Producto_ID'])
+    testDf = pd.merge(testDf, product_data_df, how='left', on=['Producto_ID'])
 
-        if 'weight' in product_data_df:
-            weight = product_data_df['weight']
-            product_data_df['weight'] = np.where(weight < 0, 0, weight)
-        if 'pieces' in product_data_df:
-            pieces = product_data_df['pieces']
-            product_data_df['pieces'] = np.where(pieces < 0, 0, pieces)
+    #add product data aggrigates by groups
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'brand_id', testDf,
+        default_stats=default_demand_stats, fops=FeatureOps())
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'product_word', testDf, drop=False,
+        default_stats=default_demand_stats, fops=FeatureOps(hmean=True))
+    feilds_to_drop = feilds_to_drop + ['product_word', 'brand_id']
 
+    agency_data_df = read_productdata_file('agency_data.csv')
+    train_df, test_df, testDf =  merge_csv_by_feild(train_df, test_df, testDf, agency_data_df, 'Agencia_ID')
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Town_id', testDf, default_demand_stats, fops=FeatureOps())
+    train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'State_id', testDf, default_demand_stats, fops=FeatureOps())
+    feilds_to_drop = feilds_to_drop + ['Town_id', 'State_id']
 
-        train_df = pd.merge(train_df, product_data_df, how='left', on=['Producto_ID'])
-        test_df = pd.merge(test_df, product_data_df, how='left', on=['Producto_ID'])
-        testDf = pd.merge(testDf, product_data_df, how='left', on=['Producto_ID'])
+    #bdf, testdf, subdf, feild_names, agr_feild, name, default_stats, fops
 
-        #add aggrigates by groups
-        #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'brand_id', testDf, drop=False,
-        #    default_stats=default_demand_stats)
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'product_word', testDf, drop=False,
-            default_stats=default_demand_stats, fops=FeatureOps(hmean=True))
-
-        #remove group ids
-        feilds_to_drop = feilds_to_drop + ['product_word', 'brand_id']
-
-    if use_agency_features:
-        agency_data_df = read_productdata_file('agency_data.csv')
-        train_df, test_df, testDf =  merge_csv_by_feild(train_df, test_df, testDf, agency_data_df, 'Agencia_ID')
-
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Town_id', testDf, drop=False, fops=FeatureOps())
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'State_id', testDf, drop=False,
-                                                            default_stats=default_demand_stats, fops=FeatureOps())
-        feilds_to_drop = feilds_to_drop + ['Town_id', 'State_id']
-
-    if use_sales_data:
-        train_df, test_df, testDf = add_time_bwt_delivery(train_df, test_df, testDf)
-        train_df, test_df, testDf = add_last_sale_and_week(train_df, test_df, testDf)
-
-    #train_df, test_df, testDf = add_five_grouped_stats(train_df, test_df, testDf)
-
-    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Dev_proxima')
-    #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy')
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Producto_ID', 'Agencia_ID'],
+                                                          'Demanda_uni_equil', "agc_product", default_demand_stats, fops=FeatureOps())
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Canal_ID', 'Ruta_SAK', 'Cliente_ID'],
+                                                          'Demanda_uni_equil', "routes_combined", default_demand_stats, fops=FeatureOps())
+    train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Agencia_ID', 'Ruta_SAK', 'Cliente_ID'],
+                                                          'Demanda_uni_equil', "clients_route_agc", default_demand_stats, fops=FeatureOps())
 
     #train_df, test_df, testDf =  merge_clusters(train_df, test_df, testDf)
     #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cluster', testDf, drop=False)
-    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Cluster'])
-
-    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Canal_ID'])
-
     #train_df, test_df, testDf = only_keep_top_categories(train_df, test_df,testDf, 'Producto_ID', 30)
     #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Producto_ID'])
 
-
-
-    #train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Producto_ID', 'Agencia_ID'],
-    #                                                      'Demanda_uni_equil', "agc_product", demand_val_mean, demand_val_stddev)
-
-    #train_df, test_df, testDf = join_multiple_feild_stats(train_df, test_df, testDf, ['Canal_ID', 'Ruta_SAK', 'Cliente_ID'],
-    #                                                      'Demanda_uni_equil', "routes_combined", demand_val_mean, demand_val_stddev)
-
     test_df_before_dropping_features = test_df
 
-    #save_train_data(conf.analysis_type, conf.command, train_df, test_df, testDf)
-    #train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,["mean_sales", "sales_count",
-    #                                        "sales_stddev", "median_sales", "last_sale", "last_sale_week", "returns"])
-
-    #train_df, test_df, testDf = do_one_hot_all(train_df, test_df, testDf, ['Agencia_ID', 'Cliente_ID'])
     train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima', 'Demanda_uni_equil']
     train_df, test_df, _ = drop_feilds(train_df, test_df, None, feilds_to_drop + train_data_feilds_to_drop)
     testDf = drop_feilds_1df(testDf, feilds_to_drop)
@@ -461,7 +416,6 @@ def generate_all_features(conf, train_df, test_df, subdf, y_actual_test):
     #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
     train_df = train_df.fillna(0)
     test_df = test_df.fillna(0)
-
 
     print "generate_features took ", (time.time() - start), "s"
     return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features

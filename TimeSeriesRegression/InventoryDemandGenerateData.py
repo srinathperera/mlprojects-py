@@ -20,6 +20,7 @@ from sklearn.linear_model import LinearRegression
 from inventory_demand import *
 from mltools import *
 #from mlpreprocessing import feather2df
+from inventory_demand_features import generate_all_features
 
 from inventory_demand_ensambles import *
 
@@ -27,16 +28,18 @@ import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
+analysis_type = 'agr_cat'
 
 command = -2
 if len(sys.argv) > 1:
     command = int(sys.argv[1])
 if len(sys.argv) > 2:
-    test_run = (int(sys.argv[2]) == 1)
+    analysis_type = sys.argv[2]
+    test_run = False
 else:
     test_run = False
 
-analysis_type = 'agr_cat'
+
 
 use_preprocessed_file = False
 save_preprocessed_file = False
@@ -107,8 +110,15 @@ print_mem_usage("before features")
 #if test_run:
 #    do_simple_models(conf, train_df,test_df, testDf, y_actual_test)
 
-train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features = generate_features(conf, train_df,
+if analysis_type == 'agr_cat':
+    train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features = generate_features(conf, train_df,
                                                                                                test_df, testDf, y_actual_test)
+elif analysis_type == 'all_features':
+    train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features = generate_all_features(conf, train_df,
+                                                                                               test_df, testDf, y_actual_test)
+else:
+    raise ValueError("Unknown analysis type" + analysis_type)
+
 
 print "after features", test_df['Semana'].unique(), test_df.shape
 print "after features bd", test_df_before_dropping_features['Semana'].unique(), test_df_before_dropping_features.shape
