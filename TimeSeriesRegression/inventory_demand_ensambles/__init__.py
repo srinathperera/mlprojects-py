@@ -462,7 +462,16 @@ def avg_models_with_ml(conf, blend_forecasts_df, y_actual, submission_forecasts_
     models = get_models4dl_only(conf)
     models, forecasts, submission_forecasts = do_forecast(conf, train_df, test_df, submission_forecasts_df,
                                                           y_actual_train, y_actual_test, models=models)
-    calculate_accuracy("dl_forecast", y_actual_test, forecasts[:, 0])
+    y_forecast = forecasts[:, 0]
+    print_mem_usage("after forecast")
+    try:
+        y_forecast_df =  pd.DataFrame(y_forecast.reshape(-1,1), columns=["target"])
+        save_file("temp", 0, y_forecast_df, 'forecast_ml')
+        y_forecast_df = load_file("temp", 0, 'forecast_ml', throw_error=True)
+        calculate_accuracy("dl_forecast", y_actual_test, y_forecast_df['target'])
+    except:
+        print_mem_usage("after error")
+        print "Unexpected error:"
 
     submission_forecast = submission_forecasts[:, 0]
     submission_forecast = np.where(submission_forecast < 0, 0, submission_forecast)
