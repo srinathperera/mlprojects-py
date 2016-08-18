@@ -120,6 +120,7 @@ def read_productdata_file(file_name):
 def fillna_and_inf(data, na_r=0, inf_r=100000):
     return np.where(np.isnan(data), na_r, np.where(np.isinf(data), inf_r, data))
 
+
 def fillna_if_feildexists(df, feild_name, replacement):
     if feild_name in df:
         df[feild_name].fillna(replacement, inplace=True)
@@ -164,9 +165,6 @@ def sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000):
     X_test = X_test[sample_indexes_test].copy()
     y_test = y_test[sample_indexes_test].copy()
     return X_train, y_train, X_test, y_test
-
-
-
 '''
 We can switch to XGboost files later if needed
 http://xgboost.readthedocs.io/en/latest/python/python_intro.html
@@ -1093,20 +1091,23 @@ def tranform_train_data_to_log(train_df, test_df, sub_df, skip_field_patterns=[]
     #then all values are done as logs
     #df['Demanda_uni_equil'] = transfrom_to_log(df['Demanda_uni_equil'].values)
 
+
 def transform_df_to_log(df, skip_field_patterns):
-    for c in list(df):
+    columns_list = list(df)
+    transformed_data = []
+
+    for c in columns_list:
         skip = False
         for p in skip_field_patterns:
             if p in c:
                 skip = True
         if not skip:
-            df[c] = transfrom_to_log(df[c].values)
+            log_vals = transfrom_to_log(df[c].values)
         else:
+            log_vals = df[c].values
             print "skip log transform ", c
-    return df
-
-
-
+        transformed_data.append(log_vals)
+    return pd.DataFrame(np.column_stack(transformed_data), columns=columns_list)
 
 class InventoryDemandPredictor:
     def __init__(self, model):
@@ -1544,6 +1545,10 @@ def get_models4xgboost_only(conf):
 
     models.append(XGBoostModel(conf, xgb_params))
     return models
+
+
+def get_models4dl_only(conf):
+    return [DLModel(conf)]
 
 
 def get_models4ensamble(conf):

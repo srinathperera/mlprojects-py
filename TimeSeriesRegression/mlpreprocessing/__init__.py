@@ -47,14 +47,19 @@ def df2feather(df, path):
 #install py tables ( bit complicated http://docs.h5py.org/en/latest/build.html)
 
 
-def prepare_train_and_test_data(data_df, y_feild, split_frac=0.6):
+def prepare_train_and_test_data(data_df, y_actual_data=None, y_feild_name=None, split_frac=0.6):
     training_set_size = int(split_frac*data_df.shape[0])
     test_set_size = data_df.shape[0] - training_set_size
 
     train_df = data_df[:training_set_size]
     test_df = data_df[-1*test_set_size:]
 
-    y_all = data_df[y_feild].values
+    if y_actual_data is not None:
+        y_all = y_actual_data
+    else:
+        if y_feild_name is None:
+            raise ValueError("y_actual_data=None or y_feild_name must present")
+        y_all = data_df[y_feild_name].values
     y_actual_train = y_all[:training_set_size]
     y_actual_test = y_all[-1*test_set_size:]
 

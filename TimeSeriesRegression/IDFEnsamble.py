@@ -284,6 +284,7 @@ def run_ensambles_on_multiple_models(command):
     #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
     #             blend_data, blend_data_submission)
     print_mem_usage("avg models")
-    avg_models(conf, forecasts_df, y_actual, subdf, submission_ids=submissions_ids)
+    #avg_models(conf, forecasts_df, y_actual, subdf, submission_ids=submissions_ids)
+    avg_models_with_ml(conf, forecasts_df, y_actual, subdf, submission_ids=submissions_ids)
 
 run_ensambles_on_multiple_models(command)

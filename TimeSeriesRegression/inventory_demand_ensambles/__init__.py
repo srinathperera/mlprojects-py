@@ -26,6 +26,7 @@ from sklearn.pipeline import Pipeline
 
 from mltools import *
 from inventory_demand import *
+from mlpreprocessing import *
 import scipy
 
 def cal_rmsle(a,b):
@@ -397,11 +398,13 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
             print to_saveDf.describe()
 
         print "avg_models took ", (time.time() - start), "s"
-
+    '''
     if do_ml:
         #we randomly select 5 million values
         print_mem_usage("before dl")
         X_train, y_train, X_test, y_test = sample_train_dataset(X_train, y_train, X_test, y_test, maxentries=5000000)
+        y_test_before_normalize = y_test.copy()
+
         dlconf = MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.3, activation_fn='relu', loss="mse",
                     epoch_count=4, optimizer=Adam(lr=0.0001), regularization=0.2)
         y_train, parmsFromNormalization = preprocess1DtoZeroMeanUnit(y_train)
@@ -420,7 +423,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
             y_forecast_df =  pd.DataFrame(y_forecast.reshape(-1,1), columns=["target"])
             save_file("temp", 0, y_forecast_df, 'forecast_ml')
             y_forecast_df = load_file("temp", 0, 'forecast_ml', throw_error=True)
-            calculate_accuracy("dl_forecast", retransfrom_from_log(y_test), y_forecast_df['target'])
+            calculate_accuracy("dl_forecast", retransfrom_from_log(y_test_before_normalize), y_forecast_df['target'])
         except:
             print_mem_usage("after error")
             print "Unexpected error:"
@@ -428,7 +431,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
         if sub_X_all is not None:
             ensamble_forecast = model.predict(sub_X_all)
             ensamble_forecast = retransfrom_from_log(ensamble_forecast)
-
+            ensamble_forecast = undoPreprocessing(ensamble_forecast, parmsFromNormalization)
             #becouse forecast cannot be negative
             ensamble_forecast = np.where(ensamble_forecast < 0, 0, ensamble_forecast)
 
@@ -441,5 +444,27 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
 
             print "Best Ensamble Submission Stats"
             print to_saveDf.describe()
+    '''
 
 
+def avg_models_with_ml(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None):
+    blend_forecasts_df['target'] = y_actual
+
+    blend_forecasts_df = blend_forecasts_df.sample(min(5000000, blend_forecasts_df.shape[0]))
+    y_all = blend_forecasts_df['target'].values
+    blend_forecasts_df = drop_feilds_1df(blend_forecasts_df, ['target'])
+    blend_forecasts_df = blend_forecasts_df.copy()
+    submission_forecasts_df = submission_forecasts_df.copy()
+
+    train_df, test_df, y_actual_train, y_actual_test = prepare_train_and_test_data(blend_forecasts_df,
+                                                                                  y_actual_data=y_all, split_frac=0.6)
+
+    models = get_models4dl_only(conf)
+    models, forecasts, submission_forecasts = do_forecast(conf, train_df, test_df, submission_forecasts_df,
+                                                          y_actual_train, y_actual_test, models=models)
+    calculate_accuracy("dl_forecast", y_actual_test, forecasts[:, 0])
+
+    submission_forecast = submission_forecasts[:, 0]
+    submission_forecast = np.where(submission_forecast < 0, 0, submission_forecast)
+    submission_file = 'en_dl_submission'+str(conf.command)+ '.csv'
+    save_submission_file(submission_file, submission_ids, submission_forecast)
