@@ -420,7 +420,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
             y_forecast_df =  pd.DataFrame(y_forecast.reshape(-1,1), columns=["target"])
             save_file("temp", 0, y_forecast_df, 'forecast_ml')
             y_forecast_df = load_file("temp", 0, 'forecast_ml', throw_error=True)
-            calculate_accuracy("dl_forecast", y_actual_test, y_forecast_df['target'])
+            calculate_accuracy("dl_forecast", y_actual_test[:5000000], y_forecast_df['target'])
         except:
             print_mem_usage("after error")
             print "Unexpected error:"
