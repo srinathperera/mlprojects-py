@@ -22,6 +22,7 @@ from data_explore import *
 
 
 from inventory_demand import *
+from inventory_demand_features import *
 
 def print_base_stats(df):
     print df.describe()
@@ -802,7 +803,9 @@ def test_merge_datasets():
 #test_merge_datasets()
 #find_similar_products()
 #analyze_parameter_sweep()
-create_random_file()
+#create_random_file()
+
+parse_feature_explore_outputs()
 
 #analyze_error()
 

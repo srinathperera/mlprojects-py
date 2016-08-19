@@ -1163,11 +1163,10 @@ def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_
     merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
 
     sup_train_df, sup_test_df, sup_sub_df, _, _ = load_train_data(analysis_type, cmd, throw_error=True)
-    if feilds_to_use is not None:
-        feilds_to_use = feilds_to_use + merge_feilds
-        sup_train_df = sup_train_df[feilds_to_use]
-        sup_test_df = sup_test_df[feilds_to_use]
-        sup_sub_df = sup_sub_df[feilds_to_use]
+    feilds_to_use = feilds_to_use + merge_feilds
+    sup_train_df = sup_train_df[feilds_to_use]
+    sup_test_df = sup_test_df[feilds_to_use]
+    sup_sub_df = sup_sub_df[feilds_to_use]
 
     #if left has duplicates, that will increase left side. this fix it
     #sup_train_df = sup_train_df.drop_duplicates(subset=merge_feilds)

@@ -60,19 +60,23 @@ if feature_set is None or feature_set == "feature-explore":
     ]
     '''
 
-    groups = [
-        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
-        ['Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Dev_proximaci', 'Agencia_ID_Dev_proxima_median'],
-        ['Agencia_ID_Venta_hoy_Mean', 'Agencia_ID_Venta_hoyci', 'Agencia_ID_Venta_hoy_median', 'clients_combined_Mean'],
-        ['clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
+    top_group = [
+        ['clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median'],
         ['clients_combined_vh_Mean_x', 'clients_combined_vhci_x', 'clients_combined_vh_median_x'],
-        ['clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median', 'Producto_ID_Demanda_uni_equil_Mean'],
-        ['Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median'],
+        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
+        ['Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Demanda_uni_equil_Mean'],
+        ['clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median', 'clients_combined_Mean']
+    ]
+
+
+    groups = [
+        ['Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Dev_proximaci', 'Agencia_ID_Dev_proxima_median'],
+        ['Agencia_ID_Venta_hoy_Mean', 'Agencia_ID_Venta_hoyci', 'Agencia_ID_Venta_hoy_median'],
         ['Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
-        ['clients_combined_vh_Mean_y', 'clients_combined_vhci_y', 'clients_combined_vh_median_y'],
         ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
-        ['Canal_ID_Demanda_uni_equil_Mean', 'Canal_ID_Demanda_uni_equilci'],
-        ['Canal_ID_Demanda_uni_equil_median', 'Canal_ID_Venta_hoy_Mean', 'Canal_ID_Venta_hoyci', 'Canal_ID_Venta_hoy_median', 'Canal_ID_Dev_proxima_Mean', 'Canal_ID_Dev_proximaci', 'Canal_ID_Dev_proxima_median'],
+        ['Canal_ID_Demanda_uni_equil_Mean', 'Canal_ID_Demanda_uni_equilci', 'Canal_ID_Demanda_uni_equil_median'],
+        ['Canal_ID_Venta_hoy_Mean', 'Canal_ID_Venta_hoyci', 'Canal_ID_Venta_hoy_median'],
+        ['Canal_ID_Dev_proxima_Mean', 'Canal_ID_Dev_proximaci', 'Canal_ID_Dev_proxima_median'],
         ['Ruta_SAK_Demanda_uni_equil_Mean', 'Ruta_SAK_Demanda_uni_equilci', 'Ruta_SAK_Demanda_uni_equil_median'],
         ['Ruta_SAK_Venta_hoy_Mean', 'Ruta_SAK_Venta_hoyci', 'Ruta_SAK_Venta_hoy_median'],
         ['Ruta_SAK_Dev_proxima_Mean', 'Ruta_SAK_Dev_proximaci', 'Ruta_SAK_Dev_proxima_median'],
@@ -94,7 +98,7 @@ if feature_set is None or feature_set == "feature-explore":
     features = []
     for t in list(itertools.combinations(range(len(groups)), 3)):
         #fset = groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
-        fset = groups[t[0]] + groups[t[1]] + groups[t[2]]
+        fset = top_group[random.randint(0, len(top_group)-1)] + groups[t[0]] + groups[t[1]] + groups[t[2]]
         features.append(fset)
 
     np.random.shuffle(features)

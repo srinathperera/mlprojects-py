@@ -419,3 +419,59 @@ def generate_all_features(conf, train_df, test_df, subdf, y_actual_test):
 
     print "generate_features took ", (time.time() - start), "s"
     return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features
+
+def parse_list_from_str(list_as_str):
+    list_as_str = list_as_str.replace('[','')
+    list_as_str = list_as_str.replace(']','')
+    list_as_str = list_as_str.replace('\'','')
+    list_as_str = list_as_str.replace(' ','')
+
+    items = list_as_str.split(',')
+    return items
+
+
+def parse_feature_explore_output(file_name, feature_importance_map):
+    #[IDF1] ['clients_combined_vh_Mean_x', 'clients_combined_vhci_x', 'clients_combined_vh_median_x', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median', 'agc_product_Mean', 'agc_productci', 'agc_product_median'] XGB 0.584072902792
+
+    file = open(file_name,'r')
+    data =  file.read()
+
+    data = data.replace('\n','')
+    data = re.sub(r'\[=+\'\].*?s', '', data)
+    #28. feature 27 =Producto_ID_Dev_proxima_StdDev (0.002047)
+
+    p1 = re.compile('\[IDF1\] (\[.*?\]) XGB ([0-9.]+)')
+
+    readings = []
+    for match in p1.finditer(data):
+        feature_set = match.group(1)
+        rmsle = float(match.group(2))
+        if rmsle < 0.6:
+            for f in parse_list_from_str(feature_set):
+                count = feature_importance_map.get(f, 0)
+                count += 1
+                feature_importance_map[f] = count
+        readings.append([feature_set, rmsle])
+
+    df_data = np.row_stack(readings)
+    para_sweep_df= pd.DataFrame(df_data, columns=['feature_set' , 'rmsle'])
+    return para_sweep_df
+
+
+def parse_feature_explore_outputs():
+    feature_importance_map = dict()
+
+    data_df1 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore1.txt', feature_importance_map)
+    data_df2 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore.txt', feature_importance_map)
+    data_df3 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore.txt', feature_importance_map)
+
+
+    data_df = pd.concat([data_df1, data_df2, data_df2])
+
+    data_df = data_df.sort_values(by=['rmsle'])
+    print data_df.head(20)
+
+    feature_importance_df = pd.DataFrame(feature_importance_map.items(), columns=['feature', 'count'])
+    feature_importance_df = feature_importance_df.sort_values(by=['count'], ascending=False)
+
+    print feature_importance_df.head(20)
