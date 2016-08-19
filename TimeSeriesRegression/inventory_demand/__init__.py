@@ -123,7 +123,7 @@ def fillna_and_inf(data, na_r=0, inf_r=100000):
 
 def fillna_if_feildexists(df, feild_name, replacement):
     if feild_name in df:
-        df[feild_name].fillna(replacement, inplace=True)
+        df[feild_name].fillna(df[feild_name].mean(), inplace=True)
     return df
 
 
@@ -343,18 +343,18 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
 
     #TODO check why data is NA
     valuesDf = meanData.to_frame(name+"_Mean")
-    valuesDf.fillna(default_stats.mean, inplace=True)
+    valuesDf.fillna(meanData.mean(), inplace=True)
     valuesDf.reset_index(inplace=True)
 
     stddevData = groupData.std()
     if fops.stddev:
         valuesDf[name+"_StdDev"] = stddevData.values
-        valuesDf.fillna(default_stats.stddev, inplace=True)
+        valuesDf.fillna(valuesDf[name+"_StdDev"].mean(), inplace=True)
 
     countData = groupData.count()
     if fops.count:
         valuesDf[name+"_Count"] = countData.values
-        valuesDf.fillna(default_stats.count, inplace=True)
+        valuesDf.fillna(valuesDf[name+"_Count"].mean(), inplace=True)
     if fops.sum:
         sumData = groupData.sum()
         valuesDf[name+"_sum"] = sumData.values
@@ -457,6 +457,7 @@ def calcuate_hmean(group):
     else:
         return 0
 
+
 def calculate_group_stats(grouped_data, name, default_stats, fops):
     meanData = grouped_data.mean()
     valuesDf = meanData.to_frame(name +"_Mean")
@@ -468,13 +469,13 @@ def calculate_group_stats(grouped_data, name, default_stats, fops):
     stddevData = grouped_data.std()
     if fops.stddev or fops.count:
         valuesDf[ name +"_StdDev"] = stddevData.values
-        valuesDf.fillna(default_stats.stddev, inplace=True)
+        valuesDf.fillna(np.mean(stddevData.values), inplace=True)
 
     if fops.ci or fops.count:
         countData = grouped_data.count()
     if fops.count:
         valuesDf[name + "_Count"] = countData.values
-        valuesDf.fillna(default_stats.count, inplace=True)
+        valuesDf.fillna(np.mean(countData.values), inplace=True)
     if fops.ci:
         valuesDf[name+"ci"] = calculate_ci(stddevData.values,countData.values)
 
@@ -533,12 +534,13 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
     test_df_m.fillna(0, inplace=True)
 
     if testDf is not None:
+        name = feild_name+"_"+agr_feild
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
-        testDf[feild_name+"_"+agr_feild+"_Mean"].fillna(default_stats.mean, inplace=True)
+        testDf[name + "_Mean"].fillna(testDf[name + "_Mean"].mean(), inplace=True)
         if fops.stddev:
-            testDf[feild_name+"_"+agr_feild+"_StdDev"].fillna(default_stats.stddev, inplace=True)
+            testDf[name + "_StdDev"].fillna(testDf[name + "_StdDev"].mean(), inplace=True)
         if fops.count:
-            testDf[feild_name+"_"+agr_feild+"_Count"].fillna(default_stats.count, inplace=True)
+            testDf[name + "_Count"].fillna(testDf[name + "_Count"].mean(), inplace=True)
         if drop:
             testDf = testDf.drop(feild_name,1)
         testDf.fillna(0, inplace=True)
