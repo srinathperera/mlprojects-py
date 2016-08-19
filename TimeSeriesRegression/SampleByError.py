@@ -39,81 +39,16 @@ else:
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.command = command
 
-if feature_set is None or feature_set == "feature-explore":
-    feature_set = "feature-explore"
 
-    '''
-    groups = [
-        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
-        ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
-        ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
-        ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median'],
-        ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
-        ['weight', 'pieces'],
-        ['product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'product_word_Demanda_uni_equil_median'],
-        ['mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean'],
-        ['last_sale', 'last_sale_week'],
-        ['returns'],
-        ['signature'],
-        ['kurtosis'],
-        ['entropy']
-    ]
-    '''
-
-    top_group = [
-        ['clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median'],
-        ['clients_combined_vh_Mean_x', 'clients_combined_vhci_x', 'clients_combined_vh_median_x'],
-        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
-        ['Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Demanda_uni_equil_Mean'],
-        ['clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median', 'clients_combined_Mean']
-    ]
-
-
-    groups = [
-        ['Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Dev_proximaci', 'Agencia_ID_Dev_proxima_median'],
-        ['Agencia_ID_Venta_hoy_Mean', 'Agencia_ID_Venta_hoyci', 'Agencia_ID_Venta_hoy_median'],
-        ['Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
-        ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
-        ['Canal_ID_Demanda_uni_equil_Mean', 'Canal_ID_Demanda_uni_equilci', 'Canal_ID_Demanda_uni_equil_median'],
-        ['Canal_ID_Venta_hoy_Mean', 'Canal_ID_Venta_hoyci', 'Canal_ID_Venta_hoy_median'],
-        ['Canal_ID_Dev_proxima_Mean', 'Canal_ID_Dev_proximaci', 'Canal_ID_Dev_proxima_median'],
-        ['Ruta_SAK_Demanda_uni_equil_Mean', 'Ruta_SAK_Demanda_uni_equilci', 'Ruta_SAK_Demanda_uni_equil_median'],
-        ['Ruta_SAK_Venta_hoy_Mean', 'Ruta_SAK_Venta_hoyci', 'Ruta_SAK_Venta_hoy_median'],
-        ['Ruta_SAK_Dev_proxima_Mean', 'Ruta_SAK_Dev_proximaci', 'Ruta_SAK_Dev_proxima_median'],
-        ['weight', 'pieces', 'has_choco', 'has_vanilla', 'has_multigrain'],
-        ['brand_id_Demanda_uni_equil_Mean', 'brand_id_Demanda_uni_equilci', 'brand_id_Demanda_uni_equil_median'],
-        ['product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'product_word_Demanda_uni_equil_median'],
-        ['Town_id_Demanda_uni_equil_Mean', 'Town_id_Demanda_uni_equilci', 'Town_id_Demanda_uni_equil_median'],
-        ['State_id_Demanda_uni_equil_Mean', 'State_id_Demanda_uni_equilci', 'State_id_Demanda_uni_equil_median'],
-        ['agc_product_Mean', 'agc_productci', 'agc_product_median'],
-        ['routes_combined_Mean', 'routes_combinedci', 'routes_combined_median'],
-        ['clients_route_agc_Mean', 'clients_route_agcci', 'clients_route_agc_median'],
-        ["mean_sales", "sales_count", "sales_stddev", "median_sales", "hmean", "ci", "kurtosis"],
-        ["last_sale", "last_sale_week", 'Semana'],
-        ["returns", "signature"],
-        ["entropy", "corr", "mean_autocorr", "mean_corss_points_count"]
-    ]
-
-
-    features = []
-    for t in list(itertools.combinations(range(len(groups)), 3)):
-        #fset = groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
-        fset = top_group[random.randint(0, len(top_group)-1)] + groups[t[0]] + groups[t[1]] + groups[t[2]]
-        features.append(fset)
-
-    np.random.shuffle(features)
-    features = features[:100]
-    ml_models = get_models4xgboost_only(conf)
+if feature_set == "fg-vhmean-product":
+    list = ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean', 'entropy']
+elif feature_set == "vh-mean-product":
+    list = ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median', 'weight', 'pieces', 'signature']
 else:
-    if feature_set == "fg-vhmean-product":
-        list = ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean', 'entropy']
-    elif feature_set == "vh-mean-product":
-        list = ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median', 'weight', 'pieces', 'signature']
-    else:
-        raise ValueError("Unknown feature set "+ feature_set)
+    raise ValueError("Unknown feature set "+ feature_set)
 
-    features = [list]
-    ml_models = get_models4ensamble(conf)
+features = [list]
+ml_models = get_models4ensamble(conf)
 
 analysis_type = feature_set
 conf.analysis_type = analysis_type

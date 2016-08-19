@@ -64,12 +64,18 @@ if feature_set is None or feature_set == "feature-explore":
         ['clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median'],
         ['clients_combined_vh_Mean_x', 'clients_combined_vhci_x', 'clients_combined_vh_median_x'],
         ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
-        ['Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Demanda_uni_equil_Mean'],
+        ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
         ['clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median', 'clients_combined_Mean']
     ]
 
 
     groups = [
+        ['clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median'],
+        ['clients_combined_vh_Mean_x', 'clients_combined_vhci_x', 'clients_combined_vh_median_x'],
+        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
+        ['Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Demanda_uni_equil_Mean'],
+        ['clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median', 'clients_combined_Mean'],
+
         ['Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Dev_proximaci', 'Agencia_ID_Dev_proxima_median'],
         ['Agencia_ID_Venta_hoy_Mean', 'Agencia_ID_Venta_hoyci', 'Agencia_ID_Venta_hoy_median'],
         ['Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
@@ -96,13 +102,13 @@ if feature_set is None or feature_set == "feature-explore":
 
 
     features = []
-    for t in list(itertools.combinations(range(len(groups)), 3)):
-        #fset = groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
-        fset = top_group[random.randint(0, len(top_group)-1)] + groups[t[0]] + groups[t[1]] + groups[t[2]]
+    for t in list(itertools.combinations(range(len(groups)), 4)):
+        flist = top_group[random.randint(0, len(top_group)-1)] + groups[t[0]] + groups[t[1]] + groups[t[2]] + groups[t[3]]
+        fset = list(set(flist))
         features.append(fset)
 
     np.random.shuffle(features)
-    features = features[:100]
+    features = features[:200]
     ml_models = get_models4xgboost_only(conf)
 else:
     if feature_set == "fg-vhmean-product":
