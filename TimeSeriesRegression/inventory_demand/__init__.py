@@ -121,9 +121,12 @@ def fillna_and_inf(data, na_r=0, inf_r=100000):
     return np.where(np.isnan(data), na_r, np.where(np.isinf(data), inf_r, data))
 
 
-def fillna_if_feildexists(df, feild_name, replacement):
+def fillna_if_feildexists(df, feild_name, replacement=-1):
     if feild_name in df:
-        df[feild_name].fillna(df[feild_name].mean(), inplace=True)
+        if replacement != -1:
+            df[feild_name].fillna(replacement, inplace=True)
+        else:
+            df[feild_name].fillna(df[feild_name].mean(), inplace=True)
     return df
 
 
@@ -349,12 +352,12 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
     stddevData = groupData.std()
     if fops.stddev:
         valuesDf[name+"_StdDev"] = stddevData.values
-        valuesDf.fillna(valuesDf[name+"_StdDev"].mean(), inplace=True)
+        valuesDf.fillna(10000, inplace=True)
 
     countData = groupData.count()
     if fops.count:
         valuesDf[name+"_Count"] = countData.values
-        valuesDf.fillna(valuesDf[name+"_Count"].mean(), inplace=True)
+        valuesDf.fillna(0, inplace=True)
     if fops.sum:
         sumData = groupData.sum()
         valuesDf[name+"_sum"] = sumData.values
@@ -441,9 +444,9 @@ def find_NA_rows_percent(df_check, label):
 
 def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, default_stats):
     merged = pd.merge(bdf, stat_df, how='left', on=feild_names)
-    merged = fillna_if_feildexists(merged, name+"_Mean", default_stats.mean)
-    merged = fillna_if_feildexists(merged, name+"_StdDev", default_stats.stddev)
-    merged = fillna_if_feildexists(merged, name+"_Count", default_stats.count)
+    merged = fillna_if_feildexists(merged, name+"_Mean")
+    merged = fillna_if_feildexists(merged, name+"_StdDev", 10000)
+    merged = fillna_if_feildexists(merged, name+"_Count", 0)
     #replace rest with zero
     merged.fillna(0, inplace=True)
     return merged
@@ -469,13 +472,13 @@ def calculate_group_stats(grouped_data, name, default_stats, fops):
     stddevData = grouped_data.std()
     if fops.stddev or fops.count:
         valuesDf[ name +"_StdDev"] = stddevData.values
-        valuesDf.fillna(np.mean(stddevData.values), inplace=True)
+        valuesDf.fillna(10000, inplace=True)
 
     if fops.ci or fops.count:
         countData = grouped_data.count()
     if fops.count:
         valuesDf[name + "_Count"] = countData.values
-        valuesDf.fillna(np.mean(countData.values), inplace=True)
+        valuesDf.fillna(0, inplace=True)
     if fops.ci:
         valuesDf[name+"ci"] = calculate_ci(stddevData.values,countData.values)
 
@@ -538,9 +541,9 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
         testDf[name + "_Mean"].fillna(testDf[name + "_Mean"].mean(), inplace=True)
         if fops.stddev:
-            testDf[name + "_StdDev"].fillna(testDf[name + "_StdDev"].mean(), inplace=True)
+            testDf[name + "_StdDev"].fillna(10000, inplace=True)
         if fops.count:
-            testDf[name + "_Count"].fillna(testDf[name + "_Count"].mean(), inplace=True)
+            testDf[name + "_Count"].fillna(0, inplace=True)
         if drop:
             testDf = testDf.drop(feild_name,1)
         testDf.fillna(0, inplace=True)
