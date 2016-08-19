@@ -131,7 +131,7 @@ print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y
 #    ["median_sales", "returns", "signature", "kurtosis"])
 
 train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy", "ci", "corr", "mean_autocorr", "mean_corss_points_count"])
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
 
 
 print "X",train_df.shape, "Y", y_actual_train.shape
