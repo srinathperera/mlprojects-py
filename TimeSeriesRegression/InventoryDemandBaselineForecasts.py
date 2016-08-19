@@ -21,9 +21,9 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 
 from inventory_demand import *
 import sys
+from data_explore import *
 
-
-analysis_type = 'fg_stats'
+analysis_type = 'fg_stats1'
 
 
 
@@ -44,6 +44,26 @@ def run_simple_models(conf):
     mean_forecast = test_df['mean_sales']
     calculate_accuracy("mean_forecast", y_actual_test, mean_forecast)
     print basic_stats_as_str(mean_forecast)
+
+    create_fig()
+    error = np.abs(np.log(y_actual_test +1) - np.log(mean_forecast + 1))
+    draw_simple_scatterplot(test_df['sales_count'], error, 'sales_count', 321)
+
+    plt.tight_layout()
+    plt.savefig('error_dist.png')
+
+    error_df = test_df.copy()
+    error_df['error'] = error
+    error_df['sales_stddev'] = np.ceil(error_df['sales_stddev'])
+    group1 = error_df.groupby(['sales_count'])['error']
+    error_data = g2df_sum_mean(group1).sort_values(by=['sum'], ascending=False)
+    print error_data
+
+    group1 = error_df.groupby(['sales_stddev'])['error']
+    error_data = g2df_sum_mean(group1).sort_values(by=['sum'], ascending=False)
+    print error_data
+
+
 
 
     median_forecast = test_df['median_sales']

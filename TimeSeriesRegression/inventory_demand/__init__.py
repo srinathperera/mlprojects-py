@@ -1773,6 +1773,20 @@ def create_per_model_submission(conf, models, testDf, parmsFromNormalization, pa
     return ids, np.column_stack(kaggale_predicted_list)
 
 
+def g2df_sum_mean(group):
+    sum = group.sum()
+    mean = group.mean()
+    count = group.count()
+    valuesDf = sum.to_frame("sum")
+    valuesDf.reset_index(inplace=True)
+    valuesDf['mean'] = mean.values
+    valuesDf['count'] = count.values
+    valuesDf['rank'] = valuesDf['mean']*np.log(1+valuesDf['count'])
+
+    return valuesDf
+
+
+
 def create_submission(conf, model, sub_X_all, parmsFromNormalization, parmsFromNormalization2D ):
     start = time.time()
     print "creating submission for ", sub_X_all.shape[0], "values"

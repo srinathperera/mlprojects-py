@@ -22,17 +22,6 @@ from data_explore import *
 
 np.set_printoptions(precision=1, suppress=True)
 
-def g2df_sum_mean(group):
-    sum = group.sum()
-    mean = group.mean()
-    count = group.count()
-    valuesDf = sum.to_frame("sum")
-    valuesDf.reset_index(inplace=True)
-    valuesDf['mean'] = mean.values
-    valuesDf['count'] = count.values
-    valuesDf['rank'] = valuesDf['mean']*np.log(1+valuesDf['count'])
-
-    return valuesDf
 
 
 def analyze_error():

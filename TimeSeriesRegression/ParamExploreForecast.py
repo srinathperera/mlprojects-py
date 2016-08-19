@@ -164,7 +164,7 @@ testDf.drop('id',axis=1, inplace=True)
 print "train_df", train_df.shape, "test_df", test_df.shape
 verify_forecasting_data(train_df.values, y_actual_train, test_df.values, y_actual_test)
 
-for fset in features:
+for i, fset in enumerate(features):
     forecasts = []
     submissions = []
     model_names = []
@@ -187,7 +187,7 @@ for fset in features:
             print "[IDF"+str(conf.command)+"]", fset, t_model.name, t_model.rmsle
 
         best_model_index = np.argmin(model_rmsle)
-        print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", model_rmsle[best_model_index]
+        print str(i)+"[IDF"+str(conf.command)+"]Best Single Model has rmsle=", model_rmsle[best_model_index]
         submission_file = 'submission'+str(conf.command)+ '.csv'
         save_submission_file(submission_file, ids, submissions[best_model_index])
         #convert the values to numpy arrays
