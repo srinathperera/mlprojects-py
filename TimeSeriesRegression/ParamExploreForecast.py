@@ -100,6 +100,31 @@ if feature_set is None or feature_set == "feature-explore":
         ["entropy", "corr", "mean_autocorr", "mean_corss_points_count"]
     ]
 
+    group1 = [
+        ['Semana', 'Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'],
+        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median'],
+        ['Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Dev_proximaci', 'Agencia_ID_Dev_proxima_median'],
+        ['Agencia_ID_Venta_hoy_Mean', 'Agencia_ID_Venta_hoyci', 'Agencia_ID_Venta_hoy_median'],
+        ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median'],
+        ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median'],
+        ['clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median'],
+        ['client_nn_Mean', 'client_nnci', 'client_nn_median'],
+        ['client_nn_vh_Mean', 'client_nn_vhci', 'client_nn_vh_median'],
+        ['client_nn_dp_Mean', 'client_nn_dpci', 'client_nn_dp_median'],
+        ['client_nn_agency_Mean', 'client_nn_agencyci', 'client_nn_agency_median'],
+        ['client_nn_agency_vh_Mean', 'client_nn_agency_vhci', 'client_nn_agency_vh_median'],
+        ['client_nn_agency_dp_Mean', 'client_nn_agency_dpci', 'client_nn_agency_dp_median'],
+        ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median'],
+        ['Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
+        ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
+        ['weight', 'pieces', 'has_choco', 'has_vanilla', 'has_multigrain'],
+        ['brand_id_Demanda_uni_equil_Mean', 'brand_id_Demanda_uni_equilci', 'brand_id_Demanda_uni_equil_median','product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'product_word_Demanda_uni_equil_median'],
+        ['Town_id_Demanda_uni_equil_Mean', 'Town_id_Demanda_uni_equilci', 'Town_id_Demanda_uni_equil_median', 'State_id_Demanda_uni_equil_Mean', 'State_id_Demanda_uni_equilci', 'State_id_Demanda_uni_equil_median'],
+        ['agc_product_Mean', 'agc_productci', 'agc_product_median'],
+        ['routes_combined_Mean', 'routes_combinedci', 'routes_combined_median'],
+        ['clients_route_agc_Mean', 'clients_route_agcci', 'clients_route_agc_median']
+    ]
+
 
     features = []
     for t in list(itertools.combinations(range(len(groups)), 4)):
@@ -112,14 +137,27 @@ if feature_set is None or feature_set == "feature-explore":
     ml_models = get_models4xgboost_only(conf)
 else:
     if feature_set == "fg-vhmean-product":
-        list = ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean', 'entropy']
+        flist = ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean', 'entropy']
     elif feature_set == "vh-mean-product":
-        list = ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median', 'weight', 'pieces', 'signature']
+        flist = ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median', 'weight', 'pieces', 'signature']
+    elif feature_set == "nn_features":
+        flist = ['client_nn_Mean', 'client_nnci', 'client_nn_median']\
+            + ['client_nn_vh_Mean', 'client_nn_vhci', 'client_nn_vh_median']\
+            + ['client_nn_dp_Mean', 'client_nn_dpci', 'client_nn_dp_median']\
+            + ['client_nn_agency_Mean', 'client_nn_agencyci', 'client_nn_agency_median'] \
+            + ['client_nn_agency_vh_Mean', 'client_nn_agency_vhci', 'client_nn_agency_vh_median']\
+            + ['client_nn_agency_dp_Mean', 'client_nn_agency_dpci', 'client_nn_agency_dp_median']\
+            + ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median']\
+            + ['Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median']\
+            + ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median']\
+            + ["mean_sales", "sales_count", "sales_stddev", "median_sales", "hmean", "ci", "kurtosis"]
     else:
         raise ValueError("Unknown feature set "+ feature_set)
 
-    features = [list]
-    ml_models = get_models4ensamble(conf)
+    features = [flist]
+    #ml_models = get_models4ensamble(conf)
+    ml_models = get_models4xgboost_only(conf)
+
 
 analysis_type = feature_set
 conf.analysis_type = analysis_type
