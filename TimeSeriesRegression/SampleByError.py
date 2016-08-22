@@ -24,6 +24,43 @@ from mltools import *
 from inventory_demand_ensambles import *
 
 import sys
+
+
+def split_df(s_df, parts):
+    l = s_df.shape[0]
+    part_size = int(l/parts)
+    parts = []
+    for i in range(0, l, part_size):
+        if l - i > 2*part_size:
+            parts.append(s_df[i:i+part_size])
+        elif l -i > part_size and l -i < 2*part_size:
+            parts.append(s_df[i:l])
+        #else do nothing
+    return parts
+
+
+def train_and_find_top10error(conf, traindf1, y_train1,  traindf_check, y_train_check, test_df, y_test):
+    models = get_models4xgboost_only(conf)
+    tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, traindf1, test_df, traindf_check, y_train1, y_test, models=models)
+
+    errors = y_train_check - tsubmission_forecasts
+    error90percentile = np.percentile(errors, 90)
+    traindf_check['error'] = errors
+    traindf_check['target'] = traindf_check
+
+    check_data_to_add_df = traindf_check[traindf_check['error'] > error90percentile]
+    check_y_to_add = check_data_to_add_df['target']
+    data_to_add_df = drop_feilds_1df(check_data_to_add_df, ['error', 'target'])
+
+    traindf1 = pd.concat(train_df, data_to_add_df)
+    y_train1 = y_train1 + check_y_to_add
+
+    traindf_check = traindf_check[traindf_check['error'] <= error90percentile]
+    y_train_check = traindf_check['target']
+    traindf_check = drop_feilds_1df(traindf_check, ['error', 'target'])
+
+    return traindf1, y_train1, traindf_check, y_train_check
+
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
@@ -39,115 +76,16 @@ else:
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.command = command
 
+df, sub_dfo = read_datafiles(command, False)
+y_all = df['Demanda_uni_equil']
+train_df, test_df, y_actual_train,y_actual_test = prepare_train_and_test_data(df, y_all, split_frac=0.6)
 
-if feature_set == "fg-vhmean-product":
-    list = ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean', 'entropy']
-elif feature_set == "vh-mean-product":
-    list = ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median', 'weight', 'pieces', 'signature']
-else:
-    raise ValueError("Unknown feature set "+ feature_set)
+train_df1, train_df_check, y_train1, y_train_check = prepare_train_and_test_data(df, y_all, split_frac=0.2)
 
-features = [list]
-ml_models = get_models4ensamble(conf)
+for i in range(5):
+    train_df1, y_train1, traindf_check, y_train_check = train_and_find_top10error(conf, train_df1, y_train1,
+            train_df_check, y_train_check, test_df, y_actual_test)
 
-analysis_type = feature_set
-conf.analysis_type = analysis_type
+print 'train_df.shape', train_df.shape
+print "Done"
 
-s_time = time.time()
-
-#load first dataset
-train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True)
-print "reusing train data", analysis_type
-
-print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
-
-#load second dataset
-#train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
-#    ["median_sales", "returns", "signature", "kurtosis"])
-
-train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
-
-
-print "X",train_df.shape, "Y", y_actual_train.shape
-
-train_df.fillna(0, inplace=True)
-test_df.fillna(0, inplace=True)
-testDf.fillna(0, inplace=True)
-
-feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
-
-# we added following data when we write the submission file
-blend_features = feilds_to_drop + ['Semana']
-blend_test_data_keys = test_df[blend_features]
-blend_submission_data_keys = testDf[blend_features]
-
-#drop five feild
-train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
-
-
-testDf.fillna(0, inplace=True)
-ids = testDf['id']
-testDf.drop('id',axis=1, inplace=True)
-
-print "train_df", train_df.shape, "test_df", test_df.shape
-verify_forecasting_data(train_df.values, y_actual_train, test_df.values, y_actual_test)
-
-for fset in features:
-    forecasts = []
-    submissions = []
-    model_names = []
-    model_rmsle = []
-
-    try:
-        for m in ml_models:
-            print "using ", fset, "from", list(train_df)
-            train_dft = train_df[fset].copy(); test_dft = test_df[fset].copy(); testDft = testDf[fset].copy()
-            print_mem_usage("before running model " + m.name)
-            tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, train_dft, test_dft, testDft, y_actual_train, y_actual_test, models=[m])
-            forecasts.append(tforecasts[:, 0])
-            t_model = tmodels[0]
-            submissions.append(tsubmission_forecasts[:, 0])
-            model_names.append(t_model.name)
-            model_rmsle.append(t_model.rmsle)
-            t_model.cleanup()
-            gc.collect() #to free up memory
-            print_mem_usage("after model " + t_model.name)
-            print "[IDF"+str(conf.command)+"]", fset, t_model.name, t_model.rmsle
-
-        best_model_index = np.argmin(model_rmsle)
-        print "[IDF"+str(conf.command)+"]Best Single Model has rmsle=", model_rmsle[best_model_index]
-        submission_file = 'submission'+str(conf.command)+ '.csv'
-        save_submission_file(submission_file, ids, submissions[best_model_index])
-        #convert the values to numpy arrays
-        forecasts = np.column_stack(forecasts)
-        submissions = np.column_stack(submissions)
-
-        #create and save predictions for each model so we can build an ensamble later
-        if forecasts.shape[1] > 1:
-            model_forecasts_data = np.column_stack([blend_test_data_keys, forecasts, y_actual_test])
-            to_saveDf =  pd.DataFrame(model_forecasts_data, columns=blend_features + model_names + ["actual"])
-            metadata_map = {'rmsle':model_rmsle}
-            save_file(analysis_type, command, to_saveDf, 'model_forecasts', metadata=metadata_map)
-            print "## model_forecasts ##"
-            print to_saveDf.describe()
-
-            submission_data = np.column_stack([ids, blend_submission_data_keys, submissions])
-            to_saveDf =  pd.DataFrame(submission_data, columns=[["id"] + blend_features +model_names])
-            save_file(analysis_type, command, to_saveDf, 'model_submissions')
-            print "## model_submissions ##"
-            print to_saveDf.describe()
-
-    except Exception, error:
-        print "An exception was thrown!"
-        print str(error)
-
-
-        #model, parmsFromNormalization, parmsFromNormalization2D, best_forecast = do_forecast(conf, train_df, test_df, y_actual_test)
-
-
-
-
-m_time = time.time()
-
-print_time_took(s_time, "forecasting")

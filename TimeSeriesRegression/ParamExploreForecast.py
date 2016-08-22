@@ -22,6 +22,7 @@ from mltools import *
 #from mlpreprocessing import feather2df
 
 from inventory_demand_ensambles import *
+import os
 
 import sys
 print 'Number of arguments:', len(sys.argv), 'arguments.'
@@ -152,12 +153,18 @@ else:
             + ['Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median']\
             + ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median']\
             + ["mean_sales", "sales_count", "sales_stddev", "median_sales", "hmean", "ci", "kurtosis"]
+    elif feature_set == "nn_features-agency": #0.5737
+        core = ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median', 'client_nn_Mean', 'client_nnci', 'client_nn_median', 'client_nn_vh_Mean', 'client_nn_vhci', 'client_nn_vh_median', 'client_nn_dp_Mean', 'client_nn_dpci', 'client_nn_dp_median']
+        flist = core + ['client_nn_agency_Mean', 'client_nn_agencyci', 'client_nn_agency_median', 'client_nn_agency_vh_Mean', 'client_nn_agency_vhci', 'client_nn_agency_vh_median', 'client_nn_agency_dp_Mean', 'client_nn_agency_dpci', 'client_nn_agency_dp_median']
+    elif feature_set == "nn_features-product": #0.5737
+        core = ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median', 'client_nn_Mean', 'client_nnci', 'client_nn_median', 'client_nn_vh_Mean', 'client_nn_vhci', 'client_nn_vh_median', 'client_nn_dp_Mean', 'client_nn_dpci', 'client_nn_dp_median']
+        flist = core + ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median']
     else:
         raise ValueError("Unknown feature set "+ feature_set)
 
     features = [flist]
-    #ml_models = get_models4ensamble(conf)
-    ml_models = get_models4xgboost_only(conf)
+    ml_models = get_models4ensamble(conf)
+    #ml_models = get_models4xgboost_only(conf)
 
 
 analysis_type = feature_set
@@ -227,7 +234,10 @@ for i, fset in enumerate(features):
 
         best_model_index = np.argmin(model_rmsle)
         print str(i)+"[IDF"+str(conf.command)+"]Best Single Model has rmsle=", model_rmsle[best_model_index]
-        submission_file = 'submission'+str(conf.command)+ '.csv'
+        if not os.path.exists(analysis_type):
+            os.makedirs(analysis_type)
+
+        submission_file = analysis_type +'/submission'+str(conf.command)+ '.csv'
         save_submission_file(submission_file, ids, submissions[best_model_index])
         #convert the values to numpy arrays
         forecasts = np.column_stack(forecasts)
