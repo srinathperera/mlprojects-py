@@ -215,7 +215,7 @@ else:
         train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, feilds_in_second_ds)
 
 if conf.command == 0:
-    size = int(train_df.shape*0.6)
+    size = int(train_df.shape[0]*0.6)
     train_df = train_df[:size]
     y_actual_train = y_actual_train[:size]
 
