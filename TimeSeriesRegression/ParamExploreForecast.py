@@ -214,6 +214,11 @@ else:
     if len(feilds_in_second_ds) > 0:
         train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, feilds_in_second_ds)
 
+if conf.command == 0:
+    size = int(train_df.shape*0.6)
+    train_df = train_df[:size]
+    y_actual_train = y_actual_train[:size]
+
 print_mem_usage("after data set 2")
 print "X",train_df.shape, "Y", y_actual_train.shape
 
