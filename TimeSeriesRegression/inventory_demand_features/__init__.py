@@ -461,7 +461,7 @@ def parse_feature_explore_output(file_name, feature_importance_map):
     for match in p1.finditer(data):
         feature_set = match.group(1)
         rmsle = float(match.group(2))
-        if rmsle < 0.6:
+        if 0.56 < rmsle < 0.57:
             for f in parse_list_from_str(feature_set):
                 count = feature_importance_map.get(f, 0)
                 count += 1

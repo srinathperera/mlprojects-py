@@ -670,8 +670,8 @@ def create_random_file():
     subset_df.to_csv("train-rsample-10k.csv", index=False)
 
 
-def parse_feature_importance():
-    file = open('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/out.txt','r')
+def parse_feature_importance(file='/Users/srinath/playground/data-science/BimboInventoryDemand/logs/out.txt'):
+    file = open(file,'r')
     data =  file.read()
 
     data = data.replace('\n','')
@@ -682,22 +682,24 @@ def parse_feature_importance():
     p2 = re.compile('[0-9]+\s+([A-z0-9_]+)\s+([0-9.]+)')
 
     dict = {}
-    for match in p1.finditer(data):
-        f = match.group(1)
-        score = match.group(2)
-        if len(f) > 2:
-            list = dict.get(f, [])
-            list.append(float(score))
-            dict[f] = list
 
-        #print f,"=",score
-    for match in p2.finditer(data):
-        f = match.group(1)
-        score = match.group(2)
-        if len(f) > 2:
-            list = dict.get(f, [])
-            list.append(float(score))
-            dict[f] = list
+    for t in data.split():
+        for match in p1.finditer(t):
+            f = match.group(1)
+            score = match.group(2)
+            if len(f) > 2:
+                list = dict.get(f, [])
+                list.append(float(score))
+                dict[f] = list
+
+            #print f,"=",score
+        for match in p2.finditer(t):
+            f = match.group(1)
+            score = match.group(2)
+            if len(f) > 2:
+                list = dict.get(f, [])
+                list.append(float(score))
+                dict[f] = list
 
     df_data = []
     #for t in dict.items():
@@ -724,8 +726,8 @@ def parse_map_from_str(data):
     return dict
 
 
-def parse_parameter_sweep():
-    file = open('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/xgboost_params-explore-case4.txt','r')
+def parse_parameter_sweep(file='/Users/srinath/playground/data-science/BimboInventoryDemand/logs/xgboost_params-explore-case4.txt'):
+    file = open(file,'r')
     data =  file.read()
 
     data = data.replace('\n','')
@@ -805,7 +807,8 @@ def test_merge_datasets():
 #analyze_parameter_sweep()
 #create_random_file()
 
-parse_feature_explore_outputs()
+parse_feature_importance(file='/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore4.txt')
+#parse_feature_explore_outputs()
 
 #analyze_error()
 

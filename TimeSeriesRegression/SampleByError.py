@@ -49,15 +49,20 @@ def train_and_find_top10error(conf, traindf1, y_train1,  traindf_check, y_train_
 
     errors = np.log(1+y_train_check) - np.log(1+ tsubmission_forecasts[:, 0])
     error90percentile = np.percentile(errors, 90)
-    traindf_check['error'] = errors
-    traindf_check['target'] = y_train_check
+
+    traindf_check_data = np.column_stack([traindf_check.values, errors, y_train_check])
+    traindf_check = pd.DataFrame(traindf_check_data, columns=list(traindf_check) + ['error', 'target'])
 
     check_data_to_add_df = traindf_check[traindf_check['error'] > error90percentile]
-    check_y_to_add = check_data_to_add_df['target']
+    check_y_to_add = check_data_to_add_df['target'].values
     data_to_add_df = drop_feilds_1df(check_data_to_add_df, ['error', 'target'])
 
-    traindf1 = pd.concat([train_df, data_to_add_df])
-    y_train1 = y_train1 + check_y_to_add
+    print "traindf1", traindf1.shape, "data_to_add_df", data_to_add_df.shape, "y_train1", y_train1.shape, "check_y_to_add", check_y_to_add.shape
+
+    traindf1 = pd.concat([traindf1, data_to_add_df])
+    y_train1 = np.concatenate([y_train1, check_y_to_add])
+
+    print "traindf1", traindf1.shape, "y_train1", y_train1.shape
 
     traindf_check = traindf_check[traindf_check['error'] <= error90percentile]
     y_train_check = traindf_check['target']
