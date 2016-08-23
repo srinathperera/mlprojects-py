@@ -41,18 +41,22 @@ def split_df(s_df, parts):
 
 def train_and_find_top10error(conf, traindf1, y_train1,  traindf_check, y_train_check, test_df, y_test):
     models = get_models4xgboost_only(conf)
+    print "input", "traindf1", traindf1.shape, "test_df", test_df.shape, "traindf_check", traindf_check.shape, "y_train1", y_train1.shape,\
+        "y_test", y_test.shape
+
+    #conf, train_df, test_df, sub_df, y_train, y_test, models=None
     tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, traindf1, test_df, traindf_check, y_train1, y_test, models=models)
 
-    errors = y_train_check - tsubmission_forecasts
+    errors = np.log(1+y_train_check) - np.log(1+ tsubmission_forecasts[:, 0])
     error90percentile = np.percentile(errors, 90)
     traindf_check['error'] = errors
-    traindf_check['target'] = traindf_check
+    traindf_check['target'] = y_train_check
 
     check_data_to_add_df = traindf_check[traindf_check['error'] > error90percentile]
     check_y_to_add = check_data_to_add_df['target']
     data_to_add_df = drop_feilds_1df(check_data_to_add_df, ['error', 'target'])
 
-    traindf1 = pd.concat(train_df, data_to_add_df)
+    traindf1 = pd.concat([train_df, data_to_add_df])
     y_train1 = y_train1 + check_y_to_add
 
     traindf_check = traindf_check[traindf_check['error'] <= error90percentile]
@@ -84,7 +88,8 @@ train_df1, train_df_check, y_train1, y_train_check = prepare_train_and_test_data
 
 for i in range(5):
     train_df1, y_train1, traindf_check, y_train_check = train_and_find_top10error(conf, train_df1, y_train1,
-            train_df_check, y_train_check, test_df, y_actual_test)
+            train_df_check, y_train_check, test_df, y_actual_test.values)
+    print "try ", i ," done"
 
 print 'train_df.shape', train_df.shape
 print "Done"

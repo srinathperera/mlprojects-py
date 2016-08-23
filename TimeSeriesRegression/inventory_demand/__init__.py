@@ -188,13 +188,16 @@ def save_file(model_type, command, df, name, metadata=None):
     print "saved", submission_file, len(feature_list), " feilds=", feature_list
 
 
-def load_file(model_type, command, name, throw_error=True):
+def load_file(model_type, command, name, throw_error=True, fields=None):
     submission_file = model_type+ '/' + name+str(command)+ '.csv'
     if not throw_error:
         if not os.path.exists(submission_file):
             return None
     print "loading", submission_file
-    return  pd.read_csv(submission_file)
+    if fields is not None:
+        return  pd.read_csv(submission_file, usecols=fields)
+    else:
+        return  pd.read_csv(submission_file)
 
 
 def load_file_with_metadata(model_type, command, name):
@@ -242,10 +245,10 @@ def save_train_data(model_type, command, train_df, test_df, sub_df, y_train, y_t
     save_file(model_type, command, ytest_df, 'y_test')
 
 
-def load_train_data(model_type, command, throw_error=False):
-    train_df = load_file(model_type, command,'train', throw_error=throw_error)
-    test_df = load_file(model_type, command, 'test', throw_error=throw_error)
-    sub_df = load_file(model_type, command, 'sub', throw_error=throw_error)
+def load_train_data(model_type, command, throw_error=False, fields=None):
+    train_df = load_file(model_type, command,'train', throw_error=throw_error, fields=fields)
+    test_df = load_file(model_type, command, 'test', throw_error=throw_error, fields=fields)
+    sub_df = load_file(model_type, command, 'sub', throw_error=throw_error, fields=fields + ['id'])
 
     ytrain_df = load_file(model_type, command, 'y_train', throw_error=throw_error)
     ytest_df = load_file(model_type, command, 'y_test', throw_error=throw_error)
@@ -1166,12 +1169,13 @@ def calculate_slope(group):
 def merge_another_dataset(train_df, test_df, sub_df, analysis_type, cmd, feilds_to_use=None):
     column_count_before_merge = train_df.shape[1]
     merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
-
-    sup_train_df, sup_test_df, sup_sub_df, _, _ = load_train_data(analysis_type, cmd, throw_error=True)
     feilds_to_use = feilds_to_use + merge_feilds
-    sup_train_df = sup_train_df[feilds_to_use]
-    sup_test_df = sup_test_df[feilds_to_use]
-    sup_sub_df = sup_sub_df[feilds_to_use]
+
+    sup_train_df, sup_test_df, sup_sub_df, _, _ = load_train_data(analysis_type, cmd, throw_error=True, fields=feilds_to_use)
+
+    #sup_train_df = sup_train_df[feilds_to_use]
+    #sup_test_df = sup_test_df[feilds_to_use]
+    #sup_sub_df = sup_sub_df[feilds_to_use]
 
     #if left has duplicates, that will increase left side. this fix it
     #sup_train_df = sup_train_df.drop_duplicates(subset=merge_feilds)
@@ -1243,8 +1247,8 @@ def verify_forecasting_data(X_train, y_train, X_test, y_test):
                          + " " + X_test.shape + " " +y_test.shape)
 
     if X_train.shape[0] != y_train.shape[0] or y_test.shape[0] != X_test.shape[0]:
-        raise ValueError("columns not aligned X_train, y_train, X_test, y_test " + X_train.shape + " "+ y_train.shape
-                         + " " + X_test.shape + " " +y_test.shape)
+        raise ValueError("columns not aligned X_train, y_train, X_test, y_test " + str(X_train.shape) + " "+ str(y_train.shape)
+                         + " " + str(X_test.shape) + " " + str(y_test.shape))
 
 
         #print_xy_sample(X_train, y_train)

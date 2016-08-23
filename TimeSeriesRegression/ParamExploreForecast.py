@@ -137,6 +137,7 @@ if feature_set is None or feature_set == "feature-explore":
     np.random.shuffle(features)
     features = features[:200]
     ml_models = get_models4xgboost_only(conf)
+    load_all_data = True
 else:
     if feature_set == "fg-vhmean-product":
         flist = ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'mean_sales', 'sales_count', 'sales_stddev', 'median_sales', 'hmean', 'entropy']
@@ -164,6 +165,7 @@ else:
 
     features = [flist]
     ml_models = get_models4ensamble(conf)
+    load_all_data = False
     #ml_models = get_models4xgboost_only(conf)
 
 
@@ -172,30 +174,53 @@ conf.analysis_type = analysis_type
 
 s_time = time.time()
 
-#load first dataset
-train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True)
-print "reusing train data", analysis_type
+fg_feilds = ["mean_sales", "sales_count", "sales_stddev",
+                        "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy", "ci", "corr", "mean_autocorr", "mean_corss_points_count"]
 
-print "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
+feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
 
-#load second dataset
-#train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command,
-#    ["median_sales", "returns", "signature", "kurtosis"])
-
-train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy", "ci", "corr", "mean_autocorr", "mean_corss_points_count"])
+# we added following data when we write the submission file
+blend_features = feilds_to_drop + ['Semana']
 
 
+if load_all_data:
+    #load first dataset
+    train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True)
+    print "reusing train data", analysis_type, "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
+
+    print_mem_usage("after data set 1")
+    train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, fg_feilds)
+else:
+    all_feilds = features[0]
+    feilds_in_first_ds = [f for f in all_feilds if f not in fg_feilds]
+    feilds_in_second_ds = [f for f in all_feilds if f not in feilds_in_first_ds]
+    #feilds_in_first_ds = list(set(all_feilds) - set(fg_feilds))
+    #feilds_in_second_ds = list(set(all_feilds) - set(feilds_in_first_ds))
+
+    print "feilds_in_first_ds", feilds_in_first_ds
+    print "feilds_in_second_ds", feilds_in_second_ds
+
+    if len(feilds_in_first_ds) + len(feilds_in_second_ds) != len(all_feilds):
+        raise ValueError(feilds_in_first_ds, "+", feilds_in_second_ds, "!=", all_feilds)
+
+    #following are join features
+    feilds_in_first_ds = feilds_in_first_ds + blend_features
+
+    train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True, fields=feilds_in_first_ds)
+    print "reusing train data", analysis_type, "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
+
+    print_mem_usage("after data set 1")
+
+    if len(feilds_in_second_ds) > 0:
+        train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg_stats', conf.command, feilds_in_second_ds)
+
+print_mem_usage("after data set 2")
 print "X",train_df.shape, "Y", y_actual_train.shape
 
 train_df.fillna(0, inplace=True)
 test_df.fillna(0, inplace=True)
 testDf.fillna(0, inplace=True)
 
-feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
-
-# we added following data when we write the submission file
-blend_features = feilds_to_drop + ['Semana']
 blend_test_data_keys = test_df[blend_features]
 blend_submission_data_keys = testDf[blend_features]
 
