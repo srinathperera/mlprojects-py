@@ -674,7 +674,7 @@ def parse_feature_importance(file='/Users/srinath/playground/data-science/BimboI
     file = open(file,'r')
     data =  file.read()
 
-    data = data.replace('\n','')
+    #data = data.replace('\n','')
     data = re.sub(r'\[=+\].*?s', '', data)
     #28. feature 27 =Producto_ID_Dev_proxima_StdDev (0.002047)
 
@@ -683,7 +683,10 @@ def parse_feature_importance(file='/Users/srinath/playground/data-science/BimboI
 
     dict = {}
 
-    for t in data.split():
+    lines = data.split('\n')
+    print "lines", len(lines), "found"
+
+    for t in lines:
         for match in p1.finditer(t):
             f = match.group(1)
             score = match.group(2)

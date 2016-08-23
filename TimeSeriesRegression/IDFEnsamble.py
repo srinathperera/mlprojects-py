@@ -42,18 +42,19 @@ def load__single_file(file):
     return df, y_actual, best_forecast_index
 
 
-def merge_a_df(base_df, model_name, file_name, command, feilds_to_use=None):
-    new_df = load_file(model_name, command, file_name)
-    print "merging ", model_name, " feilds=", str(list(new_df)) + " with base fields=", list(base_df)
-    merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
-    if feilds_to_use is not None:
-        new_df = new_df[merge_feilds+feilds_to_use]
+def merge_a_df(base_df, model_name, file_name, command, feilds_to_use, merge_feilds):
+    new_df = load_file(model_name, command, file_name, fields=feilds_to_use+ merge_feilds)
     print "merging ", model_name, " feilds=", list(new_df)
+    rmap = {f: model_name+"."+f for f in feilds_to_use}
+    new_df.rename(columns=rmap, inplace=True)
     full_df = pd.merge(base_df, new_df, how='left', on=merge_feilds)
     return full_df
 
 
 def load__model_results_from_store(model_names_list, name, use_agr_features=True):
+    merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+    forecast_feilds = ['XGB', 'LR', 'RFR', 'ETR']
+
     first_dir = model_names_list[0]
     files_list = [f for f in listdir(first_dir) if str(f).startswith(name) and
                     str(f).endswith(".csv")]
@@ -74,21 +75,15 @@ def load__model_results_from_store(model_names_list, name, use_agr_features=True
 
         for i in range(1,len(model_names_list)):
             model_name = model_names_list[i]
-            feilds_to_use = None
+            feilds_to_use = forecast_feilds
             file_name = name
             if model_name == "fg_stats":
                 feilds_to_use = ["mean_sales", "sales_count", "sales_stddev",
                     "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
                 file_name = fname
-            base_df = merge_a_df(base_df, model_name, file_name, cmd, feilds_to_use)
+            base_df = merge_a_df(base_df, model_name, file_name, cmd, feilds_to_use, merge_feilds)
 
-        feilds_to_remove = [f for f in list(base_df) if str(f).startswith(addtional_data_feild)]
-        addtional_data_feild = feilds_to_remove[0]
-        feilds_to_remove = feilds_to_remove[1:]
-
-        merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
-        base_df = drop_feilds_1df(base_df, merge_feilds + feilds_to_remove)
-        print "remove feilds", feilds_to_remove
+        base_df = drop_feilds_1df(base_df, merge_feilds)
         df_list.append(base_df)
 
     if len(df_list) > 0:
@@ -110,7 +105,7 @@ def load__model_results_from_store(model_names_list, name, use_agr_features=True
     else:
         return None
 
-
+'''
 def load__from_store(model_type, name, use_agr_features=True):
     dir = model_type
     files_list = [f for f in listdir(dir) if str(f).startswith(name) and
@@ -171,7 +166,7 @@ def load__from_store(model_type, name, use_agr_features=True):
         return final_df, addtional_data
     else:
         return None
-
+'''
 
 
 def do_ensamble(conf, forecasts, best_forecast_index, y_actual, submissions_ids, submissions):
@@ -227,7 +222,7 @@ def find_best_forecast(forecasts, y_actual):
     return model_index_by_acc
 
 
-
+'''
 def run_ensambles(rcommand):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
     conf.command=-2
@@ -254,13 +249,14 @@ def run_ensambles(rcommand):
     #             blend_data, blend_data_submission)
     print_mem_usage("avg models")
     avg_models(conf, forecasts_df, y_actual, subdf, submission_ids=None)
-
+'''
 
 def run_ensambles_on_multiple_models(command):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
     conf.command=-2
 
-    model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats', 'nn_features-product', 'nn_features-agency']
+    #model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats', 'nn_features-product', 'nn_features-agency']
+    model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats']
 
     #load forecast data
     forecasts_df, y_actual = load__model_results_from_store(model_list, "model_forecasts")
