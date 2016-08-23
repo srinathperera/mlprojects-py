@@ -39,16 +39,19 @@ def split_df(s_df, parts):
     return parts
 
 
-def train_and_find_top10error(conf, traindf1, y_train1,  traindf_check, y_train_check, test_df, y_test):
+def create_features_and_forecast(traindf, test_df, subdf, y_train, y_test):
+    traindf, test_df, subdf, _, _ = generate_features(conf, traindf, test_df, subdf, y_actual_test)
+    traindf, test_df, subdf = drop_feilds(traindf, test_df, subdf, ['Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID'])
     models = get_models4xgboost_only(conf)
-    print "Forecast with", "traindf1", traindf1.shape, "y_train1", y_train1.shape, "test_df", test_df.shape, "y_test", y_test.shape, "traindf_check", traindf_check.shape
+    tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, traindf, test_df, subdf, y_train, y_test, models=models)
 
-    #conf, train_df, test_df, sub_df, y_train, y_test, models=None
-    tmodels, tforecasts, tsubmission_forecasts = do_forecast(conf, traindf1, test_df, traindf_check, y_train1, y_test, models=models)
-
+    submission_forecast = tsubmission_forecasts[:, 0]
     rmsle = tmodels[0].rmsle
+    return submission_forecast, rmsle
 
-    errors = np.log(1+y_train_check) - np.log(1+ tsubmission_forecasts[:, 0])
+
+def find_top10error_build_new_trainset(traindf1, y_train1,  traindf_check, y_train_check, submission_forecast):
+    errors = np.log(1+y_train_check) - np.log(1+ submission_forecast)
     error90percentile = np.percentile(errors, 90)
 
     train_df_feilds = list(traindf_check)
@@ -66,7 +69,7 @@ def train_and_find_top10error(conf, traindf1, y_train1,  traindf_check, y_train_
     y_train_check_left = traindf_check_left['target']
     traindf_check_left = traindf_check_left[train_df_feilds]
     print "Forecast Return", "traindf1", traindf1.shape, "y_train1", y_train1.shape, "test_df", "traindf_check_left", traindf_check_left.shape, "y_train_check_left", y_train_check_left.shape
-    return traindf1, y_train1, traindf_check_left, y_train_check_left, rmsle
+    return traindf1, y_train1, traindf_check_left, y_train_check_left
 
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
@@ -96,11 +99,9 @@ y_actual_test = y_actual_test.values
 accuracy = []
 
 for i in range(5):
-    train_df1, test_df, train_df_check, _, _ = generate_features(conf, train_df1, test_df, train_df_check, y_actual_test)
-    train_df1, test_df, train_df_check = drop_feilds(train_df1, test_df, train_df_check, ['Agencia_ID','Canal_ID','Ruta_SAK','Cliente_ID','Producto_ID'])
-    print "train_df_check",list(train_df_check)
-    train_df1, y_train1, train_df_check, y_train_check, rmsle = train_and_find_top10error(conf, train_df1, y_train1,
-            train_df_check, y_train_check, test_df, y_actual_test)
+    submission_forecast, rmsle = create_features_and_forecast(train_df1, test_df, train_df_check, y_train1, y_actual_test)
+    train_df1, y_train1, train_df_check, y_train_check = find_top10error_build_new_trainset(train_df1, y_train1,  train_df_check,
+            y_train_check, submission_forecast)
     accuracy.append(rmsle)
     print "try ", i ," done", rmsle
 

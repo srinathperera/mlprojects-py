@@ -363,8 +363,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     ensambles.append((rmsle, lr_model, "lr ensamble"))
 
     '''
-    do_xgb = False
-    do_ml = True
+    do_xgb = True
 
     if do_xgb:
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }

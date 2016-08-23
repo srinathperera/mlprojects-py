@@ -1557,6 +1557,8 @@ def get_models4xgboost_only(conf):
 
 
 def get_models4dl_only(conf):
+    MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.2, activation_fn='relu', loss="mse",
+                epoch_count=20, optimizer=Adam(lr=0.0001), regularization=0.1)
     return [DLModel(conf)]
 
 

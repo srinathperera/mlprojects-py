@@ -255,8 +255,8 @@ def run_ensambles_on_multiple_models(command):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
     conf.command=-2
 
-    #model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats', 'nn_features-product', 'nn_features-agency']
-    model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats']
+    model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats', 'nn_features-product', 'nn_features-agency']
+    #model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats']
 
     #load forecast data
     forecasts_df, y_actual = load__model_results_from_store(model_list, "model_forecasts")
