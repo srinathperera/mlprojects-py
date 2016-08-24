@@ -88,12 +88,15 @@ def load__model_results_from_store(model_names_list, name, use_agr_features=True
         df_list.append(base_df)
 
     if len(df_list) > 0:
+        '''
+        #to make sure all feilds are in order
         for df in df_list:
             print "concat", list(df)
         fileds = list(df_list[0])
         df_list = [dft[fileds] for dft in df_list]
         for df in df_list:
             print "concat after", list(df)
+        '''
 
         final_df = pd.concat(df_list)
 
@@ -221,7 +224,7 @@ def find_best_forecast(forecasts_df, y_actual):
     start = time.time()
     forecasts_rmsle = []
     for f in list(forecasts_df):
-        rmsle = calculate_accuracy(f + " full data", y_actual, forecasts_df[f])
+        rmsle = calculate_accuracy(f + " full data", y_actual, forecasts_df[f].values)
         forecasts_rmsle.append(rmsle)
 
     model_index_by_acc = np.argsort(forecasts_rmsle)
