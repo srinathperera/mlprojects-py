@@ -53,8 +53,8 @@ def merge_a_df(base_df, model_name, file_name, command, feilds_to_use, merge_fei
 
 def load__model_results_from_store(model_names_list, name, use_agr_features=True):
     merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
-    #forecast_feilds = ['XGB', 'LR', 'RFR', 'ETR']
-    forecast_feilds = ['XGB', 'RFR', 'ETR']
+    forecast_feilds = ['XGB', 'LR', 'RFR', 'ETR']
+    #forecast_feilds = ['XGB', 'RFR', 'ETR']
 
     first_dir = model_names_list[0]
     files_list = [f for f in listdir(first_dir) if str(f).startswith(name) and
@@ -275,17 +275,15 @@ def run_ensambles_on_multiple_models(command):
     #not using LR forecasts
     print "Using feilds", list(forecasts_df)
 
-    feilds_to_keep = [f for f in list(forecasts_df) if str(f).startswith("XGB") or str(f).startswith("RFR") or str(f).startswith("ETR")]
-    forecasts = forecasts_df[feilds_to_keep].values
+    forecasts = forecasts_df.values
 
 
     #load submission data
     subdf, submissions_ids = load__model_results_from_store(model_list, "model_submissions")
-    submissions = subdf[feilds_to_keep].values
+    submissions = subdf.values
 
     model_index_by_accuracy = find_best_forecast(forecasts, y_actual)
 
-    best_forecast_index = model_index_by_accuracy[0]
     print_mem_usage("before simple ensamble")
     do_ensamble(conf, forecasts, model_index_by_accuracy, y_actual, submissions_ids ,submissions)
     #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,

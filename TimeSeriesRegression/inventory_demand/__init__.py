@@ -248,7 +248,7 @@ def save_train_data(model_type, command, train_df, test_df, sub_df, y_train, y_t
 def load_train_data(model_type, command, throw_error=False, fields=None):
     train_df = load_file(model_type, command,'train', throw_error=throw_error, fields=fields)
     test_df = load_file(model_type, command, 'test', throw_error=throw_error, fields=fields)
-    sub_df = load_file(model_type, command, 'sub', throw_error=throw_error, fields=fields + ['id'])
+    sub_df = load_file(model_type, command, 'sub', throw_error=throw_error, fields=fields)
 
     ytrain_df = load_file(model_type, command, 'y_train', throw_error=throw_error)
     ytest_df = load_file(model_type, command, 'y_test', throw_error=throw_error)
@@ -1557,8 +1557,8 @@ def get_models4xgboost_only(conf):
 
 
 def get_models4dl_only(conf):
-    MLConfigs(nodes_in_layer=10, number_of_hidden_layers=2, dropout=0.0, activation_fn='relu', loss="mse",
-                epoch_count=20, optimizer=Adam(lr=0.0001), regularization=0.1)
+    MLConfigs(nodes_in_layer=20, number_of_hidden_layers=2, dropout=0.0, activation_fn='relu', loss="mse",
+                epoch_count=100, optimizer=Adam(lr=0.0001), regularization=0.1)
     return [DLModel(conf)]
 
 
