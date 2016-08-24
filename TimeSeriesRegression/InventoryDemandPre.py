@@ -682,6 +682,7 @@ def parse_feature_importance(file='/Users/srinath/playground/data-science/BimboI
     p2 = re.compile('[0-9]+\s+([A-z0-9_]+)\s+([0-9.]+)')
 
     dict = {}
+    sumdict = {}
 
     lines = data.split('\n')
     print "lines", len(lines), "found"
@@ -709,7 +710,9 @@ def parse_feature_importance(file='/Users/srinath/playground/data-science/BimboI
     for (k,v) in dict.items():
         #print t
         #df_data.append([t[0], np.sum(t[1])])
-        df_data.append([k, np.sum(v)])
+        sum = np.sum(v)
+        df_data.append([k, sum])
+        sumdict[k] = sum
 
     print df_data
 
@@ -717,6 +720,52 @@ def parse_feature_importance(file='/Users/srinath/playground/data-science/BimboI
     feature_importance_df.index = range(0, feature_importance_df.shape[0])
     feature_importance_df = feature_importance_df.sort_values(by=['score'], ascending=False)
     print feature_importance_df
+
+
+
+
+    groups = [
+        ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median']
+            + ['Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Dev_proximaci', 'Agencia_ID_Dev_proxima_median']
+            + ['Agencia_ID_Venta_hoy_Mean', 'Agencia_ID_Venta_hoyci', 'Agencia_ID_Venta_hoy_median'],
+        ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median']
+            + ['clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median']
+            + ['clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median'],
+        ['client_nn_Mean', 'client_nnci', 'client_nn_median']
+            + ['client_nn_vh_Mean', 'client_nn_vhci', 'client_nn_vh_median']
+            + ['client_nn_dp_Mean', 'client_nn_dpci', 'client_nn_dp_median'],
+        ['client_nn_agency_Mean', 'client_nn_agencyci', 'client_nn_agency_median']
+            + ['client_nn_agency_vh_Mean', 'client_nn_agency_vhci', 'client_nn_agency_vh_median']
+            + ['client_nn_agency_dp_Mean', 'client_nn_agency_dpci', 'client_nn_agency_dp_median'],
+        ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median']
+            + ['Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median']
+            + ['Producto_ID_Dev_proxima_Mean', 'Producto_ID_Dev_proximaci', 'Producto_ID_Dev_proxima_median'],
+        ['weight', 'pieces', 'has_choco', 'has_vanilla', 'has_multigrain'],
+        ['brand_id_Demanda_uni_equil_Mean', 'brand_id_Demanda_uni_equilci', 'brand_id_Demanda_uni_equil_median','product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'product_word_Demanda_uni_equil_median'],
+        ['Town_id_Demanda_uni_equil_Mean', 'Town_id_Demanda_uni_equilci', 'Town_id_Demanda_uni_equil_median', 'State_id_Demanda_uni_equil_Mean', 'State_id_Demanda_uni_equilci', 'State_id_Demanda_uni_equil_median'],
+        ['agc_product_Mean', 'agc_productci', 'agc_product_median'],
+        ['routes_combined_Mean', 'routes_combinedci', 'routes_combined_median'],
+        ['clients_route_agc_Mean', 'clients_route_agcci', 'clients_route_agc_median']
+    ]
+
+    all_f_count = 0
+    found_f_count = 0
+    for g in groups:
+        gk = []
+        for f in g:
+            score = sumdict.get(f, -1)
+            all_f_count += 1
+            if score > 1.5:
+                found_f_count += 1
+                gk.append(f)
+        print gk
+
+    print "Feature data", all_f_count, found_f_count
+
+
+
+
+
 
 
 def parse_map_from_str(data):

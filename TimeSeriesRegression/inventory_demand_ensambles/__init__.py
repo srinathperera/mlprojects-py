@@ -38,10 +38,12 @@ def is_forecast_improved(org, new, actual):
 
 
 class SimpleAvgEnsamble:
-    def __init__(self, conf, method):
+    def __init__(self, conf, method, model_index_by_accuracy, models2use=4):
         self.conf = conf
         self.method = method
         self.name = "SimpleAvg_"+method
+        self.model_index_by_accuracy = model_index_by_accuracy
+        self.models2use = models2use
 
     def fit(self, forecasts, best_rmsle_index, y_actual):
         start = time.time()
@@ -54,6 +56,7 @@ class SimpleAvgEnsamble:
         return forecast
 
     def predict(self, forecasts, best_rmsle_index):
+        forecasts = forecasts[:, self.model_index_by_accuracy[:self.models2use]]
         if self.method == 'median':
             forecast = np.median(forecasts, axis=1)
         elif self.method == 'mean':
@@ -77,7 +80,7 @@ class BestPairEnsamble:
 
         best_index = np.argmin(rmsle_values)
         self.best_pair = comb[best_index]
-        print "best mean pair value, " + str(self.conf.command), str(self.best_pair), 'rmsle=', rmsle_values[best_index]
+        print "[IDF]best mean pair value, " + str(self.conf.command), str(self.best_pair), 'rmsle=', rmsle_values[best_index]
         print_time_took(start, self.method + "_forecast " + str(self.conf.command))
         return forecast
 
@@ -107,12 +110,12 @@ class BestThreeEnsamble:
         rmsle_values = []
         for (a,b,c) in comb:
             forecast = self.predict_triple(forecasts[:,a], forecasts[:,b], forecasts[:,b])
-            rmsle = calculate_accuracy("try " +self.method + " triple " + str((a,b)) , y_actual, forecast)
+            rmsle = calculate_accuracy("try " +self.method + " triple " + str((a,b,c)) , y_actual, forecast)
             rmsle_values.append(rmsle)
 
         best_index = np.argmin(rmsle_values)
         self.best_triple = comb[best_index]
-        print "best triple, " + str(self.conf.command), str(self.best_triple), 'rmsle=', rmsle_values[best_index]
+        print "[IDF]best triple, " + str(self.conf.command), str(self.best_triple), 'rmsle=', rmsle_values[best_index]
         print_time_took(start, self.name + str(self.conf.command))
         return forecast
 
@@ -372,7 +375,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
         #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
         #                                                  xgb_params=xgb_params,num_rounds=20)
         xgb_forecast = model.predict(X_test)
-        rmsle = calculate_accuracy("xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
+        rmsle = calculate_accuracy("[IDF]xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
         ensambles.append((rmsle, model, "xgboost ensamble"))
 
         best_ensamble_index = np.argmin([t[0] for t in ensambles])
