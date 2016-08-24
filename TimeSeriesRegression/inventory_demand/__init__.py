@@ -121,10 +121,13 @@ def fillna_and_inf(data, na_r=0, inf_r=100000):
     return np.where(np.isnan(data), na_r, np.where(np.isinf(data), inf_r, data))
 
 
-def fillna_if_feildexists(df, feild_name, replacement=-1):
+def fillna_if_feildexists(df, feild_name, default_stats=None):
     if feild_name in df:
-        if replacement != -1:
-            df[feild_name].fillna(replacement, inplace=True)
+        if default_stats is not None:
+            if default_stats.replacement_feild is not None:
+                df[feild_name] = np.where(np.isnan(df[feild_name].values), df[default_stats.replacement_feild], df[feild_name].values)
+            else:
+                df[feild_name].fillna(df[feild_name].mean(), inplace=True)
         else:
             df[feild_name].fillna(df[feild_name].mean(), inplace=True)
     return df
@@ -452,7 +455,7 @@ def find_NA_rows_percent(df_check, label):
 
 def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, default_stats):
     merged = pd.merge(bdf, stat_df, how='left', on=feild_names)
-    merged = fillna_if_feildexists(merged, name+"_Mean")
+    merged = fillna_if_feildexists(merged, name+"_Mean", default_stats)
     merged = fillna_if_feildexists(merged, name+"_StdDev", 10000)
     merged = fillna_if_feildexists(merged, name+"_Count", 0)
     #replace rest with zero
@@ -542,12 +545,20 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
     test_df_m = pd.merge(test_df, valuesDf, how='left', on=[feild_name])
 
     train_df_m.fillna(0, inplace=True)
+
+    name = feild_name+"_"+agr_feild
+    if default_stats.replacement_feild is not None:
+        test_df_m[name + "_Mean"] = np.where(np.isnan(test_df_m[name + "_Mean"].values), test_df_m[default_stats.replacement_feild].values, test_df_m[name + "_Mean"].values)
+    else:
+        test_df_m[name + "_Mean"].fillna(test_df_m[name + "_Mean"].mean(), inplace=True)
     test_df_m.fillna(0, inplace=True)
 
     if testDf is not None:
-        name = feild_name+"_"+agr_feild
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
-        testDf[name + "_Mean"].fillna(testDf[name + "_Mean"].mean(), inplace=True)
+        if default_stats.replacement_feild is not None:
+            testDf[name + "_Mean"] = np.where(np.isnan(testDf[name + "_Mean"].values), testDf[default_stats.replacement_feild].values, testDf[name + "_Mean"].values)
+        else:
+            testDf[name + "_Mean"].fillna(testDf[name + "_Mean"].mean(), inplace=True)
         if fops.stddev:
             testDf[name + "_StdDev"].fillna(10000, inplace=True)
         if fops.count:
@@ -1364,6 +1375,7 @@ class DefaultStats:
         self.mean = mean
         self.count = count
         self.stddev = stddev
+        self.replacement_feild = None
 
 
 class FeatureOps:
@@ -1433,6 +1445,20 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     #                                test_df,t[0], testDf, drop=False, agr_feild=t[1])
 
     if use_group_aggrigate:
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
+                                                            FeatureOps(stddev=True, p90=True, hmean=True,p10=True, count=True))
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy',
+                                                            default_stats=default_venta_hoy_stats, fops=FeatureOps(stddev=True, count=True))
+        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
+                                                            agr_feild='Dev_proxima', default_stats=default_dev_proxima_stats,
+                                                            fops=FeatureOps(count=True))
+
+
+        default_demand_stats.replacement_feild='Producto_ID_Demanda_uni_equil_Mean'
+        default_venta_hoy_stats.replacement_feild='Producto_ID_Venta_hoy_Mean'
+        default_dev_proxima_stats.replacement_feild='Producto_ID_Dev_proxima_Mean'
+
+
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats,
                                                             FeatureOps(hmean=True, stddev=True, count=True))
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False)
@@ -1442,11 +1468,7 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
                 'Demanda_uni_equil', "clients_combined", default_demand_stats,
                                                               FeatureOps(sum= True, kurtosis=True, stddev=True, count=True, p90=10, p10=True, hmean=True))
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, default_demand_stats,
-                                                            FeatureOps(stddev=True, p90=True, hmean=True,p10=True, count=True))
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False, agr_feild='Venta_hoy',
-                                                            default_stats=default_venta_hoy_stats, fops=FeatureOps(stddev=True, count=True))
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, drop=False, agr_feild='Venta_hoy')
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Ruta_SAK', testDf, drop=False, agr_feild='Venta_hoy')
         #*train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Cliente_ID', testDf, drop=False, agr_feild='Venta_hoy')
@@ -1457,9 +1479,6 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
 
 
 
-        train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Producto_ID', testDf, drop=False,
-                                                            agr_feild='Dev_proxima', default_stats=default_dev_proxima_stats,
-                                                            fops=FeatureOps(count=True))
 
         #train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Canal_ID', testDf, default_demand_stats,
         #                                                    drop=False, agr_feild='Dev_proxima', fops=FeatureOps())
