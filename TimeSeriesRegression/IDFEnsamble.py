@@ -279,19 +279,23 @@ def load__from_store(model_type, name, use_agr_features=True):
 '''
 
 
-def do_ensamble(conf, forecasts, model_index_by_accuracy, y_actual, submissions_ids, submissions):
+def do_ensamble(conf, forecasts_only_df, top_forecast_feilds, y_actual, submissions_ids, submissions_only_df):
+    top_forecast_feilds = top_forecast_feilds[:10]
+    sorted_forecasts = forecasts_only_df[top_forecast_feilds].values
+
+
     best_forecast_index = [0]
     vf_start = time.time()
 
     ensmbales = [
-        SimpleAvgEnsamble(conf, "mean", model_index_by_accuracy),
-        SimpleAvgEnsamble(conf, "median", model_index_by_accuracy),
+        SimpleAvgEnsamble(conf, "mean"),
+        SimpleAvgEnsamble(conf, "median"),
         BestPairEnsamble(conf),
         BestThreeEnsamble(conf)
     ]
 
     for en in ensmbales:
-        en.fit(forecasts, best_forecast_index, y_actual)
+        en.fit(sorted_forecasts, best_forecast_index, y_actual)
 
     #vote_forecast = vote_based_forecast(forecasts, best_forecast_index, y_actual)
     #calculate_accuracy("vote_forecast "+ str(conf.command), y_actual, vote_forecast)
@@ -300,17 +304,18 @@ def do_ensamble(conf, forecasts, model_index_by_accuracy, y_actual, submissions_
 
     print "vf tooks", (time.time() - vf_start)
 
-    if submissions_ids is not None and submissions is not None:
-        mean_top4_forecasts = ensmbales[0].predict(submissions, best_forecast_index)
+    if submissions_ids is not None and submissions_only_df is not None:
+        sorted_submissions = submissions_only_df[top_forecast_feilds].values
+        mean_top4_forecasts = ensmbales[0].predict(sorted_submissions, best_forecast_index)
         save_submission_file("mean_top4_submission.csv", submissions_ids, mean_top4_forecasts)
 
-        best_pair_ensamble_forecasts = ensmbales[1].predict(submissions, best_forecast_index)
+        best_pair_ensamble_forecasts = ensmbales[1].predict(sorted_submissions, best_forecast_index)
         save_submission_file("median_top4_submission.csv", submissions_ids, best_pair_ensamble_forecasts)
 
-        best_pair_ensamble_forecasts = ensmbales[2].predict(submissions, best_forecast_index)
+        best_pair_ensamble_forecasts = ensmbales[2].predict(sorted_submissions, best_forecast_index)
         save_submission_file("best_pair_submission.csv", submissions_ids, best_pair_ensamble_forecasts)
 
-        best_pair_ensamble_forecasts = ensmbales[3].predict(submissions, best_forecast_index)
+        best_pair_ensamble_forecasts = ensmbales[3].predict(sorted_submissions, best_forecast_index)
         save_submission_file("best_triple_submission.csv", submissions_ids, best_pair_ensamble_forecasts)
     else:
         print "submissions not found"
@@ -322,20 +327,25 @@ def do_ensamble(conf, forecasts, model_index_by_accuracy, y_actual, submissions_
 def find_best_forecast(forecasts_df, y_actual):
     start = time.time()
     forecasts_rmsle = []
+    forecasts_fields = []
     for f in list(forecasts_df):
         rmsle = calculate_accuracy(f + " find best", y_actual, forecasts_df[f].values)
         forecasts_rmsle.append(rmsle)
+        forecasts_fields.append(f)
 
     model_index_by_acc = np.argsort(forecasts_rmsle)
-    print "[IDF]full data rmsle=", forecasts_rmsle
-    print "model index order", model_index_by_acc
+    top_forecast_feilds = [forecasts_fields[i] for i in model_index_by_acc]
+
+    print "[IDF]full data rmsle=", forecasts_rmsle, forecasts_fields
+    print "[IDF] sorted forecasts=", top_forecast_feilds
+
     best_findex = model_index_by_acc[0]
-    print "[IDF]best single model forecast is", best_findex, "rmsle=", forecasts_rmsle[best_findex]
+    print "[IDF]best single model forecast is", forecasts_fields[best_findex], "rmsle=", forecasts_rmsle[best_findex]
     print_time_took(start, "find_best_forecast")
 
     #print "best single model forecast stats\n", basic_stats_as_str(forecasts[best_findex])
     #print "y actual\n", basic_stats_as_str(y_actual)
-    return model_index_by_acc
+    return top_forecast_feilds
 
 
 '''
@@ -392,22 +402,27 @@ def run_ensambles_on_multiple_models(command):
     '''
 
     model_list = ['agr_cat', 'fg-vhmean-product']
-    forecasts_df, y_actual, forecast_feilds = load_all_forecast_data(model_list, "model_forecasts")
-    forecasts = forecasts_df[forecast_feilds].values
+    #model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand"]
+
+    forecasts_with_blend_df, y_actual, forecast_feilds = load_all_forecast_data(model_list, "model_forecasts")
+    forecasts_only_df = forecasts_with_blend_df[forecast_feilds]
 
     #load submission data
     subdf, submissions_ids, _ = load_all_forecast_data(model_list, "model_submissions")
-    submissions = subdf[forecast_feilds].values
+    submissions_only_df = subdf[forecast_feilds]
 
     print "Using forecasting feilds", forecast_feilds
-    model_index_by_accuracy = find_best_forecast(forecasts_df[forecast_feilds], y_actual)
+    top_forecast_feilds = find_best_forecast(forecasts_only_df, y_actual)
+
+    #do the second level forecast
+    avg_models(conf, forecasts_with_blend_df, y_actual, subdf, submission_ids=submissions_ids)
 
     print_mem_usage("before simple ensamble")
-    do_ensamble(conf, forecasts, model_index_by_accuracy, y_actual, submissions_ids ,submissions)
+    do_ensamble(conf, forecasts_only_df, top_forecast_feilds, y_actual, submissions_ids ,submissions_only_df)
     #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
     #             blend_data, blend_data_submission)
-    print_mem_usage("avg models")
-    avg_models(conf, forecasts_df, y_actual, subdf, submission_ids=submissions_ids)
-    avg_models_with_ml(conf, forecasts_df, y_actual, subdf, submission_ids=submissions_ids)
+    #print_mem_usage("avg models")
+
+    #avg_models_with_ml(conf, forecasts_df, y_actual, subdf, submission_ids=submissions_ids)
 
 run_ensambles_on_multiple_models(command)

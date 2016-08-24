@@ -38,11 +38,10 @@ def is_forecast_improved(org, new, actual):
 
 
 class SimpleAvgEnsamble:
-    def __init__(self, conf, method, model_index_by_accuracy, models2use=4):
+    def __init__(self, conf, method, models2use=4):
         self.conf = conf
         self.method = method
         self.name = "SimpleAvg_"+method
-        self.model_index_by_accuracy = model_index_by_accuracy
         self.models2use = models2use
 
     def fit(self, forecasts, best_rmsle_index, y_actual):
@@ -56,7 +55,7 @@ class SimpleAvgEnsamble:
         return forecast
 
     def predict(self, forecasts, best_rmsle_index):
-        forecasts = forecasts[:, self.model_index_by_accuracy[:self.models2use]]
+        forecasts = forecasts[:, :self.models2use]
         if self.method == 'median':
             forecast = np.median(forecasts, axis=1)
         elif self.method == 'mean':
