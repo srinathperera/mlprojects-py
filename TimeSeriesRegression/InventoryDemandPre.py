@@ -870,12 +870,13 @@ def shaffle_data():
     ]
 
     merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
-    for command in range(4):
+    #for command in range(4):
+    for command in [8]:
         ordered_data = pd.concat([load_file('all_features', command, f) for f in ['train', 'test']])
-        df_raw = read_datafiles(command, False)
+        df_raw, _ = read_datafiles(command, False)
         shuffled_df = pd.merge(ordered_data[merge_feilds], df_raw, how='left', on=merge_feilds)
         find_NA_rows_percent(shuffled_df, "shaffle_data")
-        shuffled_df.to_csv(data_files[command], index=False)
+        shuffled_df.to_csv(data_files[command][0], index=False)
 
 
 shaffle_data()
