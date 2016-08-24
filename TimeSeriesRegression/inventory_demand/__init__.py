@@ -245,9 +245,14 @@ def save_train_data(model_type, command, train_df, test_df, sub_df, y_train, y_t
     save_file(model_type, command, ytest_df, 'y_test')
 
 
-def load_train_data(model_type, command, throw_error=False, fields=None):
+def load_train_data(model_type, command, throw_error=False, fields=None, load_sub_id=True):
     train_df = load_file(model_type, command,'train', throw_error=throw_error, fields=fields)
     test_df = load_file(model_type, command, 'test', throw_error=throw_error, fields=fields)
+    if load_sub_id:
+        if fields is None:
+            fields = ['id']
+        else:
+            fields = fields + ['id']
     sub_df = load_file(model_type, command, 'sub', throw_error=throw_error, fields=fields)
 
     ytrain_df = load_file(model_type, command, 'y_train', throw_error=throw_error)

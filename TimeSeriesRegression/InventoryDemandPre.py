@@ -854,12 +854,37 @@ def test_merge_datasets():
                                             "sales_stddev", "median_sales", "last_sale", "last_sale_week", "returns"])
     print list(train_df)
 
+
+def shaffle_data():
+    data_files = [
+        ["trainitems0_5000.csv", 0, 5000, "test_0_5000.csv"], #1.4G, 0
+        ["trainitems5_10_35_40_45_50k.csv", 5000, 10000, "test_5_10_35_40_45_50k.csv"], #534M, 1
+        ["trainitems30000_35000.csv", 30000, 35000, "test_30000_35000.csv"], #559M, 2
+        #["trainitems30000_35000.csv", 30000, 35000, "trainitems5_10_35_40_45_50k.csv"], #559M # to remove ** pass #1 as #2 test
+        ["trainitems40000_45000.csv", 40000, 45000, "test_40000_45000.csv"], #640M, 2
+        ["trainitems5000_15000.csv", -1, -1, "test0_100.csv"], #4
+        ["train-rsample-10m.csv", -1, -1, "test0_100.csv"], #5
+        ["train-rsample-500k.csv", -1, -1, "test0_100.csv"], #6
+        ["train-rsample-15m.csv", -1, -1, "test.csv"], #7
+        ["train-rsample-10k.csv", -1, -1, "test0_100.csv"] #8
+    ]
+
+    merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+    for command in range(4):
+        ordered_data = pd.concat([load_file('all_features', command, f) for f in ['train', 'test']])
+        df_raw = read_datafiles(command, False)
+        shuffled_df = pd.merge(ordered_data[merge_feilds], df_raw, how='left', on=merge_feilds)
+        find_NA_rows_percent(shuffled_df, "shaffle_data")
+        shuffled_df.to_csv(data_files[command], index=False)
+
+
+shaffle_data()
 #test_merge_datasets()
 #find_similar_products()
 #analyze_parameter_sweep()
 #create_random_file()
 
-parse_feature_importance(file='/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore4.txt')
+#parse_feature_importance(file='/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore4.txt')
 #parse_feature_explore_outputs()
 
 #analyze_error()

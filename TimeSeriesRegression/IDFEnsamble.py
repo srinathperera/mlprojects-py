@@ -51,6 +51,94 @@ def merge_a_df(base_df, model_name, file_name, command, feilds_to_use, merge_fei
     return full_df
 
 
+merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
+forecast_feilds = ['XGB', 'LR', 'RFR', 'ETR']
+
+
+def load_data_for_each_run(model_name, file_name, feild_names=None):
+
+    files_list = [f for f in listdir(model_name) if str(f).startswith(file_name) and
+                    str(f).endswith(".csv")]
+    print file_name, "found files", files_list
+
+    df_list = []
+    for f in files_list:
+        '''
+        cmd = extract_regx('[0-9]+', f)
+        if file_name == "model_forecasts":
+            addtional_data_feild = 'actual'
+        elif file_name == "model_submissions":
+            addtional_data_feild = 'id'
+        else:
+            raise ValueError("")
+        '''
+        if feild_names is not None:
+            base_df = pd.read_csv(model_name+'/'+str(f), usecols=feild_names)
+        else:
+            base_df = pd.read_csv(model_name+'/'+str(f))
+        df_list.append(base_df)
+
+    if len(df_list) > 0:
+        final_df = pd.concat(df_list)
+
+        #final_df = final_df.sample(frac=1)
+
+         #if we do not copy, we get errors due to shafflinf
+        #find_NA_rows_percent(final_df, "loading data for ensamble")
+        final_df.fillna(0, inplace=True)
+
+
+        #this is criticial as otherwise few stores will depend all in testing data
+        print "final feilds", list(final_df)
+        #addtional_data = final_df[addtional_data_feild].values.copy()
+        #final_df = drop_feilds_1df(final_df, [addtional_data_feild])
+
+        print "load files", model_name, "shape=", final_df.shape, "with features", list(final_df)
+        return final_df
+    else:
+        return None
+
+
+def load_all_forecast_data(model_names_list, file_name):
+    if file_name == "model_forecasts":
+        fname = "test"
+        addtional_data_feild = 'actual'
+    elif file_name == "model_submissions":
+        fname = "sub"
+        addtional_data_feild = 'id'
+
+    basedf = load_data_for_each_run('fg_stats', fname)
+    first_actual_feild = None
+    feilds_to_remove = []
+
+    for model_name in model_names_list:
+        forecast_df = load_data_for_each_run(model_name, file_name, merge_feilds + forecast_feilds + [addtional_data_feild])
+        #rename so feilds will not clash
+        rmap = {f: model_name+"."+f for f in forecast_feilds + [addtional_data_feild]}
+        forecast_df.rename(columns=rmap, inplace=True)
+
+        basedf = pd.merge(basedf, forecast_df, how='left', on=merge_feilds)
+
+        y_feild =  model_name +"."+ addtional_data_feild
+
+        for f in forecast_feilds:
+            ff = model_name +"."+ f
+            calculate_accuracy(ff + " full data", basedf[y_feild].values, basedf[ff].values)
+
+        feilds_to_remove.append(y_feild)
+        if first_actual_feild is None:
+            first_actual_feild = y_feild
+        else:
+            if not np.allclose(basedf[y_feild].values, basedf[first_actual_feild].values):
+                raise ValueError("additiona feild not aligned " + str(basedf[y_feild].values[:10]), basedf[first_actual_feild].values[:10])
+
+    additional_feild_data = basedf[first_actual_feild].values
+    basedf = drop_feilds_1df(basedf, feilds_to_remove)
+
+    basedf = basedf.sample(frac=1)
+    return basedf, additional_feild_data
+
+
 def load__model_results_from_store(model_names_list, name, use_agr_features=True):
     merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
     forecast_feilds = ['XGB', 'LR', 'RFR', 'ETR']
@@ -273,8 +361,10 @@ def run_ensambles_on_multiple_models(command):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
     conf.command=-2
 
-    model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats', 'nn_features-product', 'nn_features-agency', "nn_features-brand"]
-    #model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats']
+    '''
+    #model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats', 'nn_features-product', 'nn_features-agency', "nn_features-brand"]
+    model_list = ['agr_cat', 'fg-vhmean-product', 'fg_stats']
+
 
     #load forecast data
     forecasts_df, y_actual = load__model_results_from_store(model_list, "model_forecasts")
@@ -287,6 +377,15 @@ def run_ensambles_on_multiple_models(command):
 
     #load submission data
     subdf, submissions_ids = load__model_results_from_store(model_list, "model_submissions")
+    submissions = subdf.values
+    '''
+
+    model_list = ['agr_cat', 'fg-vhmean-product']
+    forecasts_df, y_actual = load_all_forecast_data(model_list, "model_forecasts")
+    forecasts = forecasts_df.values
+
+    #load submission data
+    subdf, submissions_ids = load_all_forecast_data(model_list, "model_submissions")
     submissions = subdf.values
 
     model_index_by_accuracy = find_best_forecast(forecasts_df, y_actual)
