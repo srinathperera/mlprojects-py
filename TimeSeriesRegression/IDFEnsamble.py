@@ -43,7 +43,7 @@ def load__single_file(file):
 
 
 def merge_a_df(base_df, model_name, file_name, command, feilds_to_use, merge_feilds):
-    new_df = load_file(model_name, command, file_name, fields=feilds_to_use+ merge_feilds)
+    new_df = load_file(model_name, command, file_name, fields=merge_feilds + feilds_to_use)
     print "merging ", model_name, " feilds=", list(new_df)
     rmap = {f: model_name+"."+f for f in feilds_to_use}
     new_df.rename(columns=rmap, inplace=True)
@@ -63,7 +63,6 @@ def load__model_results_from_store(model_names_list, name, use_agr_features=True
 
     df_list = []
     for f in files_list:
-
         cmd = extract_regx('[0-9]+', f)
         if name == "model_forecasts":
             fname = "test"
@@ -89,6 +88,13 @@ def load__model_results_from_store(model_names_list, name, use_agr_features=True
         df_list.append(base_df)
 
     if len(df_list) > 0:
+        for df in df_list:
+            print "concat", list(df)
+        fileds = list(df_list[0])
+        df_list = [dft[fileds] for dft in df_list]
+        for df in df_list:
+            print "concat after", list(df)
+
         final_df = pd.concat(df_list)
 
         #this is criticial as otherwise few stores will depend all in testing data
@@ -211,13 +217,12 @@ def do_ensamble(conf, forecasts, model_index_by_accuracy, y_actual, submissions_
     #avg_models(conf, models, forecasts, y_actual_test, test_df, submission_forecasts=kaggale_predicted_list, submission_ids=ids, sub_df=testDf)
 
 
-def find_best_forecast(forecasts, y_actual):
+def find_best_forecast(forecasts_df, y_actual):
     start = time.time()
     forecasts_rmsle = []
-    for i in range(forecasts.shape[1]):
-        rmsle = calculate_accuracy("vote_forecast "+ str(i), y_actual, forecasts[:, i])
+    for f in list(forecasts_df):
+        rmsle = calculate_accuracy(f + " full data", y_actual, forecasts_df[f])
         forecasts_rmsle.append(rmsle)
-        print "[full data] forecast "+str(i)+" rmsle=", rmsle, " stats\n"
 
     model_index_by_acc = np.argsort(forecasts_rmsle)
     print "[IDF]full data rmsle=", forecasts_rmsle
@@ -226,9 +231,8 @@ def find_best_forecast(forecasts, y_actual):
     print "[IDF]best single model forecast is", best_findex, "rmsle=", forecasts_rmsle[best_findex]
     print_time_took(start, "find_best_forecast")
 
-    print "best single model forecast stats\n", basic_stats_as_str(forecasts[best_findex])
-    print "y actual\n", basic_stats_as_str(y_actual)
-
+    #print "best single model forecast stats\n", basic_stats_as_str(forecasts[best_findex])
+    #print "y actual\n", basic_stats_as_str(y_actual)
     return model_index_by_acc
 
 
@@ -282,7 +286,7 @@ def run_ensambles_on_multiple_models(command):
     subdf, submissions_ids = load__model_results_from_store(model_list, "model_submissions")
     submissions = subdf.values
 
-    model_index_by_accuracy = find_best_forecast(forecasts, y_actual)
+    model_index_by_accuracy = find_best_forecast(forecasts_df, y_actual)
 
     print_mem_usage("before simple ensamble")
     do_ensamble(conf, forecasts, model_index_by_accuracy, y_actual, submissions_ids ,submissions)

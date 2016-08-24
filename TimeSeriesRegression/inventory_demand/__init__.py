@@ -195,7 +195,7 @@ def load_file(model_type, command, name, throw_error=True, fields=None):
             return None
     print "loading", submission_file
     if fields is not None:
-        return  pd.read_csv(submission_file, usecols=fields)
+        return pd.read_csv(submission_file, usecols=fields)
     else:
         return  pd.read_csv(submission_file)
 
