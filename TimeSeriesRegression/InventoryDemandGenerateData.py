@@ -20,7 +20,7 @@ from sklearn.linear_model import LinearRegression
 from inventory_demand import *
 from mltools import *
 #from mlpreprocessing import feather2df
-from inventory_demand_features import generate_all_features
+from inventory_demand_features import *
 
 from inventory_demand_ensambles import *
 
@@ -77,7 +77,7 @@ conf.analysis_type = analysis_type
 
 df = df[df['Producto_ID'] > 0]
 
-df = df.sample(frac=1)
+#df = df.sample(frac=1)
 
 
 #df['unit_prize'] = df['Venta_hoy']/df['Venta_uni_hoy']
@@ -116,12 +116,14 @@ if analysis_type == 'agr_cat':
 elif analysis_type == 'all_features':
     train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features = generate_all_features(conf, train_df,
                                                                                                test_df, testDf, y_actual_test)
+elif analysis_type == 'fg_stats':
+    train_df, test_df, testDf = add_five_grouped_stats(train_df,test_df, testDf)
 else:
     raise ValueError("Unknown analysis type" + analysis_type)
 
 
-print "after features", test_df['Semana'].unique(), test_df.shape
-print "after features bd", test_df_before_dropping_features['Semana'].unique(), test_df_before_dropping_features.shape
+#print "after features", test_df['Semana'].unique(), test_df.shape
+#print "after features bd", test_df_before_dropping_features['Semana'].unique(), test_df_before_dropping_features.shape
 
 prep_time = time.time()
 

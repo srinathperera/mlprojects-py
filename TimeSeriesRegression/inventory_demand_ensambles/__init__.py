@@ -333,6 +333,8 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     start = time.time()
 
     forecasting_feilds = list(blend_forecasts_df)
+    print "Using features", forecasting_feilds
+
     X_all = blend_forecasts_df.values
     sub_X_all = submission_forecasts_df.values
 

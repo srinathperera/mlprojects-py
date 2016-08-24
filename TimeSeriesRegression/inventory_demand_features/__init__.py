@@ -628,3 +628,98 @@ def select_from_all_features():
     np.random.shuffle(features)
     features = features[:200]
     return features
+
+
+def five_group_stats(group):
+    sales = np.array(group['Demanda_uni_equil'].values)
+    samana = group['Semana'].values
+    max_index = np.argmax(samana)
+    returns = group['Dev_proxima'].mean()
+    #this is signature on when slaes happens
+
+    sorted_samana_index = np.argsort(samana)
+    sorted_sales = sales[sorted_samana_index]
+
+    signature = np.sum([ math.pow(2,s-3) for s in samana])
+    kurtosis = fillna_and_inf(scipy.stats.kurtosis(sorted_sales))
+    hmean = fillna_and_inf(scipy.stats.hmean(np.where(sales <0, 0.1, sales)))
+    entropy = fillna_and_inf(scipy.stats.entropy(sales))
+    std = fillna_and_inf(np.std(sales))
+    N = len(sales)
+    ci = fillna_and_inf(calculate_ci(std, N))
+    corr = fillna_and_inf(scipy.stats.pearsonr(range(N), sorted_sales)[0])
+
+    autocorr_list = np.correlate(sorted_sales, sorted_sales, mode='same')
+    mean_autocorr = fillna_and_inf(np.mean(autocorr_list))
+
+    mean = np.mean(sales)
+
+    mean_corss_points_count = 0
+    if N > 1:
+        high_than_mean = mean < sorted_sales[0]
+        for i in range(1,N):
+            if (high_than_mean and mean > sorted_sales[i]) or (not high_than_mean and mean > sorted_sales[i]):
+                mean_corss_points_count += mean_corss_points_count
+            high_than_mean = mean < sorted_sales[i]
+
+    return mean, N, std, np.median(sales), sales[max_index], samana[max_index], \
+           returns, signature, kurtosis, hmean, entropy, ci, corr, mean_autocorr, mean_corss_points_count
+
+
+def add_five_grouped_stats(train_df, test_df, testDf):
+    start_ts = time.time()
+
+    #we first remove any entry that has only returns
+    sales_df = train_df[train_df['Demanda_uni_equil'] > 0]
+    grouped = sales_df.groupby(['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+
+    slope_data_df = grouped.apply(five_group_stats)
+    sales_data_df = slope_data_df.to_frame("sales_data")
+    sales_data_df.reset_index(inplace=True)
+    valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy", "ci", "corr", "mean_autocorr", "mean_corss_points_count"])
+    find_NA_rows_percent(valuesDf, "valuesDf base stats")
+
+    #valuesDf = expand_array_feild_and_add_df(sales_data_df, 'sales_data', ["sales_count"])
+
+    #now we merge the data
+    sale_data_aggr_time = time.time()
+
+    train_df_m = pd.merge(train_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    default_sales_mean = train_df_m['mean_sales'].mean()
+    train_df_m['mean_sales'].fillna(default_sales_mean, inplace=True)
+    train_df_m['median_sales'].fillna(default_sales_mean, inplace=True)
+    train_df_m['last_sale'].fillna(default_sales_mean, inplace=True)
+    train_df_m.fillna(0, inplace=True)
+
+    test_df_m = pd.merge(test_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+    test_df_m['mean_sales'].fillna(default_sales_mean, inplace=True)
+    test_df_m['median_sales'].fillna(default_sales_mean, inplace=True)
+    test_df_m['last_sale'].fillna(default_sales_mean, inplace=True)
+    test_df_m.fillna(0, inplace=True)
+
+    if testDf is not None:
+        testDf = pd.merge(testDf, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
+        testDf['mean_sales'].fillna(default_sales_mean, inplace=True)
+        testDf['median_sales'].fillna(default_sales_mean, inplace=True)
+        testDf['last_sale'].fillna(default_sales_mean, inplace=True)
+        testDf.fillna(0, inplace=True)
+
+    '''
+    #these are top aggrigate features
+    default_demand_stats = DefaultStats(mean=train_df['Demanda_uni_equil'].mean(), count=train_df['Demanda_uni_equil'].count(),
+                                        stddev=train_df['Demanda_uni_equil'].std())
+    train_df_m, test_df_m, testDf = addFeildStatsAsFeatures(train_df_m, test_df_m,'Agencia_ID', testDf, default_demand_stats,
+                                                        FeatureOps(stddev=True))
+    train_df_m, test_df_m, testDf = join_multiple_feild_stats(train_df_m, test_df_m, testDf, ['Ruta_SAK', 'Cliente_ID'],
+                'Demanda_uni_equil', "clients_combined", default_demand_stats, FeatureOps(kurtosis=True, stddev=True))
+    train_df_m, test_df_m, testDf = addFeildStatsAsFeatures(train_df_m, test_df_m,'Producto_ID', testDf, default_demand_stats,
+                                                            FeatureOps(stddev=True))
+    '''
+    train_data_feilds_to_drop = ['Venta_uni_hoy', 'Venta_hoy', 'Dev_uni_proxima', 'Dev_proxima']
+    train_df_m, test_df_m, _ = drop_feilds(train_df_m, test_df_m, None, train_data_feilds_to_drop)
+
+    slopes_time = time.time()
+
+    print "Add Sales Data took %f (%f, %f)" %(slopes_time - start_ts, sale_data_aggr_time-start_ts, slopes_time-sale_data_aggr_time)
+    return train_df_m, test_df_m, testDf

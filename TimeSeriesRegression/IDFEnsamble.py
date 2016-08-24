@@ -89,7 +89,7 @@ def load_data_for_each_run(model_name, file_name, feild_names=None):
 
 
         #this is criticial as otherwise few stores will depend all in testing data
-        print "final feilds", list(final_df)
+        #print "final feilds", list(final_df)
         #addtional_data = final_df[addtional_data_feild].values.copy()
         #final_df = drop_feilds_1df(final_df, [addtional_data_feild])
 
@@ -109,7 +109,10 @@ def load_all_forecast_data(model_names_list, file_name):
 
     basedf = load_data_for_each_run('fg_stats', fname)
     first_actual_feild = None
+    data_size = 0
+
     feilds_to_remove = []
+    forecast_data_feilds = []
 
     for model_name in model_names_list:
         forecast_df = load_data_for_each_run(model_name, file_name, merge_feilds + forecast_feilds + [addtional_data_feild])
@@ -118,25 +121,33 @@ def load_all_forecast_data(model_names_list, file_name):
         forecast_df.rename(columns=rmap, inplace=True)
 
         basedf = pd.merge(basedf, forecast_df, how='left', on=merge_feilds)
+        basedf.fillna(0, inplace=True)
 
         y_feild =  model_name +"."+ addtional_data_feild
 
-        for f in forecast_feilds:
-            ff = model_name +"."+ f
-            calculate_accuracy(ff + " full data", basedf[y_feild].values, basedf[ff].values)
+        if addtional_data_feild == 'actual':
+            for f in forecast_feilds:
+                ff = model_name +"."+ f
+                forecast_data_feilds.append(ff)
+                calculate_accuracy(ff + " loading", basedf[y_feild].values, basedf[ff].values)
 
         feilds_to_remove.append(y_feild)
         if first_actual_feild is None:
             first_actual_feild = y_feild
+            data_size = forecast_df.shape[0]
         else:
+            if forecast_df.shape[0] != data_size:
+                raise ValueError("data sizes does not match" + forecast_df.shape[0] + " != " + data_size)
             if not np.allclose(basedf[y_feild].values, basedf[first_actual_feild].values):
                 raise ValueError("additiona feild not aligned " + str(basedf[y_feild].values[:10]), basedf[first_actual_feild].values[:10])
 
-    additional_feild_data = basedf[first_actual_feild].values
-    basedf = drop_feilds_1df(basedf, feilds_to_remove)
-
+    #important, if not shufflued some products will end up in the test data fully
     basedf = basedf.sample(frac=1)
-    return basedf, additional_feild_data
+
+    additional_feild_data = basedf[first_actual_feild].values
+    basedf = drop_feilds_1df(basedf, feilds_to_remove + merge_feilds)
+
+    return basedf, additional_feild_data, forecast_data_feilds
 
 
 def load__model_results_from_store(model_names_list, name, use_agr_features=True):
@@ -312,7 +323,7 @@ def find_best_forecast(forecasts_df, y_actual):
     start = time.time()
     forecasts_rmsle = []
     for f in list(forecasts_df):
-        rmsle = calculate_accuracy(f + " full data", y_actual, forecasts_df[f].values)
+        rmsle = calculate_accuracy(f + " find best", y_actual, forecasts_df[f].values)
         forecasts_rmsle.append(rmsle)
 
     model_index_by_acc = np.argsort(forecasts_rmsle)
@@ -381,14 +392,15 @@ def run_ensambles_on_multiple_models(command):
     '''
 
     model_list = ['agr_cat', 'fg-vhmean-product']
-    forecasts_df, y_actual = load_all_forecast_data(model_list, "model_forecasts")
-    forecasts = forecasts_df.values
+    forecasts_df, y_actual, forecast_feilds = load_all_forecast_data(model_list, "model_forecasts")
+    forecasts = forecasts_df[forecast_feilds].values
 
     #load submission data
-    subdf, submissions_ids = load_all_forecast_data(model_list, "model_submissions")
-    submissions = subdf.values
+    subdf, submissions_ids, _ = load_all_forecast_data(model_list, "model_submissions")
+    submissions = subdf[forecast_feilds].values
 
-    model_index_by_accuracy = find_best_forecast(forecasts_df, y_actual)
+    print "Using forecasting feilds", forecast_feilds
+    model_index_by_accuracy = find_best_forecast(forecasts_df[forecast_feilds], y_actual)
 
     print_mem_usage("before simple ensamble")
     do_ensamble(conf, forecasts, model_index_by_accuracy, y_actual, submissions_ids ,submissions)
