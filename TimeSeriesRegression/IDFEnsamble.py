@@ -107,7 +107,8 @@ def load_all_forecast_data(model_names_list, file_name):
         fname = "sub"
         addtional_data_feild = 'id'
 
-    basedf = load_data_for_each_run('fg_stats', fname)
+    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
     first_actual_feild = None
     data_size = 0
 
