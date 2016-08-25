@@ -50,6 +50,12 @@ if train_df is None or test_df is None or testDf is None:
 else:
     print "reusing train data", analysis_type
 
+if conf.command == 0:
+    size = int(train_df.shape[0]*0.6)
+    train_df = train_df[:size]
+    y_actual_train = y_actual_train[:size]
+
+
 #drop five feild
 feilds_to_drop = ['Canal_ID','Cliente_ID','Producto_ID', 'Agencia_ID', 'Ruta_SAK']
 
