@@ -98,7 +98,7 @@ blend_features = feilds_to_drop + ['Semana']
 
 if load_all_data:
     #load first dataset
-    train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True)
+    train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True, load_sub_id=True)
     print "reusing train data", analysis_type, "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
 
     print_mem_usage("after data set 1")
@@ -119,7 +119,7 @@ else:
     #following are join features
     feilds_in_first_ds = feilds_in_first_ds + blend_features
 
-    train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True, fields=feilds_in_first_ds)
+    train_df, test_df, testDf, y_actual_train, y_actual_test = load_train_data('all_features', conf.command, throw_error=True, fields=feilds_in_first_ds, load_sub_id=True)
     print "reusing train data", analysis_type, "X",train_df.shape, "Y", y_actual_train.shape, "test_df",test_df.shape, "Y test", y_actual_test.shape
 
     print_mem_usage("after data set 1")

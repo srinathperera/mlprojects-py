@@ -870,8 +870,8 @@ def shaffle_data():
     ]
 
     merge_feilds = ['Semana', 'Agencia_ID' , 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID']
-    for command in range(4):
-    #for command in [8]:
+    #for command in range(4):
+    for command in [8]:
         ordered_data = pd.concat([load_file('all_features', command, f) for f in ['train', 'test']])
         df_raw, _ = read_datafiles(command, False)
         shuffled_df = pd.merge(ordered_data[merge_feilds], df_raw, how='left', on=merge_feilds)
