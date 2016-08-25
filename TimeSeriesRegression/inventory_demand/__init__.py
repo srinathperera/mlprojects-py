@@ -253,7 +253,7 @@ def load_train_data(model_type, command, throw_error=False, fields=None, load_su
     test_df = load_file(model_type, command, 'test', throw_error=throw_error, fields=fields)
     if load_sub_id:
         if fields is None:
-            fields = ['id']
+            fields = None
         else:
             fields = fields + ['id']
     sub_df = load_file(model_type, command, 'sub', throw_error=throw_error, fields=fields)
