@@ -107,8 +107,11 @@ def load_all_forecast_data(model_names_list, file_name):
         fname = "sub"
         addtional_data_feild = 'id'
 
-    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+    #basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
+    #                "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["sales_count", "sales_stddev",
+                    "returns", "signature", "kurtosis", "hmean", "entropy"])
+
     first_actual_feild = None
     data_size = 0
 
@@ -419,7 +422,7 @@ def run_ensambles_on_multiple_models(command):
     avg_models(conf, forecasts_with_blend_df, y_actual, subdf, submission_ids=submissions_ids)
 
     print_mem_usage("before simple ensamble")
-    do_ensamble(conf, forecasts_only_df, top_forecast_feilds, y_actual, submissions_ids ,submissions_only_df)
+    #do_ensamble(conf, forecasts_only_df, top_forecast_feilds, y_actual, submissions_ids ,submissions_only_df)
     #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
     #             blend_data, blend_data_submission)
     #print_mem_usage("avg models")
