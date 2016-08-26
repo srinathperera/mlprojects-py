@@ -529,7 +529,7 @@ def select_2tier_features():
         features.append(flist)
 
     np.random.shuffle(features)
-    features = features[:10]
+    #features = features[:10]
     return features
 
 
