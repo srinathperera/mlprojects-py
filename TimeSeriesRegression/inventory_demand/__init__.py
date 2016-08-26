@@ -1593,12 +1593,16 @@ def get_models4ensamble(conf):
     # see http://scikit-learn.org/stable/modules/linear_model.html
 
     #0 was too big to run with depth set to 1, and 1 was overfitting a bit
+    '''
     if conf.command == 0 or conf.command == 1:
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":3, "eta":0.1, "min_child_weight":5,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
     else:
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":10, "eta":0.1, "min_child_weight":8,
             "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
+    '''
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":10, "eta":0.1, "min_child_weight":8,
+        "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
 
     models = [
                 #DLModel(conf),

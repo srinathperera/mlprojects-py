@@ -107,10 +107,10 @@ def load_all_forecast_data(model_names_list, file_name):
         fname = "sub"
         addtional_data_feild = 'id'
 
-    #basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
-    #                "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
-    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["sales_count", "sales_stddev",
-                    "returns", "signature", "kurtosis", "entropy"])
+    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+    #basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["sales_count", "sales_stddev",
+    #                "returns", "signature", "kurtosis", "entropy"])
 
     first_actual_feild = None
     data_size = 0
@@ -406,7 +406,7 @@ def run_ensambles_on_multiple_models(command):
     top_forecast_feilds = find_best_forecast(forecasts_only_df, y_actual)
 
     #do the second level forecast
-    #avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids)
+    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids)
 
     print_mem_usage("before simple ensamble")
     mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \
@@ -414,7 +414,7 @@ def run_ensambles_on_multiple_models(command):
 
     #to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
 
-
+    '''
     new_column_list = list(forecasts_with_blend_df) + ['mean_forecast', 'best_pair_forecast']
     forecasts_with_blend_df = pd.DataFrame(np.column_stack([forecasts_with_blend_df.values, mean_ensmbale_forecast, best_pair_ensmbale_forecast]),
                                                            columns=new_column_list)
@@ -422,6 +422,7 @@ def run_ensambles_on_multiple_models(command):
                                                            columns=new_column_list)
 
     avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids)
+    '''
 
     #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
     #             blend_data, blend_data_submission)
