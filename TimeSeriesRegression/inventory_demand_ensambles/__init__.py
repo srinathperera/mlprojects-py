@@ -380,7 +380,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
                                                           xgb_params=xgb_params,num_rounds=20)
         xgb_forecast = model.predict(X_test)
         rmsle = calculate_accuracy("[IDF]xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
-        ensambles.append((rmsle, model, "xgboost ensamble"))
+        ensambles.append((rmsle, model, str(xgb_params) + "xgboost ensamble"))
 
         best_ensamble_index = np.argmin([t[0] for t in ensambles])
         best_ensamble = ensambles[best_ensamble_index][1]

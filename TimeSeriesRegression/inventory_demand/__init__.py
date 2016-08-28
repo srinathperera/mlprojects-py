@@ -1639,7 +1639,7 @@ def get_models4xgboost_tunning(conf, case=4):
         eta = 0.1
         maxdepth = 10
         min_child_weight = 5
-        xgb_params_list = create_xgboost_params(0, maxdepth=[maxdepth], eta=[eta], min_child_weight=[min_child_weight],
+        xgb_params_list = create_xgboost_params(0, maxdepth=[10, 15], eta=[eta], min_child_weight=[5, 10],
             gamma=[0.5, 0.3, 0.1], subsample=[0.8], colsample_bytree=[0.8], reg_alpha=[0], reg_lambda=[0])
     elif case == 3:
         #Tune subsample and colsample_bytree
