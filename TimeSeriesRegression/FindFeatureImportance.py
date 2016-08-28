@@ -48,7 +48,7 @@ def expand_features(base_df, feild_name):
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.command = command
 
-singles_features = ['clients_combined_dp_Mean', 'clients_combined_vh_Mean', 'Agencia_ID_Demanda_uni_equil_Mean',
+singles_features = ['Semana', 'clients_combined_dp_Mean', 'clients_combined_vh_Mean', 'Agencia_ID_Demanda_uni_equil_Mean',
                     'Producto_ID_Demanda_uni_equil_Mean', 'clients_combined_Mean', 'Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Venta_hoy_Mean',
                     'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Dev_proxima_Mean', 'Canal_ID_Demanda_uni_equil_Mean', 'Canal_ID_Venta_hoy_Mean',
                     'Canal_ID_Dev_proxima_Mean', 'Ruta_SAK_Demanda_uni_equil_Mean' 'Ruta_SAK_Venta_hoy_Mean', 'Ruta_SAK_Dev_proxima_Mean', 'weight', 'pieces',

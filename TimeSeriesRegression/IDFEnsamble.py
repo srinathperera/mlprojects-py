@@ -409,12 +409,14 @@ def run_ensambles_on_multiple_models(command):
     top_forecast_feilds = find_best_forecast(forecasts_only_df, y_actual)
 
     #do the second level forecast
-    models = get_models4xgboost_tunning(conf, case=3)
-    for m in models:
-        avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids,
-                   xgb_params=m.xgb_params, do_cv=False)
+    #models = get_models4xgboost_tunning(conf, case=3)
+    #for m in models:
+    #    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids,
+    #               xgb_params=m.xgb_params, do_cv=False)
 
-    #avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids)
+    xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
+                  'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 15, 'gamma': 0.3, 'lambda': 0}
+    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params)
 
     print_mem_usage("before simple ensamble")
     #mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \
