@@ -107,10 +107,11 @@ def load_all_forecast_data(model_names_list, file_name):
         fname = "sub"
         addtional_data_feild = 'id'
 
-    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+    #basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
+    #                "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
     #basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["sales_count", "sales_stddev",
     #                "returns", "signature", "kurtosis", "entropy"])
+    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["signature", "kurtosis", "hmean", "entropy", "sales_count"])
 
     first_actual_feild = None
     data_size = 0
@@ -141,12 +142,13 @@ def load_all_forecast_data(model_names_list, file_name):
             data_size = forecast_df.shape[0]
         else:
             if forecast_df.shape[0] != data_size:
-                raise ValueError("data sizes does not match" + forecast_df.shape[0] + " != " + data_size)
+                raise ValueError("data sizes does not match for " + model_name + " " + str(forecast_df.shape[0]) + " != " + str(data_size))
             if not np.allclose(basedf[y_feild].values, basedf[first_actual_feild].values):
                 raise ValueError("additiona feild not aligned " + str(basedf[y_feild].values[:10]), basedf[first_actual_feild].values[:10])
 
     #important, if not shufflued some products will end up in the test data fully
-    basedf = basedf.sample(frac=1)
+    #basedf = basedf.sample(frac=1)
+    basedf = basedf.sample(frac=0.25)
 
     additional_feild_data = basedf[first_actual_feild].values
     basedf = drop_feilds_1df(basedf, feilds_to_remove + merge_feilds)
@@ -393,7 +395,8 @@ def run_ensambles_on_multiple_models(command):
     '''
 
     #model_list = ['agr_cat', 'fg-vhmean-product']
-    model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat"]
+    model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency"]
+    #features-agency
 
     forecasts_with_blend_df, y_actual, forecast_feilds = load_all_forecast_data(model_list, "model_forecasts")
     forecasts_only_df = forecasts_with_blend_df[forecast_feilds]
@@ -406,11 +409,16 @@ def run_ensambles_on_multiple_models(command):
     top_forecast_feilds = find_best_forecast(forecasts_only_df, y_actual)
 
     #do the second level forecast
+    models = get_models4xgboost_tunning(conf, case=1)
+    for m in models:
+        avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids,
+                   xgb_params=m.xgb_params, do_cv=False)
+
     avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids)
 
     print_mem_usage("before simple ensamble")
-    mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \
-        do_ensamble(conf, forecasts_only_df, top_forecast_feilds, y_actual, submissions_ids ,submissions_only_df)
+    #mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \
+    #    do_ensamble(conf, forecasts_only_df, top_forecast_feilds, y_actual, submissions_ids ,submissions_only_df)
 
     #to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
 

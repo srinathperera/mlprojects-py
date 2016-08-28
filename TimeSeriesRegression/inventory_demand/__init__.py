@@ -1623,10 +1623,8 @@ def get_models4ensamble(conf):
     return models
 
 
-def get_models4xgboost_tunning(conf):
+def get_models4xgboost_tunning(conf, case=4):
     #http://www.voidcn.com/blog/mmc2015/article/p-5751771.html
-    case = 4
-
     if case == 0:
         xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":5, "eta":0.1, "min_child_weight":1,
             "subsample":0.8, "nthread":4, "colsample_bytree":0.8, "num_parallel_tree":1, 'gamma':0}

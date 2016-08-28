@@ -73,6 +73,11 @@ else:
         flist = core + ['agc_product_Mean', 'agc_productci', 'agc_product_median'] + ['weight', 'pieces', 'has_choco', 'has_vanilla', 'has_multigrain']
     elif feature_set == "features-agency": #0.5737
         flist = core + ['Agencia_ID_Demanda_uni_equil_Mean', 'Agencia_ID_Demanda_uni_equilci', 'Agencia_ID_Demanda_uni_equil_median', 'Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Dev_proximaci', 'Agencia_ID_Dev_proxima_median', 'Agencia_ID_Venta_hoy_Mean', 'Agencia_ID_Venta_hoyci', 'Agencia_ID_Venta_hoy_median']
+    elif feature_set == "cc-cnn-agc": #0.492059235749
+        flist = ['clients_combined_Mean', 'clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median', 'clients_combined_vh_Mean', 'clients_combined_vhci', 'clients_combined_vh_median', 'clients_combined_dp_Mean', 'clients_combined_dpci', 'clients_combined_dp_median', 'client_nn_Mean', 'client_nnci', 'client_nn_median', 'client_nn_vh_Mean', 'client_nn_vhci', 'client_nn_vh_median', 'client_nn_dp_Mean', 'client_nn_dpci', 'client_nn_dp_median', 'agc_product_Mean',
+                 'agc_productci', 'agc_product_median', 'weight', 'pieces', 'has_choco', 'has_vanilla', 'has_multigrain']
+    elif feature_set == "misc-features": #0.585399746915
+        flist = ['weight', 'pieces', 'product_word_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equilci', 'agc_product_Mean', 'agc_productci', 'agc_product_median', 'routes_combined_Mean', 'routes_combinedci', 'routes_combined_median']
     else:
         raise ValueError("Unknown feature set "+ feature_set)
 

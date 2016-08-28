@@ -327,7 +327,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     #return xgb_forecast, rmsle
 
 
-def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None):
+def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None, xgb_params=None, do_cv=True):
     print "start avg models"
     start = time.time()
 
@@ -370,11 +370,14 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     do_xgb = True
 
     if do_xgb:
-        xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
-        model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
+        if xgb_params is None:
+            xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
+        if do_cv:
+            model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
                                 use_sklean=False, xgb_params=xgb_params)
-        #model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-        #                                                  xgb_params=xgb_params,num_rounds=20)
+        else:
+            model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
+                                                          xgb_params=xgb_params,num_rounds=20)
         xgb_forecast = model.predict(X_test)
         rmsle = calculate_accuracy("[IDF]xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
         ensambles.append((rmsle, model, "xgboost ensamble"))

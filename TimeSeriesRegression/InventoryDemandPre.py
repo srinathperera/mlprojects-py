@@ -879,14 +879,14 @@ def shaffle_data():
         shuffled_df.to_csv(data_files[command][0], index=False)
 
 
-shaffle_data()
+#shaffle_data()
 #test_merge_datasets()
 #find_similar_products()
 #analyze_parameter_sweep()
 #create_random_file()
 
 #parse_feature_importance(file='/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore4.txt')
-#parse_feature_explore_outputs()
+parse_feature_explore_outputs()
 
 #analyze_error()
 

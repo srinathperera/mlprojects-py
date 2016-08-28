@@ -480,11 +480,12 @@ def parse_feature_explore_outputs():
     #data_df2 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore.txt', feature_importance_map)
     #data_df3 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore2.txt', feature_importance_map)
     #data_df4 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore3.txt', feature_importance_map)
-    data_df5 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore4.txt', feature_importance_map)
+    #data_df5 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore4.txt', feature_importance_map)
+    data_df6 = parse_feature_explore_output('/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore5.txt', feature_importance_map)
 
 
-    #data_df = pd.concat([data_df1, data_df2, data_df3, data_df4])
-    data_df = data_df5
+    #data_df = pd.concat([data_df1, data_df2, data_df3, data_df4, data_df5])
+    data_df = data_df6
 
     data_df = data_df.sort_values(by=['rmsle'])
     print data_df.head(20)
@@ -560,6 +561,8 @@ def select_from_all_features():
         ['Producto_ID_Demanda_uni_equil_Mean', 'Producto_ID_Demanda_uni_equilci', 'Producto_ID_Demanda_uni_equil_median', 'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Venta_hoyci', 'Producto_ID_Venta_hoy_median'],
         ['clients_combined_kurtosis', 'clients_combinedci', 'clients_combined_median', 'clients_combined_Mean']
     ]
+
+
 
 
     groups2 = [
