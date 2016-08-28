@@ -379,8 +379,8 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
             model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
                                                           xgb_params=xgb_params,num_rounds=20)
         xgb_forecast = model.predict(X_test)
-        rmsle = calculate_accuracy("[IDF]xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
-        ensambles.append((rmsle, model, str(xgb_params) + "xgboost ensamble"))
+        rmsle = calculate_accuracy(str(xgb_params) + "[IDF]xgb_forecast", y_actual_test, retransfrom_from_log(xgb_forecast))
+        ensambles.append((rmsle, model, "xgboost ensamble"))
 
         best_ensamble_index = np.argmin([t[0] for t in ensambles])
         best_ensamble = ensambles[best_ensamble_index][1]
