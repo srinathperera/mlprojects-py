@@ -491,7 +491,14 @@ def avg_models_with_ml(conf, blend_forecasts_df, y_actual, submission_forecasts_
     save_submission_file(submission_file, submission_ids, submission_forecast)
 
 
-def find_best_forecast_per_product(data_df, y_actual, sub_data_df, product_data, product_data_submission, submission_ids):
+def find_best_forecast_per_product(data_df, y_actual, sub_data_df, product_data, product_data_submission, submission_ids, frac=0.25):
+    if frac < 1:
+        full_data_size = data_df.shape[0]
+        sample_size = int(full_data_size*frac)
+        data_df = data_df.head(sample_size)
+        product_data = product_data[:sample_size]
+        y_actual = y_actual[:sample_size]
+
     feilds = {k: data_df[k] for k in list(data_df)}
     feilds['Producto_ID'] = pd.Series(product_data)
     data_df = pd.DataFrame(feilds)
