@@ -398,14 +398,14 @@ def run_ensambles_on_multiple_models(command):
 
     #model_list = ['agr_cat', 'fg-vhmean-product']
     #model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc"]
-    model_list = ['nn_features-product', "cc-cnn-agc"]
+    model_list = ['nn_features-product', "cc-cnn-agc", "features-agc-pp", "agr_cat"]
     #features-agency
 
     forecasts_with_blend_df, y_actual, forecast_feilds, product_data = load_all_forecast_data(model_list, "model_forecasts")
     forecasts_only_df = forecasts_with_blend_df[forecast_feilds]
 
     #load submission data
-    sub_with_blend_df, submissions_ids, _ , _ = load_all_forecast_data(model_list, "model_submissions")
+    sub_with_blend_df, submissions_ids, _ , product_data_submission = load_all_forecast_data(model_list, "model_submissions")
     submissions_only_df = sub_with_blend_df[forecast_feilds]
 
     '''
@@ -433,7 +433,12 @@ def run_ensambles_on_multiple_models(command):
     avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params, frac=0.5)
     '''
 
-    find_best_forecast_per_product(forecasts_with_blend_df, y_actual, product_data)
+    per_product_forecast, per_product_forecast_submission = find_best_forecast_per_product(forecasts_with_blend_df, y_actual, sub_with_blend_df,
+                                                                                           product_data, product_data_submission, submissions_ids)
+    forecasts_with_blend_df['ppf'] = per_product_forecast
+    sub_with_blend_df['ppf'] = per_product_forecast_submission
+    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, frac=0.5)
+
 
     print_mem_usage("after models")
     #mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \

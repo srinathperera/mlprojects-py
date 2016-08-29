@@ -491,7 +491,7 @@ def avg_models_with_ml(conf, blend_forecasts_df, y_actual, submission_forecasts_
     save_submission_file(submission_file, submission_ids, submission_forecast)
 
 
-def find_best_forecast_per_product(data_df, y_actual, product_data):
+def find_best_forecast_per_product(data_df, y_actual, sub_data_df, product_data, product_data_submission, submission_ids):
     data_df =  pd.DataFrame(np.column_stack([data_df.values, product_data.values]), columns=list(data_df)+['Producto_ID'])
     forecast_feilds = [f for f in list(data_df) if "." in f]
 
@@ -518,7 +518,6 @@ def find_best_forecast_per_product(data_df, y_actual, product_data):
     print basic_stats_as_str(best_forecast_index)
 
     forecast_size = best_forecast_index.shape[0]
-    per_product_forecast = np.zeros(forecast_size)
 
     '''
     for i in range(forecast_size):
@@ -529,3 +528,20 @@ def find_best_forecast_per_product(data_df, y_actual, product_data):
 
     per_product_forecast = [forecast_options[i, int(best_forecast_index[i])] for i in range(forecast_size)]
     calculate_accuracy("best_forecast_per_product", y_actual, per_product_forecast)
+
+    sub_data_df =  pd.DataFrame(np.column_stack([sub_data_df.values, product_data_submission.values]), columns=list(sub_data_df)+['Producto_ID'])
+    sub_data_df = pd.merge(sub_data_df, best_forecast_index_df, how='left', on=['Producto_ID'])
+    best_forecast_index_sub = fillna_and_inf(sub_data_df['forecast_index'].values)
+    forecast_options_sub = fillna_and_inf(sub_data_df[forecast_feilds].values)
+    per_product_forecast_submission = [forecast_options_sub[i, int(best_forecast_index_sub[i])] for i in range(forecast_options_sub.shape[0])]
+
+    to_save = np.column_stack((submission_ids, per_product_forecast_submission))
+    to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+    to_saveDf = to_saveDf.fillna(0)
+    to_saveDf["id"] = to_saveDf["id"].astype(int)
+    submission_file = 'per_product_submission.csv'
+    to_saveDf.to_csv(submission_file, index=False)
+    print "Best Ensamble Submission Stats", submission_file
+
+    return per_product_forecast, per_product_forecast_submission
+
