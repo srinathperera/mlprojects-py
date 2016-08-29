@@ -413,7 +413,7 @@ def run_ensambles_on_multiple_models(command):
     #model_list = ['agr_cat', 'fg-vhmean-product']
     model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc"]
     #model_list = ['nn_features-product', "cc-cnn-agc", "features-agc-pp", "agr_cat"]
-    #features-agency
+    #fg_stats  vh-mean-product fg-vhmean-product
 
     forecasts_with_blend_df, y_actual, forecast_feilds, product_data = load_all_forecast_data(model_list, "model_forecasts")
     forecasts_only_df = forecasts_with_blend_df[forecast_feilds]

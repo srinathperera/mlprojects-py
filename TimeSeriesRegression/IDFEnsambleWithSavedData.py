@@ -82,12 +82,19 @@ def run_ensambles_on_multiple_models(command):
         y_folds.append(y_actual[fs:min(fs+fold_size, data_size)])
 
     submission_forecasts = []
+    xgb_forecasts = []
+    y_actuals = []
+
     for i in range(len(y_folds)):
         train_df = pd.DataFrame(train_folds[i], columns=all_feilds)
         y_data = y_folds[i]
         print "fold data", train_df.shape, y_data.shape
-        _, submission_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df, submission_ids=submissions_ids, do_cv=False)
+        xgb_forecast, y_actual_test, submission_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df, submission_ids=submissions_ids, do_cv=False)
         submission_forecasts.append(submission_forecast)
+        xgb_forecasts.append(xgb_forecast)
+        y_actuals.append(y_actual_test)
+
+    calculate_accuracy("overall avg forecast", np.concatenate(y_actuals), np.concatenate(xgb_forecasts))
 
     all_submission_data = np.column_stack(submission_forecasts)
     avg_submission = np.mean(all_submission_data, axis=1)

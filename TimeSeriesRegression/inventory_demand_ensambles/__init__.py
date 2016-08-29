@@ -411,7 +411,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
 
 
         print "avg_models took ", (time.time() - start), "s"
-        return xgb_forecast_actual, ensamble_forecast
+        return xgb_forecast_actual, y_actual_test, ensamble_forecast
 
 
 
