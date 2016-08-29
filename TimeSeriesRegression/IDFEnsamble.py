@@ -397,7 +397,8 @@ def run_ensambles_on_multiple_models(command):
     '''
 
     #model_list = ['agr_cat', 'fg-vhmean-product']
-    model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc"]
+    #model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc"]
+    model_list = ['nn_features-product', "cc-cnn-agc"]
     #features-agency
 
     forecasts_with_blend_df, y_actual, forecast_feilds, product_data = load_all_forecast_data(model_list, "model_forecasts")
@@ -407,6 +408,7 @@ def run_ensambles_on_multiple_models(command):
     sub_with_blend_df, submissions_ids, _ , _ = load_all_forecast_data(model_list, "model_submissions")
     submissions_only_df = sub_with_blend_df[forecast_feilds]
 
+    '''
     print "Using forecasting feilds", forecast_feilds
     top_forecast_feilds = find_best_forecast(forecasts_only_df, y_actual)
 
@@ -415,6 +417,7 @@ def run_ensambles_on_multiple_models(command):
     #for m in models:
     #    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids,
     #               xgb_params=m.xgb_params, do_cv=False)
+
 
     print_mem_usage("before running models")
     print "new xgb configs 15"
@@ -428,8 +431,9 @@ def run_ensambles_on_multiple_models(command):
     print "new xgb configs 10"
     xgb_params['max_depth'] = 10
     avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params, frac=0.5)
+    '''
 
-    #find_best_forecast_per_product(forecasts_with_blend_df, y_actual, product_data)
+    find_best_forecast_per_product(forecasts_with_blend_df, y_actual, product_data)
 
     print_mem_usage("after models")
     #mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \

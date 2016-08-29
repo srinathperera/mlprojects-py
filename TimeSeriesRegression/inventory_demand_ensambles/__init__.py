@@ -509,8 +509,23 @@ def find_best_forecast_per_product(data_df, y_actual, product_data):
 
     basedf = pd.merge(data_df, best_forecast_index_df, how='left', on=['Producto_ID'])
 
+    print basedf[forecast_feilds].head(10)
+
     best_forecast_index = basedf['forecast_index'].values
     forecast_options = basedf[forecast_feilds].values
+    print forecast_options.shape
+    print best_forecast_index.shape
+    print basic_stats_as_str(best_forecast_index)
 
-    per_product_forecast = [forecast_options[i, best_forecast_index[i]] for i in range(best_forecast_index.shape[0])]
+    forecast_size = best_forecast_index.shape[0]
+    per_product_forecast = np.zeros(forecast_size)
+
+    '''
+    for i in range(forecast_size):
+        findex = best_forecast_index[i]
+        print findex
+        per_product_forecast[i] = forecast_options[i, int(findex)]
+    '''
+
+    per_product_forecast = [forecast_options[i, int(best_forecast_index[i])] for i in range(forecast_size)]
     calculate_accuracy("best_forecast_per_product", y_actual, per_product_forecast)
