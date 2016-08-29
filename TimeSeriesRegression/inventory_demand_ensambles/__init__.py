@@ -327,7 +327,12 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     #return xgb_forecast, rmsle
 
 
-def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None, xgb_params=None, do_cv=True):
+def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None, xgb_params=None, do_cv=True, frac=1.0):
+    if frac < 1:
+        data_size = int(blend_forecasts_df.shape[0]*frac)
+        blend_forecasts_df = blend_forecasts_df[:data_size, :]
+        y_actual = y_actual[:data_size]
+
     print "start avg models"
     start = time.time()
 

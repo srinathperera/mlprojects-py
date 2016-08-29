@@ -147,8 +147,8 @@ def load_all_forecast_data(model_names_list, file_name):
                 raise ValueError("additiona feild not aligned " + str(basedf[y_feild].values[:10]), basedf[first_actual_feild].values[:10])
 
     #important, if not shufflued some products will end up in the test data fully
-    #basedf = basedf.sample(frac=1)
-    basedf = basedf.sample(frac=0.25)
+    basedf = basedf.sample(frac=1)
+    #basedf = basedf.sample(frac=0.25)
 
     additional_feild_data = basedf[first_actual_feild].values
     basedf = drop_feilds_1df(basedf, feilds_to_remove + merge_feilds)
@@ -395,7 +395,7 @@ def run_ensambles_on_multiple_models(command):
     '''
 
     #model_list = ['agr_cat', 'fg-vhmean-product']
-    model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency"]
+    model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc"]
     #features-agency
 
     forecasts_with_blend_df, y_actual, forecast_feilds = load_all_forecast_data(model_list, "model_forecasts")
@@ -414,11 +414,21 @@ def run_ensambles_on_multiple_models(command):
     #    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids,
     #               xgb_params=m.xgb_params, do_cv=False)
 
+    print_mem_usage("before running models")
+    print "new xgb configs 15"
     xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
                   'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 15, 'gamma': 0.3, 'lambda': 0}
-    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params)
+    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params, frac=0.5)
 
-    print_mem_usage("before simple ensamble")
+    print "default xgb configs"
+    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, frac=0.5)
+
+    print "new xgb configs 10"
+    xgb_params['max_depth'] = 10
+    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params, frac=0.5)
+
+
+    print_mem_usage("after models")
     #mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \
     #    do_ensamble(conf, forecasts_only_df, top_forecast_feilds, y_actual, submissions_ids ,submissions_only_df)
 
