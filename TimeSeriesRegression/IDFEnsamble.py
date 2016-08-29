@@ -435,9 +435,9 @@ def run_ensambles_on_multiple_models(command):
 
     per_product_forecast, per_product_forecast_submission = find_best_forecast_per_product(forecasts_with_blend_df, y_actual, sub_with_blend_df,
                                                                                            product_data, product_data_submission, submissions_ids)
-    forecasts_with_blend_df['ppf'] = per_product_forecast
-    sub_with_blend_df['ppf'] = per_product_forecast_submission
-    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, frac=0.5)
+    #forecasts_with_blend_df['ppf'] = per_product_forecast
+    #sub_with_blend_df['ppf'] = per_product_forecast_submission
+    #avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, frac=0.5)
 
 
     print_mem_usage("after models")
