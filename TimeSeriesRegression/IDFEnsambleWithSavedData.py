@@ -68,7 +68,7 @@ def log_centrality_forecasts(conf, forecasts_data, y_actual):
     #calculate_accuracy("log_mean", y_actual, mean_forecast)
 
 def best_pair_forecast(conf, forecasts_data, y_actual, submission_data, submissions_ids):
-    best_pair_ensmbale = BestPairEnsamble(conf)
+    best_pair_ensmbale = BestPairLogEnsamble(conf)
     best_pair_ensmbale_forecast = best_pair_ensmbale.fit(forecasts_data, y_actual)
     best_pair_ensamble_submission = best_pair_ensmbale.predict(submission_data)
     save_submission_file("best_pair_submission.csv", submissions_ids, best_pair_ensamble_submission)
