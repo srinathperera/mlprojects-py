@@ -62,23 +62,13 @@ def run_ensambles_on_multiple_models(command):
     forecasts_with_blend_df, y_actual = load_saved_ensamble_data("model_forecasts")
     sub_with_blend_df, submissions_ids = load_saved_ensamble_data("model_submissions")
 
+    data_feilds = ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
     forecast_feilds = [f for f in list(forecasts_with_blend_df) if "." in f]
+    all_feilds = data_feilds+forecast_feilds
 
     product_data = forecasts_with_blend_df['Producto_ID']
     product_data_submission = sub_with_blend_df['Producto_ID']
-
-
-    kf = KFold(data_df.shape[0], n_folds=fold_count)
-    y_all = data_df[y_feild].values
-
-    folds =[]
-    for train_index, test_index in kf:
-        train_df, test_df = data_df.ix[train_index], data_df.ix[test_index]
-        y_train, y_test = y_all[train_index], y_all[test_index]
-        folds.append((train_df, test_df, y_train,y_test))
-
-    return folds, y_all
-
 
 
     data_size = forecasts_with_blend_df.shape[0]
@@ -91,32 +81,22 @@ def run_ensambles_on_multiple_models(command):
         train_folds.append(forecast_data[fs:min(fs+fold_size, data_size)])
         y_folds.append(y_actual[fs:min(fs+fold_size, data_size)])
 
+    submission_forecasts = []
     for i in range(len(y_folds)):
-        train_df = pd.DataFrame(train_folds[i], columns=)
-        avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids)
+        train_df = pd.DataFrame(train_folds[i], columns=all_feilds)
+        _, submission_forecast = avg_models(conf, train_df, y_folds[i], sub_with_blend_df, submission_ids=submissions_ids, do_cv=False)
+        submission_forecasts.append(submission_forecast)
 
+    all_submission_data = np.column_stack(submission_forecasts)
+    avg_submission = np.mean(all_submission_data, axis=1)
+    to_save = np.column_stack((submissions_ids, avg_submission))
+    to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+    to_saveDf = to_saveDf.fillna(0)
+    to_saveDf["id"] = to_saveDf["id"].astype(int)
+    submission_file = 'avg_xgb_ensamble_submission.csv'
+    to_saveDf.to_csv(submission_file, index=False)
 
-
+    print "Best Ensamble Submission Stats", submission_file
     print_mem_usage("after models")
-    #mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \
-    #    do_ensamble(conf, forecasts_only_df, top_forecast_feilds, y_actual, submissions_ids ,submissions_only_df)
-
-    #to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
-
-    '''
-    new_column_list = list(forecasts_with_blend_df) + ['mean_forecast', 'best_pair_forecast']
-    forecasts_with_blend_df = pd.DataFrame(np.column_stack([forecasts_with_blend_df.values, mean_ensmbale_forecast, best_pair_ensmbale_forecast]),
-                                                           columns=new_column_list)
-    sub_with_blend_df = pd.DataFrame(np.column_stack([sub_with_blend_df.values, mean_top4_submission, best_pair_ensamble_submission]),
-                                                           columns=new_column_list)
-
-    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids)
-    '''
-
-    #blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids, submissions,
-    #             blend_data, blend_data_submission)
-    #print_mem_usage("avg models")
-
-    #avg_models_with_ml(conf, forecasts_df, y_actual, subdf, submission_ids=submissions_ids)
 
 run_ensambles_on_multiple_models(command)
