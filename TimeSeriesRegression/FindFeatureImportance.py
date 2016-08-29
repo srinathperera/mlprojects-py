@@ -48,6 +48,7 @@ def expand_features(base_df, feild_name):
 conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
 conf.command = command
 
+'''
 singles_features = ['Semana', 'clients_combined_dp_Mean', 'clients_combined_vh_Mean', 'Agencia_ID_Demanda_uni_equil_Mean',
                     'Producto_ID_Demanda_uni_equil_Mean', 'clients_combined_Mean', 'Agencia_ID_Dev_proxima_Mean', 'Agencia_ID_Venta_hoy_Mean',
                     'Producto_ID_Venta_hoy_Mean', 'Producto_ID_Dev_proxima_Mean', 'Canal_ID_Demanda_uni_equil_Mean', 'Canal_ID_Venta_hoy_Mean',
@@ -55,8 +56,10 @@ singles_features = ['Semana', 'clients_combined_dp_Mean', 'clients_combined_vh_M
                     'has_choco', 'has_vanilla', 'has_multigrain', 'brand_id_Demanda_uni_equil_Mean', 'product_word_Demanda_uni_equil_Mean', 'Town_id_Demanda_uni_equil_Mean',
                     'State_id_Demanda_uni_equil_Mean', 'agc_product_Mean', 'routes_combined_Mean', 'clients_route_agc_Mean', 'mean_sales', 'last_sale', 'returns'
                     ]
+'''
 
-features = [[f] for f in singles_features ]
+
+
 
 
 fg_feilds = ["mean_sales", "sales_count", "sales_stddev",
@@ -69,6 +72,9 @@ train_df, test_df, testDf = merge_another_dataset(train_df, test_df, testDf, 'fg
 print_mem_usage("after data set 2")
 print "X",train_df.shape, "Y", y_actual_train.shape
 
+
+singles_features = list(train_df)
+features = [[f] for f in singles_features ]
 
 train_df.fillna(0, inplace=True)
 test_df.fillna(0, inplace=True)

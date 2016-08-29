@@ -276,6 +276,11 @@ def load_train_data(model_type, command, throw_error=False, fields=None, load_su
             return train_df, test_df, sub_df, None, None
 
 
+def create_df_from_list(columns, list_data):
+    feilds = {columns[k]: list_data[k] for k in range(len(columns))}
+    return pd.DataFrame(feilds)
+
+
 def find_alt_for_missing(to_merge, seen_with_stats):
     print "feilds 0", list(to_merge), list(seen_with_stats)
     seen_without_stat = seen_with_stats[['Ruta_SAK', 'Cliente_ID']]

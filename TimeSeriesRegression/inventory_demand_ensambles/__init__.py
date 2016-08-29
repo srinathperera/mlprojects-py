@@ -492,24 +492,21 @@ def avg_models_with_ml(conf, blend_forecasts_df, y_actual, submission_forecasts_
 
 
 def find_best_forecast_per_product(data_df, y_actual, sub_data_df, product_data, product_data_submission, submission_ids):
-    data_df =  pd.DataFrame(np.column_stack([data_df.values, product_data.values]), columns=list(data_df)+['Producto_ID'])
-    forecast_feilds = [f for f in list(data_df) if "." in f]
+    feilds = {k: data_df[k] for k in list(data_df)}
+    feilds['Producto_ID'] = pd.Series(product_data)
+    data_df = pd.DataFrame(feilds)
 
+    forecast_feilds = [f for f in list(data_df) if "." in f]
     errors = [product_data.values]
     errors = errors + [np.abs(np.log(1+data_df[f]) - np.log(1+y_actual)) for f in forecast_feilds]
-
-    errors_data = np.column_stack(errors)
-    print "errors_data.shape",errors_data.shape
-    error_df = pd.DataFrame(errors_data, columns=['Producto_ID'] + forecast_feilds)
+    error_df = create_df_from_list(['Producto_ID'] + forecast_feilds, errors)
 
     grouped_error = error_df.groupby(['Producto_ID']).mean()
     grouped_error_vals = grouped_error.values
     best_forecast_index = np.argmin(grouped_error_vals, axis=1)
-    best_forecast_index_df = pd.DataFrame(np.column_stack([grouped_error.index, best_forecast_index]), columns=['Producto_ID', "forecast_index"])
+    best_forecast_index_df = create_df_from_list(['Producto_ID', "forecast_index"], [grouped_error.index, best_forecast_index])
 
     basedf = pd.merge(data_df, best_forecast_index_df, how='left', on=['Producto_ID'])
-
-    print basedf[forecast_feilds].head(10)
 
     best_forecast_index = basedf['forecast_index'].values
     forecast_options = basedf[forecast_feilds].values
@@ -529,7 +526,10 @@ def find_best_forecast_per_product(data_df, y_actual, sub_data_df, product_data,
     per_product_forecast = [forecast_options[i, int(best_forecast_index[i])] for i in range(forecast_size)]
     calculate_accuracy("best_forecast_per_product", y_actual, per_product_forecast)
 
-    sub_data_df =  pd.DataFrame(np.column_stack([sub_data_df.values, product_data_submission.values]), columns=list(sub_data_df)+['Producto_ID'])
+    feilds = {k: sub_data_df[k] for k in list(sub_data_df)}
+    feilds['Producto_ID'] = pd.Series(product_data_submission.values)
+    sub_data_df = pd.DataFrame(feilds)
+
     sub_data_df = pd.merge(sub_data_df, best_forecast_index_df, how='left', on=['Producto_ID'])
     best_forecast_index_sub = fillna_and_inf(sub_data_df['forecast_index'].values)
     forecast_options_sub = fillna_and_inf(sub_data_df[forecast_feilds].values)
