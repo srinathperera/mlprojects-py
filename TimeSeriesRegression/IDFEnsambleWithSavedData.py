@@ -89,10 +89,14 @@ def run_ensambles_on_multiple_models(command):
         train_df = pd.DataFrame(train_folds[i], columns=all_feilds)
         y_data = y_folds[i]
         print "fold data", train_df.shape, y_data.shape
-        xgb_forecast, y_actual_test, submission_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df, submission_ids=submissions_ids, do_cv=False)
-        submission_forecasts.append(submission_forecast)
-        xgb_forecasts.append(xgb_forecast)
-        y_actuals.append(y_actual_test)
+        try:
+            xgb_forecast, y_actual_test, submission_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df, submission_ids=submissions_ids, do_cv=True)
+            submission_forecasts.append(submission_forecast)
+            xgb_forecasts.append(xgb_forecast)
+            y_actuals.append(y_actual_test)
+        except Exception, error:
+            print "An exception was thrown!"
+            print str(error)
 
     calculate_accuracy("overall avg forecast", np.concatenate(y_actuals), np.concatenate(xgb_forecasts))
 
