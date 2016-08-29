@@ -107,11 +107,11 @@ def load_all_forecast_data(model_names_list, file_name):
         fname = "sub"
         addtional_data_feild = 'id'
 
-    #basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
-    #                "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
+    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"])
     #basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["sales_count", "sales_stddev",
     #                "returns", "signature", "kurtosis", "entropy"])
-    basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["signature", "kurtosis", "hmean", "entropy", "sales_count"])
+    #basedf = load_data_for_each_run('fg_stats', fname, feild_names=merge_feilds + ["signature", "kurtosis", "hmean", "entropy", "sales_count"])
 
     first_actual_feild = None
     data_size = 0
@@ -151,6 +151,7 @@ def load_all_forecast_data(model_names_list, file_name):
     #basedf = basedf.sample(frac=0.25)
 
     additional_feild_data = basedf[first_actual_feild].values
+    save_file("all_ensamble", 0, basedf, file_name)
     product_data = basedf['Producto_ID']
 
     basedf = drop_feilds_1df(basedf, feilds_to_remove + merge_feilds)
@@ -424,21 +425,24 @@ def run_ensambles_on_multiple_models(command):
     xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
                   'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 15, 'gamma': 0.3, 'lambda': 0}
     avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params, frac=0.5)
-
-    print "default xgb configs"
-    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, frac=0.5)
-
-    print "new xgb configs 10"
-    xgb_params['max_depth'] = 10
-    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params, frac=0.5)
     '''
 
-    per_product_forecast, per_product_forecast_submission = find_best_forecast_per_product(forecasts_with_blend_df, y_actual, sub_with_blend_df,
-                                                                                           product_data, product_data_submission, submissions_ids)
-    #forecasts_with_blend_df['ppf'] = per_product_forecast
-    #sub_with_blend_df['ppf'] = per_product_forecast_submission
+    #print "default xgb configs"
     #avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, frac=0.5)
 
+    #print "new xgb configs 10"
+    #xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
+    #        'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 5, 'gamma': 0.3, 'lambda': 0}
+    #avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params, frac=0.5)
+
+
+    '''
+    per_product_forecast, per_product_forecast_submission = find_best_forecast_per_product(forecasts_with_blend_df, y_actual, sub_with_blend_df,
+                                                                                           product_data, product_data_submission, submissions_ids)
+    forecasts_with_blend_df['ppf'] = per_product_forecast
+    sub_with_blend_df['ppf'] = per_product_forecast_submission
+    avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, frac=0.5)
+    '''
 
     print_mem_usage("after models")
     #mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \
