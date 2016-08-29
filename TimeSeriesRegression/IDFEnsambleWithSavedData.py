@@ -53,24 +53,19 @@ def per_product_forecast():
     #avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, frac=0.5)
     print "hello"
 
+def log_centrality_forecasts(forecasts_data, y_actual):
+    forecasts_data = transfrom_to_log2d(forecasts_data)
+    mean_forecast = retransfrom_from_log(np.mean(forecasts_data, axis=1))
+    calculate_accuracy("log_mean", y_actual, mean_forecast)
+
+    median_forecast = retransfrom_from_log(np.median(forecasts_data, axis=1))
+    calculate_accuracy("log_median", y_actual, median_forecast)
+
+    #mean_forecast = retransfrom_from_log(np.mean(forecasts_data, axis=1))
+    #calculate_accuracy("log_mean", y_actual, mean_forecast)
 
 
-def run_ensambles_on_multiple_models(command):
-    conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
-    conf.command=-2
-
-    forecasts_with_blend_df, y_actual = load_ensamble_data("model_forecasts")
-    sub_with_blend_df, submissions_ids = load_ensamble_data("model_submissions")
-
-    data_feilds = ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
-    forecast_feilds = [f for f in list(forecasts_with_blend_df) if "." in f]
-    all_feilds = data_feilds+forecast_feilds
-
-    product_data = forecasts_with_blend_df['Producto_ID']
-    product_data_submission = sub_with_blend_df['Producto_ID']
-
-
+def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids):
     data_size = forecasts_with_blend_df.shape[0]
     fold_size = int(math.ceil(data_size/4))
 
@@ -110,6 +105,26 @@ def run_ensambles_on_multiple_models(command):
     to_saveDf.to_csv(submission_file, index=False)
 
     print "Best Ensamble Submission Stats", submission_file
+
+def run_ensambles_on_multiple_models(command):
+    conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
+    conf.command=-2
+
+    forecasts_with_blend_df, y_actual = load_ensamble_data("model_forecasts")
+    sub_with_blend_df, submissions_ids = load_ensamble_data("model_submissions")
+
+    data_feilds = ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
+    forecast_feilds = [f for f in list(forecasts_with_blend_df) if "." in f]
+    all_feilds = data_feilds+forecast_feilds
+
+    product_data = forecasts_with_blend_df['Producto_ID']
+    product_data_submission = sub_with_blend_df['Producto_ID']
+
+    #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
+    log_centrality_forecasts(forecasts_with_blend_df[forecast_feilds].values, y_actual)
+
+
     print_mem_usage("after models")
 
 run_ensambles_on_multiple_models(command)
