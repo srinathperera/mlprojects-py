@@ -34,16 +34,16 @@ if len(sys.argv) > 1:
     command = int(sys.argv[1])
 
 
-def load_saved_ensamble_data(file_name):
-    data_df = load_file("all_ensamble", 0, file_name)
 
-    if file_name == "model_forecasts":
-        addtional_data_feild = 'actual'
-    elif file_name == "model_submissions":
-        addtional_data_feild = 'id'
+def load_ensamble_data(name):
+    model_type = "all_ensamble"
+    command = 0
+    train_df = load_file(model_type, command, name, throw_error=True)
+    ytrain_df = load_file(model_type, command, 'y_'+name, throw_error=True)
+    y_train = ytrain_df['target'].values
 
-    additional_feild_data = data_df[addtional_data_feild].values
-    return data_df, additional_feild_data
+    return train_df, y_train
+
 
 def per_product_forecast():
     #per_product_forecast, per_product_forecast_submission = find_best_forecast_per_product(train_fold1, y_actual_fold1, sub_with_blend_df,
@@ -59,8 +59,8 @@ def run_ensambles_on_multiple_models(command):
     conf = IDConfigs(target_as_log=True, normalize=True, save_predictions_with_data=True, generate_submission=True)
     conf.command=-2
 
-    forecasts_with_blend_df, y_actual = load_saved_ensamble_data("model_forecasts")
-    sub_with_blend_df, submissions_ids = load_saved_ensamble_data("model_submissions")
+    forecasts_with_blend_df, y_actual = load_ensamble_data("model_forecasts")
+    sub_with_blend_df, submissions_ids = load_ensamble_data("model_submissions")
 
     data_feilds = ["mean_sales", "sales_count", "sales_stddev",
                     "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
@@ -72,9 +72,9 @@ def run_ensambles_on_multiple_models(command):
 
 
     data_size = forecasts_with_blend_df.shape[0]
-    fold_size = math.ceil(data_size/4)
+    fold_size = int(math.ceil(data_size/4))
 
-    forecast_data = forecasts_with_blend_df.values
+    forecast_data = forecasts_with_blend_df[all_feilds].values
     train_folds = []
     y_folds = []
     for fs in range(0, data_size, fold_size):
@@ -84,7 +84,9 @@ def run_ensambles_on_multiple_models(command):
     submission_forecasts = []
     for i in range(len(y_folds)):
         train_df = pd.DataFrame(train_folds[i], columns=all_feilds)
-        _, submission_forecast = avg_models(conf, train_df, y_folds[i], sub_with_blend_df, submission_ids=submissions_ids, do_cv=False)
+        y_data = y_folds[i]
+        print "fold data", train_df.shape, y_data.shape
+        _, submission_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df, submission_ids=submissions_ids, do_cv=False)
         submission_forecasts.append(submission_forecast)
 
     all_submission_data = np.column_stack(submission_forecasts)

@@ -151,12 +151,25 @@ def load_all_forecast_data(model_names_list, file_name):
     #basedf = basedf.sample(frac=0.25)
 
     additional_feild_data = basedf[first_actual_feild].values
-    save_file("all_ensamble", 0, basedf, file_name)
     product_data = basedf['Producto_ID']
 
-    basedf = drop_feilds_1df(basedf, feilds_to_remove + merge_feilds)
+    basedf = drop_feilds_1df(basedf, feilds_to_remove)
+    save_ensamble_data(basedf, additional_feild_data, file_name)
+    basedf = drop_feilds_1df(basedf, merge_feilds)
 
     return basedf, additional_feild_data, forecast_data_feilds, product_data
+
+
+def save_ensamble_data(train_df, y_data, name):
+    model_type = "all_ensamble"
+    command = 0
+    save_file(model_type, command,train_df, name)
+    ytrain_df =  pd.DataFrame(y_data.reshape(-1,1), columns=["target"])
+    save_file(model_type, command, ytrain_df, 'y_'+name)
+
+
+
+
 
 
 def load__model_results_from_store(model_names_list, name, use_agr_features=True):
