@@ -95,6 +95,44 @@ class BestPairEnsamble:
             forecast = np.mean(forecasts, axis=1)
         return forecast
 
+class BestPairLogEnsamble:
+    def __init__(self, conf, method="mean"):
+        self.conf = conf
+        self.method = method
+        self.name = "BestPairEnsamble_"+method
+
+    def fit(self, forecasts, y_actual):
+        forecasts = transfrom_to_log(forecasts)
+        start = time.time()
+        comb = list(itertools.combinations(range(forecasts.shape[1]),2))
+        rmsle_values = []
+        for (a,b) in comb:
+            forecast = self.predict_pair(forecasts[:,a], forecasts[:,b])
+            forecast = retransfrom_from_log(forecast)
+            rmsle = calculate_accuracy("try " +self.method + " pair " + str((a,b)) , y_actual, forecast)
+            rmsle_values.append(rmsle)
+
+        best_index = np.argmin(rmsle_values)
+        self.best_pair = comb[best_index]
+        print "[IDF]best mean pair value, " + str(self.conf.command), str(self.best_pair), 'rmsle=', rmsle_values[best_index]
+        print_time_took(start, self.method + "_forecast " + str(self.conf.command))
+        return forecast
+
+    def predict(self, forecasts):
+        forecasts = transfrom_to_log(forecasts)
+        (a,b) = self.best_pair
+        return self.predict_pair(forecasts[:,a], forecasts[:,b])
+
+    def predict_pair(self, f1,f2 ):
+        forecasts = np.column_stack([f1,f2])
+        if self.method == 'median':
+            forecast = np.median(forecasts, axis=1)
+        elif self.method == 'mean':
+            forecast = np.mean(forecasts, axis=1)
+        forecast = retransfrom_from_log(forecast)
+        return forecast
+
+
 
 class BestThreeEnsamble:
     def __init__(self, conf, method="mean"):
@@ -382,7 +420,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
                                 use_sklean=False, xgb_params=xgb_params)
         else:
             model, y_pred = regression_with_xgboost_no_cv(X_train, y_train, X_test, y_test, features=forecasting_feilds,
-                                                          xgb_params=xgb_params,num_rounds=20)
+                                                          xgb_params=xgb_params,num_rounds=200)
         xgb_forecast = model.predict(X_test)
         xgb_forecast_actual = retransfrom_from_log(xgb_forecast)
         rmsle = calculate_accuracy(str(xgb_params) + "[IDF]xgb_forecast", y_actual_test, xgb_forecast_actual)
