@@ -23,6 +23,7 @@ from data_explore import *
 
 from inventory_demand import *
 from inventory_demand_features import *
+from inventory_demand_ensambles import *
 
 def print_base_stats(df):
     print df.describe()
@@ -886,7 +887,13 @@ def shaffle_data():
 #create_random_file()
 
 #parse_feature_importance(file='/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore4.txt')
-parse_feature_explore_outputs()
+#parse_feature_explore_outputs()
+
+compare_submissions(
+    ['submissions_parts/xgb_ensamble_submission_1472484817.68.csv',
+     'submissions_parts/xgb_ensamble_submission_1472490059.13.csv',
+     'submissions_parts/xgb_ensamble_submission_1472495260.59.csv',
+     'submissions_parts/xgb_ensamble_submission_1472500466.16.csv'])
 
 #analyze_error()
 

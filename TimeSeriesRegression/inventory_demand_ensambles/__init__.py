@@ -546,3 +546,22 @@ def find_best_forecast_per_product(data_df, y_actual, sub_data_df, product_data,
 
     return per_product_forecast, per_product_forecast_submission
 
+
+def compare_submissions(file_list):
+    submissions_data = [read_submission_file(f) for f in file_list]
+    submissions_data = np.column_stack(submissions_data)
+    stddev_list = np.std(submissions_data, axis=1)
+    print basic_stats_as_str(stddev_list)
+
+    submissions_data = transfrom_to_log2d(submissions_data)
+    mean_log_ensamble_forecast = retransfrom_from_log(np.mean(submissions_data, axis=1))
+    mean_log_ensamble_forecast = np.where(mean_log_ensamble_forecast < 0, 0, mean_log_ensamble_forecast)
+
+    to_save = np.column_stack((range(mean_log_ensamble_forecast.shape[0]), mean_log_ensamble_forecast))
+    to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
+    to_saveDf = to_saveDf.fillna(0)
+    to_saveDf["id"] = to_saveDf["id"].astype(int)
+    submission_file = 'mean_log_ensamble_forecast.csv'
+    to_saveDf.to_csv(submission_file, index=False)
+    print "Best Ensamble Submission Stats", submission_file
+

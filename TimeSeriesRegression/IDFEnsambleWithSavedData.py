@@ -105,8 +105,11 @@ def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with
 
     calculate_accuracy("overall avg forecast", np.concatenate(y_actuals), np.concatenate(xgb_forecasts))
 
+
     all_submission_data = np.column_stack(submission_forecasts)
     avg_submission = np.mean(all_submission_data, axis=1)
+
+    avg_submission = np.where(avg_submission < 0, 0, avg_submission)
     to_save = np.column_stack((submissions_ids, avg_submission))
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
     to_saveDf = to_saveDf.fillna(0)

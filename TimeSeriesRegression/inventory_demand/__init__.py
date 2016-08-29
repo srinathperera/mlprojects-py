@@ -236,6 +236,11 @@ def save_submission_file(submission_file, ids, submissions):
     print_time_took(start, "create_submission took ")
 
 
+def read_submission_file(submission_file):
+    submission_df = pd.read_csv(submission_file)
+    return submission_df['Demanda_uni_equil'].values
+
+
 def save_train_data(model_type, command, train_df, test_df, sub_df, y_train, y_test):
     save_file(model_type, command,train_df, 'train')
     save_file(model_type, command,test_df, 'test')
