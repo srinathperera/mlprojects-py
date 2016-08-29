@@ -328,11 +328,6 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
 
 
 def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None, xgb_params=None, do_cv=True, frac=1.0):
-    if frac < 1:
-        data_size = int(blend_forecasts_df.shape[0]*frac)
-        blend_forecasts_df = blend_forecasts_df[:data_size, :]
-        y_actual = y_actual[:data_size]
-
     print "start avg models"
     start = time.time()
 
@@ -341,6 +336,12 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
 
     X_all = blend_forecasts_df.values
     sub_X_all = submission_forecasts_df.values
+
+    if frac < 1:
+        data_size = int(blend_forecasts_df.shape[0]*frac)
+        X_all = X_all[:data_size, :]
+        y_actual = y_actual[:data_size]
+
 
     #removing NaN and inf if there is any
     X_all = fillna_and_inf(X_all)
@@ -488,3 +489,28 @@ def avg_models_with_ml(conf, blend_forecasts_df, y_actual, submission_forecasts_
     submission_forecast = np.where(submission_forecast < 0, 0, submission_forecast)
     submission_file = 'en_dl_submission'+str(conf.command)+ '.csv'
     save_submission_file(submission_file, submission_ids, submission_forecast)
+
+
+def find_best_forecast_per_product(data_df, y_actual, product_data):
+    data_df =  pd.DataFrame(np.column_stack([data_df.values, product_data.values]), columns=list(data_df)+['Producto_ID'])
+    forecast_feilds = [f for f in list(data_df) if "." in f]
+
+    errors = [product_data.values]
+    errors = errors + [np.abs(np.log(1+data_df[f]) - np.log(1+y_actual)) for f in forecast_feilds]
+
+    errors_data = np.column_stack(errors)
+    print "errors_data.shape",errors_data.shape
+    error_df = pd.DataFrame(errors_data, columns=['Producto_ID'] + forecast_feilds)
+
+    grouped_error = error_df.groupby(['Producto_ID']).mean()
+    grouped_error_vals = grouped_error.values
+    best_forecast_index = np.argmin(grouped_error_vals, axis=1)
+    best_forecast_index_df = pd.DataFrame(np.column_stack([grouped_error.index, best_forecast_index]), columns=['Producto_ID', "forecast_index"])
+
+    basedf = pd.merge(data_df, best_forecast_index_df, how='left', on=['Producto_ID'])
+
+    best_forecast_index = basedf['forecast_index'].values
+    forecast_options = basedf[forecast_feilds].values
+
+    per_product_forecast = [forecast_options[i, best_forecast_index[i]] for i in range(best_forecast_index.shape[0])]
+    calculate_accuracy("best_forecast_per_product", y_actual, per_product_forecast)

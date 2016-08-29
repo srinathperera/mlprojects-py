@@ -151,9 +151,11 @@ def load_all_forecast_data(model_names_list, file_name):
     #basedf = basedf.sample(frac=0.25)
 
     additional_feild_data = basedf[first_actual_feild].values
+    product_data = basedf['Producto_ID']
+
     basedf = drop_feilds_1df(basedf, feilds_to_remove + merge_feilds)
 
-    return basedf, additional_feild_data, forecast_data_feilds
+    return basedf, additional_feild_data, forecast_data_feilds, product_data
 
 
 def load__model_results_from_store(model_names_list, name, use_agr_features=True):
@@ -398,11 +400,11 @@ def run_ensambles_on_multiple_models(command):
     model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc"]
     #features-agency
 
-    forecasts_with_blend_df, y_actual, forecast_feilds = load_all_forecast_data(model_list, "model_forecasts")
+    forecasts_with_blend_df, y_actual, forecast_feilds, product_data = load_all_forecast_data(model_list, "model_forecasts")
     forecasts_only_df = forecasts_with_blend_df[forecast_feilds]
 
     #load submission data
-    sub_with_blend_df, submissions_ids, _ = load_all_forecast_data(model_list, "model_submissions")
+    sub_with_blend_df, submissions_ids, _ , _ = load_all_forecast_data(model_list, "model_submissions")
     submissions_only_df = sub_with_blend_df[forecast_feilds]
 
     print "Using forecasting feilds", forecast_feilds
@@ -427,6 +429,7 @@ def run_ensambles_on_multiple_models(command):
     xgb_params['max_depth'] = 10
     avg_models(conf, forecasts_with_blend_df, y_actual, sub_with_blend_df, submission_ids=submissions_ids, xgb_params=xgb_params, frac=0.5)
 
+    #find_best_forecast_per_product(forecasts_with_blend_df, y_actual, product_data)
 
     print_mem_usage("after models")
     #mean_ensmbale_forecast, mean_top4_submission, best_pair_ensmbale_forecast, best_pair_ensamble_submission = \
