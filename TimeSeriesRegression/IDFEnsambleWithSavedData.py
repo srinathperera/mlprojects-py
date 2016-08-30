@@ -174,7 +174,7 @@ def run_ensambles_on_multiple_models(command):
     #print_mem_usage("after models")
 
     xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
-            'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 3, 'gamma': 0.3, 'lambda': 0}
+            'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 4, 'gamma': 0.3, 'lambda': 0}
     xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=xgb_params)
 
 
