@@ -109,7 +109,9 @@ def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with
 
 
     all_submission_data = np.column_stack(submission_forecasts)
+    all_submission_data = transfrom_to_log2d(all_submission_data)
     avg_submission = np.mean(all_submission_data, axis=1)
+    avg_submission = retransfrom_from_log(avg_submission)
 
     avg_submission = np.where(avg_submission < 0, 0, avg_submission)
     to_save = np.column_stack((submissions_ids, avg_submission))

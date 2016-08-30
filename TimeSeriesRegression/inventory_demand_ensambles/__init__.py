@@ -243,6 +243,14 @@ def predict_using_veriation(forecasts_data, best_forecast, y_actual, frac = 1.0)
     lr_forecast = retransfrom_from_log(lr_forecast)
     calculate_accuracy("predict_using_veriation_lr_forecast ", retransfrom_from_log(y_test), lr_forecast)
 
+
+    xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4 }
+    model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=['best_forecast', 'forecasts_mean', 'forecasts_hmean', 'forecasts_stdev', 'min_diff_to_best', 'diff_best_to_mean', 'forecasts_median'], use_cv=True,
+                                use_sklean=False, xgb_params=xgb_params)
+    xgb_forecast = model.predict(X_test)
+    xgb_forecast_actual = retransfrom_from_log(xgb_forecast)
+    calculate_accuracy(str(xgb_params) + "predict_using_veriation_xgb_forecast", retransfrom_from_log(y_test), xgb_forecast_actual)
+
     return final_forecast
 
 
