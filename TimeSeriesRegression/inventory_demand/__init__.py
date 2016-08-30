@@ -1786,6 +1786,15 @@ def calculate_accuracy(label, y_actual_test, y_forecast):
     return rmsle
 
 
+def print_error_distribution(y_actual_test, y_forecast):
+    errors = np.abs(transfrom_to_log(y_actual_test) - transfrom_to_log(y_forecast))
+    error_df = pd.DataFrame({"values": np.round(np.log10(y_actual_test)), "errors": errors})
+    error_df.sort_values(by=["values"], inplace=True)
+    group = error_df.groupby(["values"])
+    print group.sum()
+    print group.mean()
+
+
 def find_range(rmsle, forecast):
     h = np.exp(rmsle)*(forecast+1) - 1
     l = (forecast+1)/np.exp(rmsle) - 1

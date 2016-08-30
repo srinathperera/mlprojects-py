@@ -79,8 +79,6 @@ def best_pair_forecast(conf, forecasts_data, y_actual, submission_data, submissi
 def calcuate_mean_forecast(forecasts_list):
     forecasts_np = np.column_stack(forecasts_list)
     return np.mean(forecasts_np, axis=1)
-    calculate_accuracy("2ndy overall avg log forecast", np.concatenate(y_actuals),
-                       retransfrom_from_log())
 
 
 def calcuate_log_mean_forecast(forecasts_list):
@@ -88,6 +86,7 @@ def calcuate_log_mean_forecast(forecasts_list):
     log_mean_forecast = np.mean(transfrom_to_log2d(forecasts_np), axis=1)
     log_mean_forecast = retransfrom_from_log(log_mean_forecast)
     return log_mean_forecast
+
 
 def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=None):
     data_size = forecasts_with_blend_df.shape[0]
@@ -97,8 +96,12 @@ def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with
     train_folds = []
     y_folds = []
     for fs in range(0, data_size, fold_size):
-        train_folds.append(forecast_data[fs:min(fs+fold_size, data_size)])
+        fold_data = forecast_data[fs:min(fs+fold_size, data_size)]
+        if fold_data.shape[0] < fold_size/2:
+            raise ValueError("data fold too small" + str(fold_data.shape[0]))
+        train_folds.append(fold_data)
         y_folds.append(y_actual[fs:min(fs+fold_size, data_size)])
+
 
     second_test_data_size = int(data_size*0.1)
     second_test_data = forecast_data[:second_test_data_size]
@@ -124,7 +127,9 @@ def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with
             print "An exception was thrown!"
             print str(error)
 
-    calculate_accuracy("overall avg forecast", np.concatenate(y_actuals), np.concatenate(xgb_forecasts))
+    all_y_actuals = np.concatenate(y_actuals); all_xgb_forecasts = np.concatenate(xgb_forecasts)
+    calculate_accuracy("overall avg forecast", all_y_actuals, all_xgb_forecasts)
+    print_error_distribution(all_y_actuals, all_xgb_forecasts)
     calculate_accuracy("2ndy overall avg forecast", second_y_test_data, calcuate_mean_forecast(sec_y_forecasts))
     calculate_accuracy("2ndy overall avg log forecast", second_y_test_data, calcuate_log_mean_forecast(sec_y_forecasts))
 
