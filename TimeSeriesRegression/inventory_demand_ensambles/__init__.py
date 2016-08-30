@@ -428,7 +428,7 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
 
     #return xgb_forecast, rmsle
 
-def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None, xgb_params=None, do_cv=True, frac=1.0):
+def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, submission_ids=None, xgb_params=None, do_cv=True, frac=1.0, sec_test_data=None):
     print "start avg models"
     start = time.time()
 
@@ -511,9 +511,14 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
             print "Best Ensamble Submission Stats", submission_file
             print to_saveDf.describe()
 
+        if sec_test_data is not None:
+            sec_test_data = fillna_and_inf(sec_test_data)
+            sec_y_forecast = best_ensamble.predict(sec_test_data)
+            sec_y_forecast = retransfrom_from_log(sec_y_forecast)
+            sec_y_forecast = np.where(sec_y_forecast < 0, 0, sec_y_forecast)
 
         print "avg_models took ", (time.time() - start), "s"
-        return xgb_forecast_actual, y_actual_test, ensamble_forecast
+        return xgb_forecast_actual, y_actual_test, ensamble_forecast, sec_y_forecast
 
 
 

@@ -76,6 +76,18 @@ def best_pair_forecast(conf, forecasts_data, y_actual, submission_data, submissi
     sys.stdout.flush()
 
 
+def calcuate_mean_forecast(forecasts_list):
+    forecasts_np = np.column_stack(forecasts_list)
+    return np.mean(forecasts_np, axis=1)
+    calculate_accuracy("2ndy overall avg log forecast", np.concatenate(y_actuals),
+                       retransfrom_from_log())
+
+
+def calcuate_log_mean_forecast(forecasts_list):
+    forecasts_np = np.column_stack(forecasts_list)
+    log_mean_forecast = np.mean(transfrom_to_log2d(forecasts_np), axis=1)
+    log_mean_forecast = retransfrom_from_log(log_mean_forecast)
+    return log_mean_forecast
 
 def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=None):
     data_size = forecasts_with_blend_df.shape[0]
@@ -88,31 +100,35 @@ def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with
         train_folds.append(forecast_data[fs:min(fs+fold_size, data_size)])
         y_folds.append(y_actual[fs:min(fs+fold_size, data_size)])
 
+    second_test_data_size = int(data_size*0.1)
+    second_test_data = forecast_data[:second_test_data_size]
+    second_y_test_data = y_actual[:second_test_data_size]
+
     submission_forecasts = []
     xgb_forecasts = []
     y_actuals = []
+    sec_y_forecasts = []
 
     for i in range(len(y_folds)):
         train_df = pd.DataFrame(train_folds[i], columns=all_feilds)
         y_data = y_folds[i]
         print "fold data", train_df.shape, y_data.shape
         try:
-            xgb_forecast, y_actual_test, submission_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df, submission_ids=submissions_ids, do_cv=True, xgb_params=xgb_params)
+            xgb_forecast, y_actual_test, submission_forecast, sec_y_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df,
+                    submission_ids=submissions_ids, do_cv=True, xgb_params=xgb_params, sec_test_data=second_test_data)
             submission_forecasts.append(submission_forecast)
             xgb_forecasts.append(xgb_forecast)
             y_actuals.append(y_actual_test)
+            sec_y_forecasts.append(sec_y_forecast)
         except Exception, error:
             print "An exception was thrown!"
             print str(error)
 
     calculate_accuracy("overall avg forecast", np.concatenate(y_actuals), np.concatenate(xgb_forecasts))
+    calculate_accuracy("2ndy overall avg forecast", second_y_test_data, calcuate_mean_forecast(sec_y_forecasts))
+    calculate_accuracy("2ndy overall avg log forecast", second_y_test_data, calcuate_log_mean_forecast(sec_y_forecasts))
 
-
-    all_submission_data = np.column_stack(submission_forecasts)
-    all_submission_data = transfrom_to_log2d(all_submission_data)
-    avg_submission = np.mean(all_submission_data, axis=1)
-    avg_submission = retransfrom_from_log(avg_submission)
-
+    avg_submission = calcuate_log_mean_forecast(submission_forecasts)
     avg_submission = np.where(avg_submission < 0, 0, avg_submission)
     to_save = np.column_stack((submissions_ids, avg_submission))
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
@@ -149,12 +165,12 @@ def run_ensambles_on_multiple_models(command):
     forecast_feilds_data_only = forecasts_with_blend_df[forecast_feilds].values
     #best_pair_forecast(conf, forecast_feilds_data_only, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids)
 
-    predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['agr_cat.XGB'].values, y_actual)
-    print_mem_usage("after models")
+    #predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['agr_cat.XGB'].values, y_actual)
+    #print_mem_usage("after models")
 
-    #xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
-    #        'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 4, 'gamma': 0.3, 'lambda': 0}
-    #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
+    xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
+            'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 3, 'gamma': 0.3, 'lambda': 0}
+    xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=xgb_params)
 
 
 run_ensambles_on_multiple_models(command)
