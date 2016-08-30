@@ -104,13 +104,15 @@ class BestPairLogEnsamble:
     def fit(self, forecasts, y_actual):
         start = time.time()
         comb = list(itertools.combinations(range(forecasts.shape[1]),2))
+        random.shuffle(comb)
+        comb = comb[:min(50, len(comb))]
         rmsle_values = []
-        for (a,b) in comb:
+        for i, (a,b) in enumerate(comb):
             x = transfrom_to_log(forecasts[:,a])
             y = transfrom_to_log(forecasts[:,b])
             forecast = self.predict_pair(x,y)
             forecast = retransfrom_from_log(forecast)
-            rmsle = calculate_accuracy("try " +self.method + " pair " + str((a,b)) , y_actual, forecast)
+            rmsle = calculate_accuracy(str(i) +" try " +self.method + " pair " + str((a,b)) , y_actual, forecast)
             rmsle_values.append(rmsle)
 
         best_index = np.argmin(rmsle_values)
@@ -194,13 +196,34 @@ def generate_forecast_features(forecasts, model_index_by_acc):
             + ["kurtosis", "hmean", "diff_best_two", "min_diff_to_best", "min_diff_to_second", "avg_two", "std_all","weighted_mean"]
 
 
+def predict_using_veriation(forecasts_data, best_forecast, y_actual, frac = 1.0):
+    size_to_keep = int(forecasts_data.shape[0]*frac)
+    forecasts_data = forecasts_data[:size_to_keep]
+    y_actual = y_actual[:size_to_keep]
 
-def predict_using_veriation(forecasts_data, best_forecast):
+    forecasts_data = transfrom_to_log2d(forecasts_data)
     forecasts_stdev = np.std(forecasts_data, axis=1)
     forecasts_mean = np.mean(forecasts_data, axis=1)
-    hmean = fillna_and_inf(scipy.stats.hmean(np.where(forecasts_data <= 0, 0.1, forecasts_data), axis=1))
-    min_diff_to_best = np.min(np.abs(forecasts_data - best_forecast[:, 0].reshape((-1,1))), axis=1)
+    forecasts_hmean = fillna_and_inf(scipy.stats.hmean(np.where(forecasts_data <= 0, 0.1, forecasts_data), axis=1))
+    min_diff_to_best = np.min(np.abs(forecasts_data - best_forecast.reshape((-1,1))), axis=1)
+    diff_best_to_mean = np.abs(best_forecast - forecasts_mean)
 
+    print "forecasts_stdev", basic_stats_as_str(forecasts_stdev)
+    print "forecasts_mean", basic_stats_as_str(forecasts_mean)
+    print "diff_best_to_mean", basic_stats_as_str(diff_best_to_mean)
+    print "min_diff_to_best", basic_stats_as_str(min_diff_to_best)
+
+    final_forecast = np.zeros(size_to_keep)
+    for i in range(size_to_keep):
+        if min_diff_to_best[i] < 0.2 or diff_best_to_mean[i] < 0.3:
+            final_forecast[i] = best_forecast[i]
+        elif forecasts_stdev[i] < 0.3:
+            final_forecast[i] = forecasts_mean[i]
+        else:
+            final_forecast[i] = (forecasts_hmean[i] + best_forecast[i])/2
+
+    calculate_accuracy("predict_using_veriation", y_actual, final_forecast)
+    return final_forecast
 
 
 

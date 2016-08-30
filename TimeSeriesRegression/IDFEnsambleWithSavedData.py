@@ -25,6 +25,7 @@ from os import listdir
 from os.path import isfile, join
 
 import sys
+import gc
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
 
@@ -131,6 +132,9 @@ def run_ensambles_on_multiple_models(command):
                     "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
     forecast_feilds = [f for f in list(forecasts_with_blend_df) if "." in f]
     all_feilds = data_feilds+forecast_feilds
+    print_mem_usage("before models")
+
+    gc.collect()
 
     #product_data = forecasts_with_blend_df['Producto_ID']
     #product_data_submission = sub_with_blend_df['Producto_ID']
@@ -139,7 +143,10 @@ def run_ensambles_on_multiple_models(command):
     #xgb_forecast_feilds = [f for f in list(forecasts_with_blend_df) if ".XGB" in f]
     #log_centrality_forecasts(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual)
 
-    best_pair_forecast(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids)
+    forecast_feilds_data_only = forecasts_with_blend_df[forecast_feilds].values
+    best_pair_forecast(conf, forecast_feilds_data_only, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids)
+
+    predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['cc-cnn-agc.XGB'].values, y_actual)
     print_mem_usage("after models")
 
 run_ensambles_on_multiple_models(command)
