@@ -54,6 +54,7 @@ print compare_submission_files([
     'submissions_parts/submission-0.46.csv',
     'submissions_parts/avg_xgb_ensamble_submission.csv',
     'submissions_parts/xgb_ensamble_submission_1472490059.13.csv',
-    'submissions_parts/best_pair_submission.csv'],
-    ["best", "avg_xgb", "part", "best_pair"]
+    'submissions_parts/best_pair_submission.csv',
+    'mean_log_ensamble_forecast.csv'],
+    ["best", "avg_xgb", "part", "best_pair", "mean log"]
 )

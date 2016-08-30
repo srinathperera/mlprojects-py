@@ -75,8 +75,7 @@ def best_pair_forecast(conf, forecasts_data, y_actual, submission_data, submissi
     save_submission_file("best_pair_submission.csv", submissions_ids, best_pair_ensamble_submission)
 
 
-
-def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids):
+def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=None):
     data_size = forecasts_with_blend_df.shape[0]
     fold_size = int(math.ceil(data_size/4))
 
@@ -96,7 +95,7 @@ def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with
         y_data = y_folds[i]
         print "fold data", train_df.shape, y_data.shape
         try:
-            xgb_forecast, y_actual_test, submission_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df, submission_ids=submissions_ids, do_cv=True)
+            xgb_forecast, y_actual_test, submission_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df, submission_ids=submissions_ids, do_cv=True, xgb_params=xgb_params)
             submission_forecasts.append(submission_forecast)
             xgb_forecasts.append(xgb_forecast)
             y_actuals.append(y_actual_test)
@@ -148,5 +147,10 @@ def run_ensambles_on_multiple_models(command):
 
     predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['cc-cnn-agc.XGB'].values, y_actual)
     print_mem_usage("after models")
+
+    #xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
+    #        'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 4, 'gamma': 0.3, 'lambda': 0}
+    #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
+
 
 run_ensambles_on_multiple_models(command)

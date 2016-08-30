@@ -223,6 +223,17 @@ def predict_using_veriation(forecasts_data, best_forecast, y_actual, frac = 1.0)
             final_forecast[i] = (forecasts_hmean[i] + best_forecast[i])/2
 
     calculate_accuracy("predict_using_veriation", y_actual, final_forecast)
+
+    X_all = np.column_stack([best_forecast, forecasts_mean, forecasts_hmean, forecasts_stdev, min_diff_to_best, diff_best_to_mean])
+    y_actual = transfrom_to_log(y_actual)
+    no_of_training_instances = int(round(len(y_actual)*0.50))
+    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
+    lr_model =linear_model.Lasso(alpha = 0.2)
+    lr_model.fit(X_train, y_train)
+    lr_forecast = lr_model.predict(X_test)
+    lr_forecast = retransfrom_from_log(lr_forecast)
+    calculate_accuracy("predict_using_veriation_lr_forecast ", retransfrom_from_log(y_test), lr_forecast)
+
     return final_forecast
 
 
