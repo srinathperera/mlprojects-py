@@ -548,8 +548,16 @@ def find_best_forecast_per_product(data_df, y_actual, sub_data_df, product_data,
 
 
 def compare_submissions(file_list):
-    submissions_data = [read_submission_file(f) for f in file_list]
-    submissions_data = np.column_stack(submissions_data)
+    submissions_df_list = [read_submission_file(f) for f in file_list]
+
+    basedf = submissions_df_list[0]
+    for i in range(1, len(submissions_df_list)):
+        basedf = pd.merge(basedf, submissions_df_list[i], how='left', on=["id"])
+
+    submission_ids = basedf['id']
+    basedf = drop_feilds_1df(basedf, ['id'])
+
+    submissions_data = basedf.values
     stddev_list = np.std(submissions_data, axis=1)
     print basic_stats_as_str(stddev_list)
 
@@ -557,7 +565,7 @@ def compare_submissions(file_list):
     mean_log_ensamble_forecast = retransfrom_from_log(np.mean(submissions_data, axis=1))
     mean_log_ensamble_forecast = np.where(mean_log_ensamble_forecast < 0, 0, mean_log_ensamble_forecast)
 
-    to_save = np.column_stack((range(mean_log_ensamble_forecast.shape[0]), mean_log_ensamble_forecast))
+    to_save = np.column_stack([submission_ids, mean_log_ensamble_forecast])
     to_saveDf =  pd.DataFrame(to_save, columns=["id","Demanda_uni_equil"])
     to_saveDf = to_saveDf.fillna(0)
     to_saveDf["id"] = to_saveDf["id"].astype(int)

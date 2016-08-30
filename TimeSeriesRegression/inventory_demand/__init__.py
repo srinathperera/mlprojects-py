@@ -238,7 +238,7 @@ def save_submission_file(submission_file, ids, submissions):
 
 def read_submission_file(submission_file):
     submission_df = pd.read_csv(submission_file)
-    return submission_df['Demanda_uni_equil'].values
+    return submission_df
 
 
 def save_train_data(model_type, command, train_df, test_df, sub_df, y_train, y_test):
