@@ -136,10 +136,10 @@ def run_ensambles_on_multiple_models(command):
     product_data_submission = sub_with_blend_df['Producto_ID']
 
     #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
-    xgb_forecast_feilds = [f for f in list(forecasts_with_blend_df) if ".XGB" in f]
-    log_centrality_forecasts(conf, forecasts_with_blend_df[xgb_forecast_feilds].values, y_actual)
+    #xgb_forecast_feilds = [f for f in list(forecasts_with_blend_df) if ".XGB" in f]
+    log_centrality_forecasts(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual)
 
-    best_pair_forecast(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids)
+    #best_pair_forecast(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids)
     print_mem_usage("after models")
 
 run_ensambles_on_multiple_models(command)
