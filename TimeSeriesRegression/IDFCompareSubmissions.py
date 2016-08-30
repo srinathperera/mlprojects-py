@@ -46,5 +46,13 @@ def compare_submission_files(file_list, name_list):
 
     for f in list(basedf):
         print f, basic_stats_as_str(basedf[f].values)
-    print basedf.describe()
 
+
+
+print compare_submission_files([
+    'submissions_parts/submission-0.46.csv',
+    'submissions_parts/avg_xgb_ensamble_submission.csv',
+    'submissions_parts/xgb_ensamble_submission_1472490059.13.csv',
+    'submissions_parts/best_pair_submission.csv'],
+    ["best", "avg_xgb", "part", "best_pair"]
+)
