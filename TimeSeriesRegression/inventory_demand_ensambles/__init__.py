@@ -103,6 +103,7 @@ class BestPairLogEnsamble:
 
     def fit(self, forecasts, y_actual):
         forecasts = transfrom_to_log(forecasts)
+        forecasts = fillna_and_inf(forecasts)
         start = time.time()
         comb = list(itertools.combinations(range(forecasts.shape[1]),2))
         rmsle_values = []
@@ -121,15 +122,17 @@ class BestPairLogEnsamble:
     def predict(self, forecasts):
         forecasts = transfrom_to_log(forecasts)
         (a,b) = self.best_pair
-        return self.predict_pair(forecasts[:,a], forecasts[:,b])
+        final_forecast = self.predict_pair(forecasts[:,a], forecasts[:,b])
+        final_forecast = retransfrom_from_log(final_forecast)
+        return final_forecast
 
-    def predict_pair(self, f1,f2 ):
+
+    def predict_pair(self, f1,f2):
         forecasts = np.column_stack([f1,f2])
         if self.method == 'median':
             forecast = np.median(forecasts, axis=1)
         elif self.method == 'mean':
             forecast = np.mean(forecasts, axis=1)
-        forecast = retransfrom_from_log(forecast)
         return forecast
 
 

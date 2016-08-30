@@ -132,8 +132,8 @@ def run_ensambles_on_multiple_models(command):
     forecast_feilds = [f for f in list(forecasts_with_blend_df) if "." in f]
     all_feilds = data_feilds+forecast_feilds
 
-    product_data = forecasts_with_blend_df['Producto_ID']
-    product_data_submission = sub_with_blend_df['Producto_ID']
+    #product_data = forecasts_with_blend_df['Producto_ID']
+    #product_data_submission = sub_with_blend_df['Producto_ID']
 
     #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
     #xgb_forecast_feilds = [f for f in list(forecasts_with_blend_df) if ".XGB" in f]
