@@ -102,13 +102,13 @@ class BestPairLogEnsamble:
         self.name = "BestPairEnsamble_"+method
 
     def fit(self, forecasts, y_actual):
-        forecasts = transfrom_to_log(forecasts)
-        forecasts = fillna_and_inf(forecasts)
         start = time.time()
         comb = list(itertools.combinations(range(forecasts.shape[1]),2))
         rmsle_values = []
         for (a,b) in comb:
-            forecast = self.predict_pair(forecasts[:,a], forecasts[:,b])
+            x = transfrom_to_log(forecasts[:,a])
+            y = transfrom_to_log(forecasts[:,b])
+            forecast = self.predict_pair(x,y)
             forecast = retransfrom_from_log(forecast)
             rmsle = calculate_accuracy("try " +self.method + " pair " + str((a,b)) , y_actual, forecast)
             rmsle_values.append(rmsle)
@@ -192,6 +192,16 @@ def generate_forecast_features(forecasts, model_index_by_acc):
     return np.column_stack([sorted_forecats, kurtosis, hmean, diff_best_two, min_diff_to_best,
             min_diff_to_second, avg_two, std_all,weighted_mean]),['f'+str(f) for f in range(sorted_forecats.shape[1])] \
             + ["kurtosis", "hmean", "diff_best_two", "min_diff_to_best", "min_diff_to_second", "avg_two", "std_all","weighted_mean"]
+
+
+
+def predict_using_veriation(forecasts_data, best_forecast):
+    forecasts_stdev = np.std(forecasts_data, axis=1)
+    forecasts_mean = np.mean(forecasts_data, axis=1)
+    hmean = fillna_and_inf(scipy.stats.hmean(np.where(forecasts_data <= 0, 0.1, forecasts_data), axis=1))
+    min_diff_to_best = np.min(np.abs(forecasts_data - best_forecast[:, 0].reshape((-1,1))), axis=1)
+
+
 
 
 def vote_based_forecast(forecasts, best_model_index, y_actual=None):
