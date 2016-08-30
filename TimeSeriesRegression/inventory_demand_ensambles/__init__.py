@@ -385,6 +385,9 @@ def blend_models(conf, forecasts, model_index_by_acc, y_actual, submissions_ids,
     calculate_accuracy("vote__lr_forecast " + str(conf.command), y_actual_test, lr_forcast_revered)
     '''
 
+
+
+
     xgb_params = {"objective": "reg:linear", "booster":"gbtree", "eta":0.1, "nthread":4, 'min_child_weight':5}
     model, y_pred = regression_with_xgboost(X_train, y_train, X_test, y_test, features=forecasting_feilds, use_cv=True,
                             use_sklean=False, xgb_params=xgb_params)
@@ -459,7 +462,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     y_actual_test = y_actual_saved[no_of_training_instances:]
 
     ensambles = []
-    '''
+
     rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
@@ -467,14 +470,15 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     rmsle = calculate_accuracy("rfr_forecast", y_actual_test, retransfrom_from_log(rfr_forecast))
     ensambles.append((rmsle, rfr, "rfr ensamble"))
 
+
     lr_model =linear_model.Lasso(alpha = 0.2)
     lr_model.fit(X_train, y_train)
     lr_forecast = lr_model.predict(X_test)
     rmsle = calculate_accuracy("lr_forecast", y_actual_test, retransfrom_from_log(lr_forecast))
     ensambles.append((rmsle, lr_model, "lr ensamble"))
 
-    '''
-    do_xgb = True
+
+    do_xgb = False
 
     if do_xgb:
         if xgb_params is None:
