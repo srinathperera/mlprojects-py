@@ -411,7 +411,7 @@ def run_ensambles_on_multiple_models(command):
     '''
 
     #model_list = ['agr_cat', 'fg-vhmean-product']
-    model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc"]
+    model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc", 'vh-mean-product', 'fg-vhmean-product']
     #model_list = ['nn_features-product', "cc-cnn-agc", "features-agc-pp", "agr_cat"]
     #fg_stats  vh-mean-product fg-vhmean-product
 
