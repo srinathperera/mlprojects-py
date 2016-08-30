@@ -198,7 +198,6 @@ def regression_with_xgboost_no_cv(x_train, y_train, X_test, Y_test, features=Non
 
 
 def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use_cv=True, use_sklean=False, xgb_params=None):
-
     train_data = xgb.DMatrix(x_train, label=y_train)
     test_data = xgb.DMatrix(X_test, Y_test)
     evallist  = [(test_data,'eval'), (train_data,'train')]
