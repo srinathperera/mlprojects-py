@@ -28,7 +28,7 @@ import sys
 import gc
 print 'Number of arguments:', len(sys.argv), 'arguments.'
 print 'Argument List:', str(sys.argv)
-
+sys.stdout.flush()
 
 command = -2
 if len(sys.argv) > 1:
@@ -73,6 +73,8 @@ def best_pair_forecast(conf, forecasts_data, y_actual, submission_data, submissi
     best_pair_ensmbale_forecast = best_pair_ensmbale.fit(forecasts_data, y_actual)
     best_pair_ensamble_submission = best_pair_ensmbale.predict(submission_data)
     save_submission_file("best_pair_submission.csv", submissions_ids, best_pair_ensamble_submission)
+    sys.stdout.flush()
+
 
 
 def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=None):
@@ -143,9 +145,9 @@ def run_ensambles_on_multiple_models(command):
     #log_centrality_forecasts(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual)
 
     forecast_feilds_data_only = forecasts_with_blend_df[forecast_feilds].values
-    best_pair_forecast(conf, forecast_feilds_data_only, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids)
+    #best_pair_forecast(conf, forecast_feilds_data_only, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids)
 
-    predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['cc-cnn-agc.XGB'].values, y_actual)
+    predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['agr_cat.XGB'].values, y_actual)
     print_mem_usage("after models")
 
     #xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,

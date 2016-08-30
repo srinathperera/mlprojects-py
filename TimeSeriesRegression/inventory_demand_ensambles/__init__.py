@@ -204,14 +204,23 @@ def predict_using_veriation(forecasts_data, best_forecast, y_actual, frac = 1.0)
     forecasts_data = transfrom_to_log2d(forecasts_data)
     forecasts_stdev = np.std(forecasts_data, axis=1)
     forecasts_mean = np.mean(forecasts_data, axis=1)
+    #forecasts_robust_mean = forecasts_data[abs(forecasts_data - forecasts_mean.reshape((-1,1))) < 2 * forecasts_stdev.reshape((-1,1))]
     forecasts_hmean = fillna_and_inf(scipy.stats.hmean(np.where(forecasts_data <= 0, 0.1, forecasts_data), axis=1))
+    forecasts_median = np.median(forecasts_data, axis=1)
     min_diff_to_best = np.min(np.abs(forecasts_data - best_forecast.reshape((-1,1))), axis=1)
     diff_best_to_mean = np.abs(best_forecast - forecasts_mean)
+
+
 
     print "forecasts_stdev", basic_stats_as_str(forecasts_stdev)
     print "forecasts_mean", basic_stats_as_str(forecasts_mean)
     print "diff_best_to_mean", basic_stats_as_str(diff_best_to_mean)
     print "min_diff_to_best", basic_stats_as_str(min_diff_to_best)
+
+    #forecasts_stdev >>count=2.967219e+07,mean=2.072201e-01,std=1.256776e-01,min=3.159570e-03,50%=1.758286e-01,25%=1.243373e-01,50%=1.758286e-01,75%=2.542546e-01,95%=4.540049e-01,max=2.138248e+00,dtype:=float64
+    #forecasts_mean >>count=2.967219e+07,mean=1.594980e+00,std=6.205789e-01,min=8.732127e-02,50%=1.462738e+00,25%=1.151854e+00,50%=1.462738e+00,75%=1.893289e+00,95%=2.765280e+00,max=7.470179e+00,dtype:=float64
+    #diff_best_to_mean >>count=2.967219e+07,mean=4.604835e+00,std=1.701537e+01,min=2.758960e-07,50%=1.744317e+00,25%=8.145370e-01,50%=1.744317e+00,75%=3.950076e+00,95%=1.473034e+01,max=3.871046e+03,dtype:=float64
+    #min_diff_to_best >>count=2.967219e+07,mean=4.284890e+00,std=1.698368e+01,min=1.200819e-12,50%=1.479762e+00,25%=4.711246e-01,50%=1.479762e+00,75%=3.638548e+00,95%=1.426816e+01,max=3.870050e+03,dtype:=float64
 
     final_forecast = np.zeros(size_to_keep)
     for i in range(size_to_keep):
@@ -220,11 +229,11 @@ def predict_using_veriation(forecasts_data, best_forecast, y_actual, frac = 1.0)
         elif forecasts_stdev[i] < 0.3:
             final_forecast[i] = forecasts_mean[i]
         else:
-            final_forecast[i] = (forecasts_hmean[i] + best_forecast[i])/2
+            final_forecast[i] = (forecasts_median[i] + best_forecast[i])/2
 
     calculate_accuracy("predict_using_veriation", y_actual, final_forecast)
 
-    X_all = np.column_stack([best_forecast, forecasts_mean, forecasts_hmean, forecasts_stdev, min_diff_to_best, diff_best_to_mean])
+    X_all = np.column_stack([best_forecast, forecasts_mean, forecasts_hmean, forecasts_stdev, min_diff_to_best, diff_best_to_mean, forecasts_median])
     y_actual = transfrom_to_log(y_actual)
     no_of_training_instances = int(round(len(y_actual)*0.50))
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
