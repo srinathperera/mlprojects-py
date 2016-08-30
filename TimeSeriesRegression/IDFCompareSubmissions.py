@@ -43,9 +43,10 @@ def compare_submission_files(file_list, name_list):
     submission_ids = basedf['id']
     basedf = drop_feilds_1df(basedf, ['id'])
 
-
     for f in list(basedf):
-        print f, basic_stats_as_str(basedf[f].values)
+        data = basedf[f].values
+        print f,"data.shape", data.shape
+        print f, basic_stats_as_str(data)
 
 
 
