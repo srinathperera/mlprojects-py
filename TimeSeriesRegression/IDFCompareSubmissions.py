@@ -37,7 +37,7 @@ def compare_submission_files(file_list, name_list):
     basedf.rename(columns={"Demanda_uni_equil": name_list[0]}, inplace=True)
     for i in range(1, len(submissions_df_list)):
         mdf = submissions_df_list[i]
-        mdf.rename(columns={"Demanda_uni_equil": name_list[0]}, inplace=True)
+        mdf.rename(columns={"Demanda_uni_equil": name_list[i]}, inplace=True)
         basedf = pd.merge(basedf, mdf, how='left', on=["id"])
 
     submission_ids = basedf['id']
