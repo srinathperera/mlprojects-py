@@ -51,6 +51,8 @@ def compare_submission_files(file_list, name_list):
 
     for i in range(1,len(feature_list)):
         calculate_accuracy(feature_list[i], basedf[feature_list[0]].values, basedf[feature_list[i]].values)
+        print_error_distribution(basedf[feature_list[0]].values, basedf[feature_list[i]].values)
+
 
 
 print compare_submission_files([
