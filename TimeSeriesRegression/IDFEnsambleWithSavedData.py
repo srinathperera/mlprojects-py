@@ -154,9 +154,9 @@ def run_ensambles_on_multiple_models(command):
     forecasts_with_blend_df, y_actual = load_ensamble_data("model_forecasts")
     sub_with_blend_df, submissions_ids = load_ensamble_data("model_submissions")
 
-    #data_feilds = ["mean_sales", "sales_count", "sales_stddev",
-    #                "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
-    data_feilds = ["sales_count", "signature", "kurtosis", "entropy"]
+    data_feilds = ["mean_sales", "sales_count", "sales_stddev",
+                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
+    #data_feilds = ["sales_count", "signature", "kurtosis", "entropy"]
 
     forecast_feilds = [f for f in list(forecasts_with_blend_df) if "." in f]
     all_feilds = data_feilds+forecast_feilds

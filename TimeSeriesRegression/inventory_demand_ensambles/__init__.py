@@ -463,6 +463,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
 
     ensambles = []
 
+    '''
     rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
@@ -476,9 +477,9 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     lr_forecast = lr_model.predict(X_test)
     rmsle = calculate_accuracy("lr_forecast", y_actual_test, retransfrom_from_log(lr_forecast))
     ensambles.append((rmsle, lr_model, "lr ensamble"))
+    '''
 
-
-    do_xgb = False
+    do_xgb = True
 
     if do_xgb:
         if xgb_params is None:
