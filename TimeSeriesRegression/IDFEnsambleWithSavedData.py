@@ -154,9 +154,9 @@ def run_ensambles_on_multiple_models(command):
     forecasts_with_blend_df, y_actual = load_ensamble_data("model_forecasts")
     sub_with_blend_df, submissions_ids = load_ensamble_data("model_submissions")
 
-    data_feilds = ["mean_sales", "sales_count", "sales_stddev",
-                    "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
-    #data_feilds = ["sales_count", "signature", "kurtosis", "entropy"]
+    #data_feilds = ["mean_sales", "sales_count", "sales_stddev",
+    #                "median_sales", "last_sale", "last_sale_week", "returns", "signature", "kurtosis", "hmean", "entropy"]
+    data_feilds = ["last_sale_week"]
 
     forecast_feilds = [f for f in list(forecasts_with_blend_df) if "." in f]
     all_feilds = data_feilds+forecast_feilds
@@ -167,7 +167,7 @@ def run_ensambles_on_multiple_models(command):
     #product_data = forecasts_with_blend_df['Producto_ID']
     #product_data_submission = sub_with_blend_df['Producto_ID']
 
-    #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
+    xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
     #xgb_forecast_feilds = [f for f in list(forecasts_with_blend_df) if ".XGB" in f]
     #log_centrality_forecasts(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual)
 
@@ -177,9 +177,9 @@ def run_ensambles_on_multiple_models(command):
     #predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['agr_cat.XGB'].values, y_actual)
     #print_mem_usage("after models")
 
-    xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
-            'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 4, 'gamma': 0.3, 'lambda': 0}
-    xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=xgb_params)
+    #xgb_params = {'alpha': 0, 'booster': 'gbtree', 'colsample_bytree': 0.8, 'nthread': 4, 'min_child_weight': 10,
+    #        'subsample': 1.0, 'eta': 0.1, 'objective': 'reg:linear', 'max_depth': 4, 'gamma': 0.3, 'lambda': 0}
+    #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=xgb_params)
 
 
 run_ensambles_on_multiple_models(command)

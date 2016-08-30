@@ -105,7 +105,7 @@ class BestPairLogEnsamble:
         start = time.time()
         comb = list(itertools.combinations(range(forecasts.shape[1]),2))
         random.shuffle(comb)
-        comb = comb[:min(50, len(comb))]
+        comb = comb[:min(200, len(comb))]
         rmsle_values = []
         for i, (a,b) in enumerate(comb):
             x = transfrom_to_log(forecasts[:,a])
@@ -118,6 +118,16 @@ class BestPairLogEnsamble:
         best_index = np.argmin(rmsle_values)
         self.best_pair = comb[best_index]
         print "[IDF]best mean pair value, " + str(self.conf.command), str(self.best_pair), 'rmsle=', rmsle_values[best_index]
+
+        best_indexes = np.argsort(rmsle_values)
+        best_pairs = comb[best_indexes[:10]]
+        forecasts = [self.predict_pair(transfrom_to_log(forecasts[:,a]),transfrom_to_log(forecasts[:,a])) for (a,b) in best_pairs]
+
+
+
+        print "[IDF]best mean pair value, " + str(self.conf.command), str(self.best_pair), 'rmsle=', rmsle_values[best_index]
+
+
         print_time_took(start, self.method + "_forecast " + str(self.conf.command))
         return forecast
 
