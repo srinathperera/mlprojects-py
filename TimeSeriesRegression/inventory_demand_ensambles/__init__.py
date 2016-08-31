@@ -531,6 +531,8 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
             sec_y_forecast = best_ensamble.predict(sec_test_data)
             sec_y_forecast = retransfrom_from_log(sec_y_forecast)
             sec_y_forecast = np.where(sec_y_forecast < 0, 0, sec_y_forecast)
+        else:
+            sec_y_forecast = None
 
         print "avg_models took ", (time.time() - start), "s"
         return xgb_forecast_actual, y_actual_test, ensamble_forecast, sec_y_forecast
