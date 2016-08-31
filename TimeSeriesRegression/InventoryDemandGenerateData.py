@@ -132,6 +132,9 @@ if test_run:
 print_mem_usage("end of feture generation")
 
 save_train_data(analysis_type, conf.command, train_df, test_df, testDf, y_actual_train, y_actual_test)
+find_NA_rows_percent(train_df, "train_df after data gen", throw_error=False)
+find_NA_rows_percent(test_df, "test_df after data gen", throw_error=False)
+find_NA_rows_percent(testDf, "testDf after data gen", throw_error=False)
 
 
 #print "Memory: train, test, sub",  object_size(train_df), object_size(test_df), object_size(testDf)
