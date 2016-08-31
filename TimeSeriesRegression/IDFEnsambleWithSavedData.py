@@ -119,7 +119,7 @@ def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with
         y_data = y_folds[i]
         print "fold data", train_df.shape, y_data.shape
         try:
-            xgb_forecast, y_actual_test, submission_forecast, sec_y_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df,
+            xgb_forecast, y_actual_test, submission_forecast, sec_y_forecast = avg_models(conf, train_df, y_data, sub_with_blend_df[all_feilds],
                     submission_ids=submissions_ids, do_cv=True, xgb_params=xgb_params, sec_test_data=second_test_data)
             submission_forecasts.append(submission_forecast)
             xgb_forecasts.append(xgb_forecast)
@@ -172,14 +172,14 @@ def run_ensambles_on_multiple_models(command):
 
     gc.collect()
 
-    avg_models(conf, forecasts_with_blend_df[all_feilds], y_actual, sub_with_blend_df[all_feilds],
-                    submission_ids=submissions_ids, do_cv=True)
+    #avg_models(conf, forecasts_with_blend_df[all_feilds], y_actual, sub_with_blend_df[all_feilds],
+    #                submission_ids=submissions_ids, do_cv=True)
 
 
     #product_data = forecasts_with_blend_df['Producto_ID']
     #product_data_submission = sub_with_blend_df['Producto_ID']
 
-    #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
+    xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
     #xgb_forecast_feilds = [f for f in list(forecasts_with_blend_df) if ".XGB" in f]
     #log_centrality_forecasts(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual)
 
