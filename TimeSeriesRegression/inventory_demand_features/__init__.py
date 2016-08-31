@@ -690,23 +690,23 @@ def add_five_grouped_stats(train_df, test_df, testDf):
 
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
     default_sales_mean = train_df_m['mean_sales'].mean()
-    train_df_m['mean_sales'].fillna(default_sales_mean, inplace=True)
-    train_df_m['median_sales'].fillna(default_sales_mean, inplace=True)
-    train_df_m['last_sale'].fillna(default_sales_mean, inplace=True)
-    train_df_m.fillna(0, inplace=True)
+    #train_df_m['mean_sales'].fillna(default_sales_mean, inplace=True)
+    #train_df_m['median_sales'].fillna(default_sales_mean, inplace=True)
+    #train_df_m['last_sale'].fillna(default_sales_mean, inplace=True)
+    #train_df_m.fillna(0, inplace=True)
 
     test_df_m = pd.merge(test_df, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
-    test_df_m['mean_sales'].fillna(default_sales_mean, inplace=True)
-    test_df_m['median_sales'].fillna(default_sales_mean, inplace=True)
-    test_df_m['last_sale'].fillna(default_sales_mean, inplace=True)
-    test_df_m.fillna(0, inplace=True)
+    #test_df_m['mean_sales'].fillna(default_sales_mean, inplace=True)
+    #test_df_m['median_sales'].fillna(default_sales_mean, inplace=True)
+    #test_df_m['last_sale'].fillna(default_sales_mean, inplace=True)
+    #test_df_m.fillna(0, inplace=True)
 
     if testDf is not None:
         testDf = pd.merge(testDf, valuesDf, how='left', on=['Agencia_ID', 'Canal_ID', 'Ruta_SAK', 'Cliente_ID', 'Producto_ID'])
-        testDf['mean_sales'].fillna(default_sales_mean, inplace=True)
-        testDf['median_sales'].fillna(default_sales_mean, inplace=True)
-        testDf['last_sale'].fillna(default_sales_mean, inplace=True)
-        testDf.fillna(0, inplace=True)
+        #testDf['mean_sales'].fillna(default_sales_mean, inplace=True)
+        #testDf['median_sales'].fillna(default_sales_mean, inplace=True)
+        #testDf['last_sale'].fillna(default_sales_mean, inplace=True)
+        #testDf.fillna(0, inplace=True)
 
     '''
     #these are top aggrigate features
