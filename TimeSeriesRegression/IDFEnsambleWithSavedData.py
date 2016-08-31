@@ -161,8 +161,8 @@ def run_ensambles_on_multiple_models(command):
 
     #forecast_feilds = [f for f in list(forecasts_with_blend_df) if "." in f]
 
-    #model_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc", 'vh-mean-product', 'fg-vhmean-product']
-    fset_list = ['nn_features-product', "features-agc-pp", "agr_cat"]
+    fset_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc", 'vh-mean-product', 'fg-vhmean-product']
+    #fset_list = ['nn_features-product', "features-agc-pp", "agr_cat"]
     models = ['XGB', 'LR', 'RFR', 'ETR']
 
     forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
