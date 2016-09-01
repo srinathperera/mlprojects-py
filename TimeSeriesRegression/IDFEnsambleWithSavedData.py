@@ -90,20 +90,20 @@ def calcuate_log_mean_forecast(forecasts_list):
 
 def xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids, xgb_params=None):
     data_size = forecasts_with_blend_df.shape[0]
-    fold_size = int(math.ceil(data_size/4.0))
+    fold_size = int(math.ceil(data_size/5.0))
 
     forecast_data = forecasts_with_blend_df[all_feilds].values
     train_folds = []
     y_folds = []
-    for fs in range(0, data_size, fold_size):
-        fold_data = forecast_data[fs:min(fs+fold_size, data_size)]
+    for fs in range(0, data_size-fold_size, fold_size):
+        fold_end = min(fs+2*fold_size, data_size-fold_size)
+        fold_data = forecast_data[fs:fold_end]
         if fold_data.shape[0] > fold_size/2:
             train_folds.append(fold_data)
-            y_folds.append(y_actual[fs:min(fs+fold_size, data_size)])
+            y_folds.append(y_actual[fs:fold_end])
             print "created fold", fs, "-", min(fs+fold_size, data_size)
         else:
             print "ignoring data fold too small", str(fold_data.shape[0]), fs, "-", min(fs+fold_size, data_size)
-
 
     second_test_data_size = int(data_size*0.1)
     second_test_data = forecast_data[:second_test_data_size]
