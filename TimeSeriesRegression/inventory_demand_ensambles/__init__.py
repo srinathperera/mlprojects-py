@@ -475,7 +475,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     ensambles = []
 
 
-    rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
+    rfr = RandomForestRegressor(n_jobs=4, oob_score=True)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
     rfr_forecast = rfr.predict(X_test)
