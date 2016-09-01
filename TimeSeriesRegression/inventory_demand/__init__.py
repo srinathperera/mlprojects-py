@@ -563,9 +563,11 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
     else:
         test_df_m[name + "_Mean"].fillna(test_df_m[name + "_Mean"].mean(), inplace=True)
     test_df_m.fillna(0, inplace=True)
+    '''
 
     if testDf is not None:
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
+    '''
         if default_stats.replacement_feild is not None:
             testDf[name + "_Mean"] = np.where(np.isnan(testDf[name + "_Mean"].values), testDf[default_stats.replacement_feild].values, testDf[name + "_Mean"].values)
         else:
@@ -604,6 +606,16 @@ def drop_feilds(train_df, test_df, testDf, feilds):
         testDf = testDf.drop(feilds, axis=1)
 
     return train_df, test_df, testDf
+
+
+def replace_inf(train_df, test_df, sub_df, value):
+    df_list = [train_df, test_df, sub_df]
+    for tdf in df_list:
+        tdf.replace([np.inf, -np.inf], value, inplace=True)
+    return df_list[0], df_list[1], df_list[2]
+
+
+
 
 
 def drop_feilds_1df(df, feilds):

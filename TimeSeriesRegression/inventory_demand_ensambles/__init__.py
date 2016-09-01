@@ -464,6 +464,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
 
     target_as_log = True
     if target_as_log:
+        X_all = transfrom_to_log2d(X_all)
         y_actual = transfrom_to_log(y_actual)
 
     #we use 10% full data to train the ensamble and 30% for evalaution
@@ -473,7 +474,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
 
     ensambles = []
 
-    '''
+
     rfr = RandomForestRegressor(n_jobs=4, oob_score=True, max_depth=3)
     rfr.fit(X_train, y_train)
     print_feature_importance(rfr.feature_importances_, forecasting_feilds)
@@ -487,7 +488,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
     lr_forecast = lr_model.predict(X_test)
     rmsle = calculate_accuracy("lr_forecast", y_actual_test, retransfrom_from_log(lr_forecast))
     ensambles.append((rmsle, lr_model, "lr ensamble"))
-    '''
+
 
     do_xgb = True
 
@@ -510,7 +511,7 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
         print "[IDF]Best Ensamble", ensambles[best_ensamble_index][2], ensambles[best_ensamble_index][0]
 
         if sub_X_all is not None:
-            ensamble_forecast = best_ensamble.predict(sub_X_all)
+            ensamble_forecast = best_ensamble.predict(transfrom_to_log2d(sub_X_all))
             ensamble_forecast = retransfrom_from_log(ensamble_forecast)
 
             #becouse forecast cannot be negative
