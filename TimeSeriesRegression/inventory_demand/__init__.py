@@ -615,6 +615,16 @@ def replace_inf(train_df, test_df, sub_df, value):
     return df_list[0], df_list[1], df_list[2]
 
 
+def replace_na_dfs_with_mean(train_df, test_df, sub_df):
+    return replace_na_with_mean(train_df), replace_na_with_mean(test_df), replace_na_with_mean(sub_df)
+
+
+def replace_na_with_mean(tdf):
+    for f in list(tdf):
+        mean = tdf[f].mean()
+        tdf[f].fillna(mean, inplace=True)
+    return tdf
+
 
 
 
