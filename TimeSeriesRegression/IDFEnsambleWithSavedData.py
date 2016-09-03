@@ -68,10 +68,20 @@ def log_centrality_forecasts(conf, forecasts_data, y_actual):
     #mean_forecast = retransfrom_from_log(np.mean(forecasts_data, axis=1))
     #calculate_accuracy("log_mean", y_actual, mean_forecast)
 
-def best_pair_forecast(conf, forecasts_data, y_actual, submission_data, submissions_ids):
-    best_pair_ensmbale = BestPairLogEnsamble(conf)
-    best_pair_ensmbale_forecast = best_pair_ensmbale.fit(forecasts_data, y_actual)
-    best_pair_ensamble_submission = best_pair_ensmbale.predict(submission_data)
+
+def best_pair_forecast(conf, forecasts_data, y_actual, submission_data, submissions_ids, feild_names):
+    no_of_training_instances = int(forecasts_data.shape[0]*0.3)
+    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, forecasts_data, y_actual)
+    test_forecasts_r1, submissions_pair_forecasts = find_n_best_pairs(X_train, y_train, X_test, y_test, submission_data, feild_names, pair_count=10)
+
+    no_of_training_instances = int(test_forecasts_r1.shape[0]*0.5)
+    X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, test_forecasts_r1, y_test)
+    test_forecasts_r2, submissions_pair_forecasts = find_n_best_pairs(X_train, y_train, X_test, y_test, submissions_pair_forecasts, feild_names, pair_count=2)
+
+    final_test_forecast = np.mean(test_forecasts_r2, axis=1)
+    calculate_accuracy("final_pair_forecast", y_test, final_test_forecast)
+
+    best_pair_ensamble_submission = np.mean(submissions_pair_forecasts, axis=1)
     save_submission_file("best_pair_submission.csv", submissions_ids, best_pair_ensamble_submission)
     sys.stdout.flush()
 
@@ -176,11 +186,10 @@ def run_ensambles_on_multiple_models(command):
 
     #product_data = forecasts_with_blend_df['Producto_ID']
     #product_data_submission = sub_with_blend_df['Producto_ID']
-    models = ['LR']
-    forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
-    all_feilds = data_feilds+forecast_feilds
-
-    xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
+    #models = ['LR']
+    #forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
+    #all_feilds = data_feilds+forecast_feilds
+    #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
 
 
 
@@ -189,8 +198,10 @@ def run_ensambles_on_multiple_models(command):
     #xgb_forecast_feilds = [f for f in list(forecasts_with_blend_df) if ".XGB" in f]
     #log_centrality_forecasts(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual)
 
+    models = ['LR', 'XGB', 'RFR', 'ETR']
+    forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
     forecast_feilds_data_only = forecasts_with_blend_df[forecast_feilds].values
-    #best_pair_forecast(conf, forecast_feilds_data_only, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids)
+    best_pair_forecast(conf, forecast_feilds_data_only, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids, forecast_feilds)
 
     #predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['agr_cat.XGB'].values, y_actual)
     #print_mem_usage("after models")

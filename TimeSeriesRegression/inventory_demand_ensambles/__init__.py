@@ -95,6 +95,52 @@ class BestPairEnsamble:
             forecast = np.mean(forecasts, axis=1)
         return forecast
 
+
+def forecast_pair(forecast_data, a,b):
+    x = transfrom_to_log(forecast_data[:,a])
+    y = transfrom_to_log(forecast_data[:,b])
+    forecasts = np.column_stack([x,y])
+    forecast = np.mean(forecasts, axis=1)
+    forecast = retransfrom_from_log(forecast)
+    return forecast
+
+
+def find_n_best_pairs(forecasts_train, y_actual_train, forecasts_test, y_actual_test, submission_forecasts, feild_names, pair_count=10):
+    #create pair combinations
+    comb = list(itertools.combinations(range(forecasts_train.shape[1]),2))
+    random.shuffle(comb)
+    comb = comb[:min(200, len(comb))]
+
+    #find best pairs
+    rmsle_values = []
+    for i, (a,b) in enumerate(comb):
+        forecast = forecast_pair(forecasts_train, a, b)
+        rmsle = calculate_accuracy(str(i) + " pair " + str((a,b)) , y_actual_train, forecast)
+        rmsle_values.append(rmsle)
+
+    best_indexes = np.argsort(rmsle_values)
+    best_indexes = best_indexes[:int(pair_count)]
+    print best_indexes
+    best_pairs = [comb[i] for i in best_indexes]
+
+    test_rmsle_values = []
+    test_forecasts = []
+    submissions_pair_forecasts = []
+
+    for (a,b) in best_pairs:
+        test_forecast = forecast_pair(forecasts_test, a, b)
+        test_forecasts.append(test_forecast)
+        rmsle = calculate_accuracy(str(i) + " pair " + str((a,b)) , y_actual_test, test_forecast)
+        test_rmsle_values.append(rmsle)
+
+        sub_pair_forecast = forecast_pair(submission_forecasts, a, b)
+        submissions_pair_forecasts.append(sub_pair_forecast)
+
+    print "[IDF]best mean pair values, " + str(best_pairs), 'rmsle=', test_rmsle_values[:pair_count]
+    print "best pairs", str([feild_names[a] + " "+ feild_names[b] for (a,b) in best_pairs])
+    return np.column_stack(test_forecasts), np.column_stack(submissions_pair_forecasts)
+
+
 class BestPairLogEnsamble:
     def __init__(self, conf, method="mean"):
         self.conf = conf
