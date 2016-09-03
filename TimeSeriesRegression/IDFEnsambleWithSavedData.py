@@ -189,7 +189,7 @@ def run_ensambles_on_multiple_models(command):
     #models = ['LR']
     #forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
     #all_feilds = data_feilds+forecast_feilds
-    #xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
+    xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
 
 
 
@@ -198,10 +198,10 @@ def run_ensambles_on_multiple_models(command):
     #xgb_forecast_feilds = [f for f in list(forecasts_with_blend_df) if ".XGB" in f]
     #log_centrality_forecasts(conf, forecasts_with_blend_df[forecast_feilds].values, y_actual)
 
-    models = ['LR', 'XGB', 'RFR', 'ETR']
-    forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
-    forecast_feilds_data_only = forecasts_with_blend_df[forecast_feilds].values
-    best_pair_forecast(conf, forecast_feilds_data_only, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids, forecast_feilds)
+    #models = ['LR', 'XGB', 'RFR', 'ETR']
+    #forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
+    #forecast_feilds_data_only = forecasts_with_blend_df[forecast_feilds].values
+    #best_pair_forecast(conf, forecast_feilds_data_only, y_actual, sub_with_blend_df[forecast_feilds].values, submissions_ids, forecast_feilds)
 
     #predict_using_veriation(forecast_feilds_data_only, forecasts_with_blend_df['agr_cat.XGB'].values, y_actual)
     #print_mem_usage("after models")
