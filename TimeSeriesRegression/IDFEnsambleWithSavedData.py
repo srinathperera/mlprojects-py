@@ -173,7 +173,9 @@ def run_ensambles_on_multiple_models(command):
 
     fset_list = ['nn_features-product', 'nn_features-agency', "nn_features-brand", "features-agc-pp", "agr_cat", "features-agency", "cc-cnn-agc", 'vh-mean-product', 'fg-vhmean-product']
     #fset_list = ['nn_features-product', "features-agc-pp", "agr_cat"]
-    models = ['XGB']
+
+    models = ['LR', 'XGB', 'RFR', 'ETR']
+    #models = ['XGB']
     forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
     all_feilds = data_feilds+forecast_feilds
     print_mem_usage("before models")
@@ -189,6 +191,7 @@ def run_ensambles_on_multiple_models(command):
     #models = ['LR']
     #forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
     #all_feilds = data_feilds+forecast_feilds
+    
     xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
 
 

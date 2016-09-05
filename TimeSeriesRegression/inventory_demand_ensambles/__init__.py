@@ -513,6 +513,8 @@ def avg_models(conf, blend_forecasts_df, y_actual, submission_forecasts_df, subm
         X_all = transfrom_to_log2d(X_all)
         y_actual = transfrom_to_log(y_actual)
 
+    X_all = scipy.stats.mstats.zscore(X_all, axis=1)
+
     #we use 10% full data to train the ensamble and 30% for evalaution
     no_of_training_instances = int(round(len(y_actual)*0.5))
     X_train, X_test, y_train, y_test = train_test_split(no_of_training_instances, X_all, y_actual)
