@@ -900,6 +900,8 @@ def compare_datasets(folder1, folder2, command):
         if not data_list1[0].equals(data_list2[0]):
             print data_list1[0].describe()
             print data_list2[0].describe()
+        else:
+            print i, " equal"
 
 
 compare_datasets('agr_cat', 'agr_cat1', 0)
@@ -915,11 +917,11 @@ compare_datasets('agr_cat', 'agr_cat1', 0)
 #parse_feature_importance(file='/Users/srinath/playground/data-science/BimboInventoryDemand/logs/feature-explore4.txt')
 #parse_feature_explore_outputs()
 
-compare_submissions(
-    ['submissions_parts/xgb_ensamble_submission_1472484817.68.csv',
-     'submissions_parts/xgb_ensamble_submission_1472490059.13.csv',
-     'submissions_parts/xgb_ensamble_submission_1472495260.59.csv',
-     'submissions_parts/xgb_ensamble_submission_1472500466.16.csv'])
+#compare_submissions(
+#    ['submissions_parts/xgb_ensamble_submission_1472484817.68.csv',
+#     'submissions_parts/xgb_ensamble_submission_1472490059.13.csv',
+#     'submissions_parts/xgb_ensamble_submission_1472495260.59.csv',
+#     'submissions_parts/xgb_ensamble_submission_1472500466.16.csv'])
 
 #analyze_error()
 
