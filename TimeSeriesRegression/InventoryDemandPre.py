@@ -896,7 +896,7 @@ def compare_datasets(folder1, folder2, command):
     data_list1 = [train_df1, test_df1, testDf1]
     data_list2 = [train_df2, test_df2, testDf2]
 
-    for i in range(data_list1):
+    for i in range(len(data_list1)):
         if not data_list1[0].equals(data_list2[0]):
             print data_list1[0].describe()
             print data_list2[0].describe()
