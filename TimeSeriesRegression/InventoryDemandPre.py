@@ -904,7 +904,7 @@ def compare_datasets(folder1, folder2, command):
             print i, " equal"
 
 
-compare_datasets('agr_cat', 'agr_cat1', 0)
+compare_datasets('agr_cat', 'agr_cat1', 1)
 
 
 
