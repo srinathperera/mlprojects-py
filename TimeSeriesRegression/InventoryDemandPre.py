@@ -880,6 +880,32 @@ def shaffle_data():
         shuffled_df.to_csv(data_files[command][0], index=False)
 
 
+def compare_datasets(folder1, folder2, command):
+    train_df1, test_df1, testDf1, y_actual_train1, y_actual_test1 = load_train_data(folder1, command)
+    if train_df1 is None or test_df1 is None or testDf1 is None:
+        raise ValueError('data not found for '+ folder1)
+    else:
+        print "reusing train data", folder1
+
+    train_df2, test_df2, testDf2, y_actual_train2, y_actual_test2 = load_train_data(folder2, command)
+    if train_df2 is None or test_df2 is None or testDf2 is None:
+        raise ValueError('data not found for '+ folder2)
+    else:
+        print "reusing train data", folder2
+
+    data_list1 = [train_df1, test_df1, testDf1]
+    data_list2 = [train_df2, test_df2, testDf2]
+
+    for i in range(data_list1):
+        if not data_list1[0].equals(data_list2[0]):
+            print data_list1[0].describe()
+            print data_list2[0].describe()
+
+
+compare_datasets('agr_cat', 'agr_cat1', 0)
+
+
+
 #shaffle_data()
 #test_merge_datasets()
 #find_similar_products()
