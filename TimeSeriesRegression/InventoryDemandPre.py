@@ -898,8 +898,9 @@ def compare_datasets(folder1, folder2, command):
 
     for i in range(len(data_list1)):
         if not data_list1[0].equals(data_list2[0]):
-            print data_list1[0].describe()
-            print data_list2[0].describe()
+            for f in list(data_list1[0]):
+                if "_Mean" in f:
+                   print i, data_list1[0][f].mean(), "=", data_list2[0][f].mean()
         else:
             print i, " equal"
 
