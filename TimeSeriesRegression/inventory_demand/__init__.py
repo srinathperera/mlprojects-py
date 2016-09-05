@@ -365,21 +365,19 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
 
     #TODO check why data is NA
     valuesDf = meanData.to_frame(name+"_Mean")
-    #valuesDf.fillna(meanData.mean(), inplace=True)
     valuesDf.reset_index(inplace=True)
 
     stddevData = groupData.std()
     if fops.stddev:
         valuesDf[name+"_StdDev"] = stddevData.values
-        #valuesDf.fillna(10000, inplace=True)
 
     countData = groupData.count()
     if fops.count:
         valuesDf[name+"_Count"] = countData.values
-        #valuesDf.fillna(0, inplace=True)
     if fops.sum:
         sumData = groupData.sum()
         valuesDf[name+"_sum"] = sumData.values
+
     start2_start = time.time()
     print "join_multiple_feild_stats: base stats took", (start2_start - start)
     print "start complex stat", (time.time() - start)
@@ -406,16 +404,6 @@ def join_multiple_feild_stats(bdf, testdf, subdf, feild_names, agr_feild, name, 
         valuesDf[name+"ci"] = calculate_ci(stddevData,countData)
     if fops.median:
         valuesDf[name +"_median"] = groupData.median().values
-
-    #valuesDf = calculate_group_stats(groupData, name, default_stats, fops)
-    print "took entropy", (time.time() - start)
-    '''
-    if fops.use_close_products_missing and feild_names[0] == 'Ruta_SAK' and feild_names[1] == 'Cliente_ID':
-        to_merge = pd.concat([testdf[['Ruta_SAK','Cliente_ID']], subdf[['Ruta_SAK','Cliente_ID']]])
-        to_merge = to_merge.drop_duplicates()
-        valuesDf = find_alt_for_missing(to_merge, valuesDf)
-        print "Using close values for missing values"
-    '''
 
     merge_start = time.time()
     print "join_multiple_feild_stats: complex stats took", (merge_start - start2_start)
@@ -465,12 +453,8 @@ def find_NA_rows_percent(df_check, label, throw_error=True):
 
 def merge__multiple_feilds_stats_with_df(name, bdf, stat_df, feild_names, default_stats):
     merged = pd.merge(bdf, stat_df, how='left', on=feild_names)
-    #merged = fillna_if_feildexists(merged, name+"_Mean", default_stats)
-    #merged = fillna_if_feildexists(merged, name+"_StdDev", 10000)
-    #merged = fillna_if_feildexists(merged, name+"_Count", 0)
-    #replace rest with zero
-    #merged.fillna(0, inplace=True)
     return merged
+
 
 def calcuate_hmean(group):
     x = group.values
@@ -521,9 +505,6 @@ def calculate_group_stats(grouped_data, name, default_stats, fops):
     if fops.median:
         median = grouped_data.median()
         valuesDf[name +"_median"] = fillna_and_inf(median)
-
-
-    valuesDf.fillna(default_stats.mean, inplace=True)
     return valuesDf
 
 
@@ -554,32 +535,8 @@ def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats
     train_df_m = pd.merge(train_df, valuesDf, how='left', on=[feild_name])
     test_df_m = pd.merge(test_df, valuesDf, how='left', on=[feild_name])
 
-    '''
-    train_df_m.fillna(0, inplace=True)
-
-    name = feild_name+"_"+agr_feild
-    if default_stats.replacement_feild is not None:
-        test_df_m[name + "_Mean"] = np.where(np.isnan(test_df_m[name + "_Mean"].values), test_df_m[default_stats.replacement_feild].values, test_df_m[name + "_Mean"].values)
-    else:
-        test_df_m[name + "_Mean"].fillna(test_df_m[name + "_Mean"].mean(), inplace=True)
-    test_df_m.fillna(0, inplace=True)
-    '''
-
     if testDf is not None:
         testDf = pd.merge(testDf, valuesDf, how='left', on=[feild_name])
-    '''
-        if default_stats.replacement_feild is not None:
-            testDf[name + "_Mean"] = np.where(np.isnan(testDf[name + "_Mean"].values), testDf[default_stats.replacement_feild].values, testDf[name + "_Mean"].values)
-        else:
-            testDf[name + "_Mean"].fillna(testDf[name + "_Mean"].mean(), inplace=True)
-        if fops.stddev:
-            testDf[name + "_StdDev"].fillna(10000, inplace=True)
-        if fops.count:
-            testDf[name + "_Count"].fillna(0, inplace=True)
-        if drop:
-            testDf = testDf.drop(feild_name,1)
-        testDf.fillna(0, inplace=True)
-    '''
 
     print "addFeildStatsAsFeatures() "+ feild_name+ " took %f (%f, %f), size %s %f" %(time.time()-start, calculate_ts- start,
                                            time.time() - calculate_ts, feild_name, valuesDf.shape[0])
@@ -616,15 +573,18 @@ def replace_inf(train_df, test_df, sub_df, value):
 
 
 def replace_na_dfs_with_mean(train_df, test_df, sub_df):
-    return replace_na_with_mean(train_df), replace_na_with_mean(test_df), replace_na_with_mean(sub_df)
+    return replace_df_na_with_mean(train_df), replace_df_na_with_mean(test_df), replace_df_na_with_mean(sub_df)
 
 
-def replace_na_with_mean(tdf):
+def replace_df_na_with_mean(tdf):
     for f in list(tdf):
-        mean = tdf[f].mean()
-        tdf[f].fillna(mean, inplace=True)
+        replace_feild_na_with_mean(tdf[f])
     return tdf
 
+
+def replace_feild_na_with_mean(feild_data):
+    mean = feild_data.mean()
+    feild_data.fillna(mean, inplace=True)
 
 
 
@@ -1491,7 +1451,6 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
         #default_demand_stats.replacement_feild='Producto_ID_Demanda_uni_equil_Mean'
         #default_venta_hoy_stats.replacement_feild='Producto_ID_Venta_hoy_Mean'
         #default_dev_proxima_stats.replacement_feild='Producto_ID_Dev_proxima_Mean'
-
 
         train_df, test_df, testDf = addFeildStatsAsFeatures(train_df, test_df,'Agencia_ID', testDf, default_demand_stats,
                                                             FeatureOps(hmean=True, stddev=True, count=True))
