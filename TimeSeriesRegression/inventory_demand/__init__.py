@@ -477,13 +477,13 @@ def calculate_group_stats(grouped_data, name, default_stats, fops):
     stddevData = grouped_data.std()
     if fops.stddev or fops.count:
         valuesDf[ name +"_StdDev"] = stddevData.values
-        valuesDf.fillna(10000, inplace=True)
+        replace_feild_na_with_mean(valuesDf[ name +"_StdDev"])
 
     if fops.ci or fops.count:
         countData = grouped_data.count()
     if fops.count:
         valuesDf[name + "_Count"] = countData.values
-        valuesDf.fillna(0, inplace=True)
+        replace_feild_na_with_mean(valuesDf[name + "_Count"])
     if fops.ci:
         valuesDf[name+"ci"] = calculate_ci(stddevData.values,countData.values)
 
@@ -504,7 +504,7 @@ def calculate_group_stats(grouped_data, name, default_stats, fops):
         valuesDf[name +"_entropy"] =  np.where(np.isnan(entropy), 0, np.where(np.isinf(entropy), 10, entropy))
     if fops.median:
         median = grouped_data.median()
-        valuesDf[name +"_median"] = fillna_and_inf(median)
+        valuesDf[name +"_median"] = fillna_and_inf(median, na_r=median.mean())
     return valuesDf
 
 
