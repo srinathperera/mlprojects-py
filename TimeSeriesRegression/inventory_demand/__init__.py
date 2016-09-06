@@ -1615,7 +1615,7 @@ def get_models4ensamble(conf):
               ]
     return models
     '''
-    return XGBoostModel(conf, xgb_params, use_cv=True)
+    return [XGBoostModel(conf, xgb_params, use_cv=True)]
 
 
 def get_models4xgboost_tunning(conf, case=4):
