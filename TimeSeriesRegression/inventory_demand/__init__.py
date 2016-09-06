@@ -120,7 +120,7 @@ def read_productdata_file(file_name):
 def fillna_and_inf(data, na_r=0, inf_r=100000):
     return np.where(np.isnan(data), na_r, np.where(np.isinf(data), inf_r, data))
 
-
+'''
 def fillna_if_feildexists(df, feild_name, default_stats=None):
     if feild_name in df:
         if default_stats is not None:
@@ -131,6 +131,7 @@ def fillna_if_feildexists(df, feild_name, default_stats=None):
         else:
             df[feild_name].fillna(df[feild_name].mean(), inplace=True)
     return df
+'''
 
 
 def basic_stats_as_str(data):
