@@ -906,9 +906,9 @@ def compare_datasets(folder1, folder2, command):
                 m1 = data_list1[i][f].mean()
                 m2 = data_list2[i][f].mean()
                 if m1 == m2:
-                   print i, m1 , "=", m2
+                   print f, "Yes", i, m1 , "=", m2
                 else:
-                   print "No", i, m1 , "=", m2
+                   print f, "No", i, m1 , "=", m2
         else:
             print i, " equal"
 
