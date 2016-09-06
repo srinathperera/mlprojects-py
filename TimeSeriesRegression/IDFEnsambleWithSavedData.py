@@ -191,7 +191,7 @@ def run_ensambles_on_multiple_models(command):
     #models = ['LR']
     #forecast_feilds = [c[0] + "." + c[1] for c in list(itertools.product(fset_list, models))]
     #all_feilds = data_feilds+forecast_feilds
-    
+
     xgb_k_ensamble(conf, all_feilds, forecasts_with_blend_df, y_actual, sub_with_blend_df, submissions_ids)
 
 

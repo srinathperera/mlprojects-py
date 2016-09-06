@@ -726,3 +726,48 @@ def add_five_grouped_stats(train_df, test_df, testDf):
 
     print "Add Sales Data took %f (%f, %f)" %(slopes_time - start_ts, sale_data_aggr_time-start_ts, slopes_time-sale_data_aggr_time)
     return train_df_m, test_df_m, testDf
+
+
+
+def create_lag_feature_data(train_df, feild_names, agr_feild, time_field, lag_count):
+    #TODO another way to do this is calculate median for each samana value and join them to one df, the calcuate median and then again merge
+
+    #also see http://pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.rolling_window.html
+    #http://stackoverflow.com/questions/36937869/sliding-window-over-pandas-dataframe
+    #http://pandas.pydata.org/pandas-docs/stable/computation.html
+    #learn about how to do index merge
+
+
+
+    time_data = train_df[time_field]
+    min_time = time_data.min()
+    max_time = time_data.max()
+
+    groupData = train_df.groupby(feild_names+[time_field])[agr_feild]
+    meanData = groupData.median()
+    median_df = meanData.to_frame(agr_feild)
+    median_df.reset_index(inplace=True)
+
+    lag_feilds = []
+    lag_data = []
+
+    columns = {}
+    for i in range(lag_count):
+        shifted_time = median_df[time_field].values - i
+        lag_feild_name = "lag_"+str(i)
+        columns[lag_feild_name] = np.where(shifted_time < min_time, min_time, np.where(shifted_time > max_time, max_time, shifted_time))
+        lag_feilds.append(lag_feild_name)
+
+    lag_df = pd.DataFrame(columns=columns, index=groupData.index)
+
+    for f in lag_feilds:
+        lag_df = pd.merge(lag_df, groupData, how='left', left_on=feild_names, right_on=)
+
+
+    #TODO now merge with data
+
+
+
+    lag_median = np.median(valuesDf[lag_feilds].values, axis=1)
+
+    return pd.DataFrame(columns={"lag_"+str(lag_count)+"median": lag_median}, index=groupData.index)

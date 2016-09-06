@@ -896,6 +896,10 @@ def compare_datasets(folder1, folder2, command):
     data_list1 = [train_df1, test_df1, testDf1]
     data_list2 = [train_df2, test_df2, testDf2]
 
+    print data_list1[0].size(), "=", data_list2[0].size()
+    print list(data_list1[0])
+    print list(data_list2[0])
+
     for i in range(len(data_list1)):
         if not data_list1[0].equals(data_list2[0]):
             for f in list(data_list1[0]):
@@ -905,7 +909,7 @@ def compare_datasets(folder1, folder2, command):
             print i, " equal"
 
 
-compare_datasets('agr_cat', 'agr_cat1', 1)
+compare_datasets('/home/wso2test/MLProjects/mlprojects-py/TimeSeriesRegression/agr_cat', '/home/wso2test/MLProjects/tags/mlprojects-py/TimeSeriesRegression/agr_cat/', 1)
 
 
 
