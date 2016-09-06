@@ -893,6 +893,9 @@ def compare_datasets(folder1, folder2, command):
     else:
         print "reusing train data", folder2
 
+    train_df1, test_df1, testDf1 = replace_inf(train_df1, test_df1, testDf1, 100000)
+    train_df1, test_df1, testDf1 = replace_na_dfs_with_mean(train_df1, test_df1, testDf1)
+
     data_list1 = [train_df1, test_df1, testDf1]
     data_list2 = [train_df2, test_df2, testDf2]
 
