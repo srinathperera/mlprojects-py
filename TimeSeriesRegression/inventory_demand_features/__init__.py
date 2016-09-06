@@ -760,14 +760,14 @@ def create_lag_feature_data(train_df, feild_names, agr_feild, time_field, lag_co
 
     lag_df = pd.DataFrame(columns=columns, index=groupData.index)
 
-    for f in lag_feilds:
-        lag_df = pd.merge(lag_df, groupData, how='left', left_on=feild_names, right_on=)
+    #for f in lag_feilds:
+    #    lag_df = pd.merge(lag_df, groupData, how='left', left_on=feild_names, right_on=)
 
 
     #TODO now merge with data
 
 
 
-    lag_median = np.median(valuesDf[lag_feilds].values, axis=1)
+    #lag_median = np.median(valuesDf[lag_feilds].values, axis=1)
 
-    return pd.DataFrame(columns={"lag_"+str(lag_count)+"median": lag_median}, index=groupData.index)
+    #return pd.DataFrame(columns={"lag_"+str(lag_count)+"median": lag_median}, index=groupData.index)
