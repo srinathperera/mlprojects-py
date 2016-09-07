@@ -574,8 +574,9 @@ def replace_inf(train_df, test_df, sub_df, value):
 
 
 def replace_dfs_with_na(train_df, test_df, sub_df, value):
-    for df in [test_df, train_df, sub_df]:
-        df.fillna(value, inplace=True)
+    train_df.fillna(value, inplace=True)
+    test_df.fillna(value, inplace=True)
+    sub_df.fillna(value, inplace=True)
     return train_df, test_df, sub_df
 
 def replace_na_dfs_with_mean(train_df, test_df, sub_df):
