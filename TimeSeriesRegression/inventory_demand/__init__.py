@@ -286,7 +286,7 @@ def create_df_from_list(columns, list_data):
     feilds = {columns[k]: list_data[k] for k in range(len(columns))}
     return pd.DataFrame(feilds)
 
-
+'''
 def find_alt_for_missing(to_merge, seen_with_stats):
     print "feilds 0", list(to_merge), list(seen_with_stats)
     seen_without_stat = seen_with_stats[['Ruta_SAK', 'Cliente_ID']]
@@ -345,7 +345,7 @@ def find_alt_for_missing(to_merge, seen_with_stats):
         raise "missing from seen ", missing_ids_count
 
     return merged_withstats
-
+'''
 
 def setdiff_counts_froms_dfs(df1, df2):
     #missing_ids = pd.Index(to_merge).difference(pd.Index(merged_withstats[['Ruta_SAK','Cliente_ID']]))
@@ -514,7 +514,7 @@ def calculate_feild_stats(bdf, feild_name, agr_feild, default_stats, fops):
     groupData = bdf.groupby([feild_name])[agr_feild]
     return calculate_group_stats(groupData, feild_name+"_"+agr_feild, default_stats, fops)
 
-
+'''
 def merge_stats_with_df(bdf, stat_df, feild_name, default_mean=None, default_stddev=None, agr_feild='Demanda_uni_equil'):
     merged = pd.merge(bdf, stat_df, how='left', on=[feild_name])
 
@@ -525,7 +525,7 @@ def merge_stats_with_df(bdf, stat_df, feild_name, default_mean=None, default_std
 
     merged.fillna(0, inplace=True)
     return merged
-
+'''
 
 def addFeildStatsAsFeatures(train_df, test_df, feild_name, testDf, default_stats,fops, drop=False,
                             agr_feild='Demanda_uni_equil'):
@@ -572,6 +572,10 @@ def replace_inf(train_df, test_df, sub_df, value):
         tdf.replace([np.inf, -np.inf], value, inplace=True)
     return df_list[0], df_list[1], df_list[2]
 
+
+def replace_dfs_with_na(test_df, train_df, sub_df, value):
+    for df in [test_df, train_df, sub_df]:
+        df.fillna(value, inplace=True)
 
 def replace_na_dfs_with_mean(train_df, test_df, sub_df):
     return replace_df_na_with_mean(train_df), replace_df_na_with_mean(test_df), replace_df_na_with_mean(sub_df)
@@ -1556,8 +1560,8 @@ def generate_features(conf, train_df, test_df, subdf, y_actual_test):
     testDf = drop_feilds_1df(testDf, feilds_to_drop)
 
     #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
-    train_df = train_df.fillna(0)
-    test_df = test_df.fillna(0)
+    #train_df = train_df.fillna(0)
+    #test_df = test_df.fillna(0)
 
 
     print "generate_features took ", (time.time() - start), "s"

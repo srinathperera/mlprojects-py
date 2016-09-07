@@ -238,8 +238,6 @@ def add_single_feild_stats(base_df, feild_stats, feild_name, default_stats,fops,
 
     calculate_ts = time.time()
     merged = pd.merge(base_df, feild_stats, how='left', on=[feild_name])
-    #TODO is this ok?
-    merged.fillna(0, inplace=True)
 
     merged[feild_name+"_"+agr_feild+"_Mean"].fillna(default_stats.mean, inplace=True)
     if fops.stddev:
@@ -249,7 +247,6 @@ def add_single_feild_stats(base_df, feild_stats, feild_name, default_stats,fops,
 
     if drop:
         merged = merged.drop(feild_name,1)
-    merged.fillna(0, inplace=True)
 
     print "addFeildStatsAsFeatures() "+ feild_name+ " took %f (%f, %f), size %s %f" %(time.time()-start, calculate_ts- start,
                                            time.time() - calculate_ts, feild_name, merged.shape[0])
@@ -429,8 +426,8 @@ def generate_all_features(conf, train_df, test_df, subdf, y_actual_test):
     testDf = drop_feilds_1df(testDf, feilds_to_drop)
 
     #TODO explore this more http://pandas.pydata.org/pandas-docs/stable/missing_data.html
-    train_df = train_df.fillna(0)
-    test_df = test_df.fillna(0)
+    #train_df = train_df.fillna(0)
+    #test_df = test_df.fillna(0)
 
     print "generate_features took ", (time.time() - start), "s"
     return train_df, test_df, testDf, y_actual_test, test_df_before_dropping_features

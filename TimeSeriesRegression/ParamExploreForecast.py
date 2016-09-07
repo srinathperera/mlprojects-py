@@ -140,9 +140,10 @@ if conf.command == 0:
 print_mem_usage("after data set 2")
 print "X",train_df.shape, "Y", y_actual_train.shape
 
-train_df.fillna(0, inplace=True)
-test_df.fillna(0, inplace=True)
-testDf.fillna(0, inplace=True)
+#TODO add or handle if needed
+#train_df.fillna(0, inplace=True)
+#test_df.fillna(0, inplace=True)
+#testDf.fillna(0, inplace=True)
 
 blend_test_data_keys = test_df[blend_features]
 blend_submission_data_keys = testDf[blend_features]
@@ -154,7 +155,6 @@ train_df, test_df, testDf = replace_inf(train_df, test_df, testDf, 100000)
 train_df, test_df, testDf = replace_na_dfs_with_mean(train_df, test_df, testDf)
 
 
-testDf.fillna(0, inplace=True)
 ids = testDf['id']
 testDf.drop('id',axis=1, inplace=True)
 
