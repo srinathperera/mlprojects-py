@@ -43,9 +43,9 @@ class XGBoostModel:
 
     def predict(self, data):
         if self.isgbtree:
-            return self.model.predict(xgb.DMatrix(data), ntree_limit=self.model.best_ntree_limit)
+            return self.model.predict(xgb.DMatrix(data, missing=-999), ntree_limit=self.model.best_ntree_limit)
         else:
-            return self.model.predict(xgb.DMatrix(data))
+            return self.model.predict(xgb.DMatrix(data, missing=-999))
     def cleanup(self):
         self.model.cleanup()
         self.model = None
@@ -198,8 +198,8 @@ def regression_with_xgboost_no_cv(x_train, y_train, X_test, Y_test, features=Non
 
 
 def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use_cv=True, use_sklean=False, xgb_params=None):
-    train_data = xgb.DMatrix(x_train, label=y_train)
-    test_data = xgb.DMatrix(X_test, Y_test)
+    train_data = xgb.DMatrix(x_train, label=y_train, missing=-999)
+    test_data = xgb.DMatrix(X_test, Y_test, missing=-999)
     evallist  = [(test_data,'eval'), (train_data,'train')]
 
     #if xgb_params == None:
