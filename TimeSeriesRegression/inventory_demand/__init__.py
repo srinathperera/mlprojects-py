@@ -1719,6 +1719,9 @@ def do_forecast(conf, train_df, test_df, sub_df, y_train, y_test, models=None):
     conf.parmsFromNormalization = parmsFromNormalization
 
     verify_forecasting_data(X_train, y_train, X_test, y_test)
+    #find_NA_rows_percent(train_df, "train_df after forecast")
+    #find_NA_rows_percent(test_df, "test after forecast")
+
 
     de_normalized_forecasts = []
 
