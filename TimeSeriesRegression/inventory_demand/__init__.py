@@ -573,7 +573,7 @@ def replace_inf(train_df, test_df, sub_df, value):
     return df_list[0], df_list[1], df_list[2]
 
 
-def replace_dfs_with_na(test_df, train_df, sub_df, value):
+def replace_dfs_with_na(train_df, test_df, sub_df, value):
     for df in [test_df, train_df, sub_df]:
         df.fillna(value, inplace=True)
     return test_df, train_df, sub_df
