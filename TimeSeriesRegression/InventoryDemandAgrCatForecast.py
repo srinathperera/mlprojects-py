@@ -66,7 +66,8 @@ blend_submission_data_keys = testDf[blend_features]
 
 train_df, test_df, testDf = drop_feilds(train_df, test_df, testDf, feilds_to_drop)
 train_df, test_df, testDf = replace_inf(train_df, test_df, testDf, 100000)
-train_df, test_df, testDf = replace_na_dfs_with_mean(train_df, test_df, testDf)
+#train_df, test_df, testDf = replace_na_dfs_with_mean(train_df, test_df, testDf)
+replace_dfs_with_na(test_df, train_df, testDf, -999)
 
 
 testDf.fillna(0, inplace=True)
