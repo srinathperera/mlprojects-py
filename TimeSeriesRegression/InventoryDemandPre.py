@@ -916,7 +916,14 @@ def compare_datasets(folder1, folder2, command):
             print i, " equal"
 
 
-compare_datasets('/home/wso2test/MLProjects/mlprojects-py/TimeSeriesRegression/agr_cat', '/home/wso2test/MLProjects/tags/mlprojects-py/TimeSeriesRegression/agr_cat/', 1)
+def check_dataset_window():
+    full_df, testDf = read_datafiles(8, False)
+    create_lag_feature_data(full_df, ['Ruta_SAK', 'Cliente_ID', 'Producto_ID'], 'Demanda_uni_equil', 'Semana', 3)
+
+
+check_dataset_window()
+
+#compare_datasets('/home/wso2test/MLProjects/mlprojects-py/TimeSeriesRegression/agr_cat', '/home/wso2test/MLProjects/tags/mlprojects-py/TimeSeriesRegression/agr_cat/', 1)
 
 
 

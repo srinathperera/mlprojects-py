@@ -1603,7 +1603,7 @@ def get_models4ensamble(conf):
 
     #xgb_params = {"objective": "reg:linear", "booster":"gbtree", "max_depth":10, "eta":0.1, "min_child_weight":8,
     #    "subsample":0.5, "nthread":4, "colsample_bytree":0.5, "num_parallel_tree":1, 'gamma':0}
-    '''
+
     models = [
                 #DLModel(conf),
 
@@ -1621,8 +1621,8 @@ def get_models4ensamble(conf):
                 #AdaBoostRModel(conf, model=AdaBoostRegressor(loss='square'))
               ]
     return models
-    '''
-    return [XGBoostModel(conf, xgb_params, use_cv=True)]
+
+    #return [XGBoostModel(conf, xgb_params, use_cv=True)]
 
 
 def get_models4xgboost_tunning(conf, case=4):

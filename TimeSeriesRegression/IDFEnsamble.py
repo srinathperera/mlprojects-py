@@ -96,7 +96,7 @@ def load_data_for_each_run(model_name, file_name, feild_names=None):
         print "load files", model_name, "shape=", final_df.shape, "with features", list(final_df)
         return final_df
     else:
-        return None
+        raise ValueError("data for" + model_name + " not found")
 
 
 def load_all_forecast_data(model_names_list, file_name):

@@ -736,35 +736,70 @@ def create_lag_feature_data(train_df, feild_names, agr_feild, time_field, lag_co
 
 
 
+    #print groupData
+
+
+
+
     time_data = train_df[time_field]
     min_time = time_data.min()
     max_time = time_data.max()
 
+    '''
     groupData = train_df.groupby(feild_names+[time_field])[agr_feild]
     meanData = groupData.median()
     median_df = meanData.to_frame(agr_feild)
     median_df.reset_index(inplace=True)
+    '''
+    median_df = train_df.groupby(feild_names+[time_field], as_index=False)[agr_feild].median()
+    print "median_df"
+    print median_df.head()
 
+
+
+    lag_df = median_df[feild_names].copy()
     lag_feilds = []
     lag_data = []
 
-    columns = {}
+    #columns = {f:median_df[f] for f in feild_names+[time_field]}
     for i in range(lag_count):
-        shifted_time = median_df[time_field].values - i
-        lag_feild_name = "lag_"+str(i)
-        columns[lag_feild_name] = np.where(shifted_time < min_time, min_time, np.where(shifted_time > max_time, max_time, shifted_time))
+        shifted_time = median_df[time_field].values - (i + 1)
+        lag_df[time_field] = np.where(shifted_time < min_time, min_time, np.where(shifted_time > max_time, max_time, shifted_time))
+        tempdf = pd.merge(lag_df, median_df, how='left', on=feild_names+[time_field])
+        print tempdf.head()
+        lag_data.append(tempdf[agr_feild].values)
+
+
+    '''
         lag_feilds.append(lag_feild_name)
 
-    lag_df = pd.DataFrame(columns=columns, index=groupData.index)
 
-    #for f in lag_feilds:
-    #    lag_df = pd.merge(lag_df, groupData, how='left', left_on=feild_names, right_on=)
+    print "lag_df"
+    print lag_df.head()
 
+
+    for f in lag_feilds:
+        #median_df.rename(columns={time_field:f}, inplace=True)
+        lag_df = pd.merge(lag_df, median_df, how='left', left_on=feild_names+[f], right_on=feild_names+[time_field])
+        lag_df.rename(columns={agr_feild:f+'_'+agr_feild}, inplace=True)
+        print "lag_df", f, feild_names+[f]
+        print lag_df.head()
+
+    print "lag_df"
+    print lag_df.head()
+    '''
+
+    lag_df = median_df[feild_names+[time_field]].copy()
+    lag_median_feild = "lag_"+str(lag_count)+ "median"
+    lag_df[lag_median_feild] = np.median(np.column_stack(lag_data), axis=1)
+
+    print lag_df.head()
 
     #TODO now merge with data
 
 
-
+    '''
     #lag_median = np.median(valuesDf[lag_feilds].values, axis=1)
 
     #return pd.DataFrame(columns={"lag_"+str(lag_count)+"median": lag_median}, index=groupData.index)
+    '''
