@@ -1620,9 +1620,8 @@ def get_models4ensamble(conf):
                 ETRModel(conf, model=ExtraTreesRegressor(n_jobs=4)),
                 #AdaBoostRModel(conf, model=AdaBoostRegressor(loss='square'))
               ]
-    #return models
-
-    return [XGBoostModel(conf, xgb_params, use_cv=True)]
+    return models
+    #return [XGBoostModel(conf, xgb_params, use_cv=True)]
 
 
 def get_models4xgboost_tunning(conf, case=4):
