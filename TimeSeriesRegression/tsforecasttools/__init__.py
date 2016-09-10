@@ -43,9 +43,9 @@ class XGBoostModel:
 
     def predict(self, data):
         if self.isgbtree:
-            return self.model.predict(xgb.DMatrix(data, missing=-999), ntree_limit=self.model.best_ntree_limit)
+            return self.model.predict(xgb.DMatrix(data, missing=float("nan")), ntree_limit=self.model.best_ntree_limit)
         else:
-            return self.model.predict(xgb.DMatrix(data, missing=-999))
+            return self.model.predict(xgb.DMatrix(data, missing=float("nan")))
     def cleanup(self):
         self.model.cleanup()
         self.model = None
@@ -175,8 +175,8 @@ def get_default_xgboost_params():
     return xgb_params
 
 def regression_with_xgboost_no_cv(x_train, y_train, X_test, Y_test, features=None, xgb_params=None, num_rounds = 10):
-    train_data = xgb.DMatrix(x_train, label=y_train)
-    test_data = xgb.DMatrix(X_test, Y_test)
+    train_data = xgb.DMatrix(x_train, label=y_train, missing=float('nan'))
+    test_data = xgb.DMatrix(X_test, Y_test, missing=float('nan'))
     evallist  = [(train_data,'train'), (test_data,'eval')]
 
     if xgb_params is None:
@@ -190,16 +190,16 @@ def regression_with_xgboost_no_cv(x_train, y_train, X_test, Y_test, features=Non
     if isgbtree :
         ceate_feature_map_for_feature_importance(features)
         show_feature_importance(gbdt)
-        y_pred = gbdt.predict(xgb.DMatrix(X_test), ntree_limit=gbdt.best_ntree_limit)
+        y_pred = gbdt.predict(xgb.DMatrix(X_test, missing=float('nan')), ntree_limit=gbdt.best_ntree_limit)
     else:
-        y_pred = gbdt.predict(xgb.DMatrix(X_test))
+        y_pred = gbdt.predict(xgb.DMatrix(X_test, missing=float('nan')))
 
     return XGBoostModel(gbdt), y_pred
 
 
 def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use_cv=True, use_sklean=False, xgb_params=None):
-    train_data = xgb.DMatrix(x_train, label=y_train, missing=-999)
-    test_data = xgb.DMatrix(X_test, Y_test, missing=-999)
+    train_data = xgb.DMatrix(x_train, label=y_train, missing=float('nan'))
+    test_data = xgb.DMatrix(X_test, Y_test, missing=float('nan'))
     evallist  = [(test_data,'eval'), (train_data,'train')]
 
     #if xgb_params == None:
@@ -229,7 +229,7 @@ def regression_with_xgboost(x_train, y_train, X_test, Y_test, features=None, use
         ceate_feature_map_for_feature_importance(features)
         show_feature_importance(gbdt, feature_names=features)
 
-        y_pred = gbdt.predict(xgb.DMatrix(X_test))
+        y_pred = gbdt.predict(xgb.DMatrix(X_test, missing=float("nan")))
         return XGBoostModel(gbdt), y_pred
 
 def run_timeseries_froecasts(X_train, y_train, X_test, y_test, window_size, epoch_count, parmsFromNormalization):
